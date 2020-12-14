@@ -1,2 +1,2 @@
 # MagicImageWand
-Collaboration with the 
+Similar to the commercial PixelStick, but designed for DIY.
