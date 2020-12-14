@@ -1,0 +1,2 @@
+# MagicImageWand
+Collaboration with the 
