@@ -1,11 +1,11 @@
 # ImageConverter
 jquery/php app to create bmp images for a pixelstick.
 
-The Imgage Converter is a small web application to convert images for use with the MagicImageWand.
+The Image Converter is a small web application to convert images for use with the MagicImageWand.
 
 ## Requirements:
 
-Webserver with php and the ImageMagik module (Standard on most Web hosters)
+Webserver with php and the ImageMagick module (Standard on most Web hosters)
 
 ## Installation:
 
