@@ -341,3 +341,8 @@ healthchecksdb
 
 # macOS files
 .DS_Store
+
+# Vscode PlatformIO working folders
+.pio/
+.vscode/
+
