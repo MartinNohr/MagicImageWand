@@ -11,3 +11,7 @@ Webserver with php and the ImageMagick module (Standard on most Web hosters)
 
 copy all files from this folder to your webserver in a folder of your choice and adjust the paths in lighty.php
 
+## Demo
+
+Demo Installation is available at
+https://www.essl.de/static/lighty/
