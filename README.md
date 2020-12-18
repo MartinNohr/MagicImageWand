@@ -12,16 +12,16 @@ The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
 Put both these in the Arduino libraries folder, remove the -master from the folder name that is in the downloaded zip file.
 Two files need to be modified, user_setup.h and user_setup_select.h.
 
-In user_setup.h:
-Comment line: //#define ILI9341_DRIVER
-uncomment line: #define ST7789_DRIVER  
-comment these lines:
-//#define TFT_CS   PIN_D8  // Chip select control pin D8
-//#define TFT_DC   PIN_D3  // Data Command control pin
-//#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
-Comment this line:
-//#define SPI_FREQUENCY  27000000
+<p>In user_setup.h:
+<p>Comment line: //#define ILI9341_DRIVER
+<p>uncomment line: #define ST7789_DRIVER  
+<p>comment these lines:
+<p>//#define TFT_CS   PIN_D8  // Chip select control pin D8
+<p>//#define TFT_DC   PIN_D3  // Data Command control pin
+<p>//#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
+<p>Comment this line:
+<p>//#define SPI_FREQUENCY  27000000
 
-In user_setup_select.h:
-uncomment:
-#include <User_Setups/Setup135_ST7789.h>
+<p>In user_setup_select.h:
+<p>uncomment:
+<p>#include <User_Setups/Setup135_ST7789.h>
