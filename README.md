@@ -10,7 +10,7 @@ It has optional exFat reading to support SD cards >32GB. This is enabled with a 
 <p>For exFat support this library must be included: https://github.com/greiman/SdFat
 The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
 Put both these in the Arduino libraries folder, remove the -master from the folder name that is in the downloaded zip file.
-<p>NOTE: Version 2.2.23 must be loaded. The latest version 2.2.52 does not work with the TTGO card. I will update this when a later fixed version is available.
+<p>NOTE: Version 2.2.23 https://github.com/Bodmer/TFT_eSPI/releases/tag/2.2.23 must be loaded. The latest version 2.2.52 does not work with the TTGO card. I will update this when a later fixed version is available.
 <p>Two files need to be modified, user_setup.h and user_setup_select.h.
 
 <p>In user_setup.h:
