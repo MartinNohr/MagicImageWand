@@ -7,10 +7,11 @@ The processor is currently the TTGO with the TFT display. T-Display.
 It has a nice menu system and single button for control.
 This device can also be used as a simple light wand with color, saturation, and brightness controls.
 It has optional exFat reading to support SD cards >32GB. This is enabled with a switch in the .h file, USE_STANDARD_SD, set to 0. 1 Uses the basic SD library.
-For exFat support this library must be included: https://github.com/greiman/SdFat
+<p>For exFat support this library must be included: https://github.com/greiman/SdFat
 The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
 Put both these in the Arduino libraries folder, remove the -master from the folder name that is in the downloaded zip file.
-Two files need to be modified, user_setup.h and user_setup_select.h.
+<p>NOTE: Version 2.2.23 must be loaded. The latest version 2.2.52 does not work with the TTGO card. I will update this when a later fixed version is available.
+<p>Two files need to be modified, user_setup.h and user_setup_select.h.
 
 <p>In user_setup.h:
 <br>Comment line:
