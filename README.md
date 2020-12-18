@@ -13,15 +13,14 @@ Put both these in the Arduino libraries folder, remove the -master from the fold
 Two files need to be modified, user_setup.h and user_setup_select.h.
 
 <p>In user_setup.h:
-<p>Comment line: //#define ILI9341_DRIVER
-<p>uncomment line: #define ST7789_DRIVER  
-<p>comment these lines:
-<p>//#define TFT_CS   PIN_D8  // Chip select control pin D8
-<p>//#define TFT_DC   PIN_D3  // Data Command control pin
-<p>//#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
-<p>Comment this line:
-<p>//#define SPI_FREQUENCY  27000000
-
-<br>In user_setup_select.h:
+<br>Comment line: //#define ILI9341_DRIVER
+<br>uncomment line: #define ST7789_DRIVER  
+<br>comment these lines:
+<br>//#define TFT_CS   PIN_D8  // Chip select control pin D8
+<br>//#define TFT_DC   PIN_D3  // Data Command control pin
+<br>//#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
+<br>Comment this line:
+<br>//#define SPI_FREQUENCY  27000000
+<p>In user_setup_select.h:
 <br>uncomment:
 <br>#include &ltUser_Setups/Setup135_ST7789.h&gt
