@@ -8,7 +8,7 @@ It has a nice menu system and single button for control.
 This device can also be used as a simple light wand with color, saturation, and brightness controls.
 It has optional exFat reading to support SD cards >32GB. This is enabled with a switch in the .h file, USE_STANDARD_SD, set to 0. 1 Uses the basic SD library.
 <p>For exFat support this library must be included: https://github.com/greiman/SdFat
-The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
+<br>The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
 <p>The file user_setup_select.h needs two lines modified.
 <br>uncomment:
 <br>#include &ltUser_Setups/Setup25_TTGO_T_Display.h&gt 
