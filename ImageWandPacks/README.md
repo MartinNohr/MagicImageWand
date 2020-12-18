@@ -1,7 +1,6 @@
 # ImageWandPacks
 
-![ImageWandGrafiti]
-(https://raw.githubusercontent.com/MartinNohr/MagicImageWand/main/ImageWandPacks/source%20images/Misc/MagicImageWandGrafiti.png)
+![ImageWandGrafiti](https://raw.githubusercontent.com/MartinNohr/MagicImageWand/main/ImageWandPacks/source%20images/Misc/MagicImageWandGrafiti.png)
 
 
 These images provide an easy start for your first lightpaintings.
