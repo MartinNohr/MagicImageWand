@@ -13,8 +13,10 @@ Put both these in the Arduino libraries folder, remove the -master from the fold
 Two files need to be modified, user_setup.h and user_setup_select.h.
 
 <p>In user_setup.h:
-<br>Comment line: //#define ILI9341_DRIVER
-<br>uncomment line: #define ST7789_DRIVER  
+<br>Comment line:
+<br>//#define ILI9341_DRIVER
+<br>uncomment line:
+<br>#define ST7789_DRIVER  
 <br>comment these lines:
 <br>//#define TFT_CS   PIN_D8  // Chip select control pin D8
 <br>//#define TFT_DC   PIN_D3  // Data Command control pin
