@@ -24,4 +24,4 @@ Two files need to be modified, user_setup.h and user_setup_select.h.
 
 <p>In user_setup_select.h:
 <p>uncomment:
-<p>#include <User_Setups/Setup135_ST7789.h>
+<p>#include &ltUser_Setups/Setup135_ST7789.h&gt
