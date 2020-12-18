@@ -5,3 +5,23 @@ This is a similar device to the commercial PixelStick. It displays bmp files and
 The images are displayed using one or two 144 LED RGB pixel arrays.
 The processor is currently the TTGO with the TFT display. T-Display.
 It has a nice menu system and single button for control.
+This device can also be used as a simple light wand with color, saturation, and brightness controls.
+It has optional exFat reading to support SD cards >32GB. This is enabled with a switch in the .h file, USE_STANDARD_SD, set to 0. 1 Uses the basic SD library.
+For exFat support this library must be included: https://github.com/greiman/SdFat
+The display is handled with this library: https://github.com/Bodmer/TFT_eSPI
+Put both these in the Arduino libraries folder, remove the -master from the folder name that is in the downloaded zip file.
+Two files need to be modified, user_setup.h and user_setup_select.h.
+
+In user_setup.h:
+Comment line: //#define ILI9341_DRIVER
+uncomment line: #define ST7789_DRIVER  
+comment these lines:
+//#define TFT_CS   PIN_D8  // Chip select control pin D8
+//#define TFT_DC   PIN_D3  // Data Command control pin
+//#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
+Comment this line:
+//#define SPI_FREQUENCY  27000000
+
+In user_setup_select.h:
+uncomment:
+#include <User_Setups/Setup135_ST7789.h>
