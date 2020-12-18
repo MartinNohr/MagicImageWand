@@ -22,6 +22,6 @@ Two files need to be modified, user_setup.h and user_setup_select.h.
 <p>Comment this line:
 <p>//#define SPI_FREQUENCY  27000000
 
-<p>In user_setup_select.h:
-<p>uncomment:
-<p>#include &ltUser_Setups/Setup135_ST7789.h&gt
+<br>In user_setup_select.h:
+<br>uncomment:
+<br>#include &ltUser_Setups/Setup135_ST7789.h&gt
