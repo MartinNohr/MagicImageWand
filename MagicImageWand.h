@@ -23,11 +23,12 @@
 #endif
 #include "SPI.h"
 #include <FastLED.h>
-#include "morefonts.h"
 #include <EEPROM.h>
 #include "RotaryDialButton.h"
 #include <TFT_eSPI.h>
 #include <vector>
+//#include <fonts/GFXFF/FreeMono18pt7b.h>
+
 //#include <stack>
 //std::stack<int> menuStack;
 
@@ -61,7 +62,7 @@ bool bEnableBLE = false;
 // functions
 void UpdateBLE(bool bProgressOnly);
 void DisplayCurrentFile(bool path = true);
-void DisplayLine(int line, String text, bool bOverRide = false);
+void DisplayLine(int line, String text, int32_t color = TFT_WHITE);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
 void WriteMessage(String txt, bool error = false, int wait = 2000);
@@ -91,7 +92,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "LIP0217" };   // set to make sure saved values are valid, change when savevalues is changed
+char signature[] = { "LIP0001" };   // set to make sure saved values are valid, change when savevalues is changed
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 

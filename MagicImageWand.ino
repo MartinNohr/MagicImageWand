@@ -246,6 +246,7 @@ void setup()
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
 	tft.setRotation(3);
+	tft.setFreeFont();
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::getInstance()->begin(DIAL_A, DIAL_B, DIAL_BTN);
 	setupSDcard();
@@ -266,17 +267,30 @@ void setup()
 	int height = tft.height();
 	tft.fillScreen(TFT_BLACK);
 	tft.setTextColor(TFT_WHITE);
-	if (nBootCount == 0) {
+	rainbow_fill();
+	if (nBootCount == 0)
+	{
+		tft.setTextColor(TFT_BLACK);
+		//tft.setFreeFont(&FreeMono18pt7b);
+		tft.setTextFont(2);
 		tft.drawRect(0, 0, width - 1, height - 1, TFT_WHITE);
-		tft.setTextSize(4);
-		tft.drawString("LEDPainter", 2, 2);
-		tft.setTextSize(3);
-		tft.drawString("Version 2.17", 4, 30);
 		tft.setTextSize(2);
-		tft.drawString(__DATE__, 4, 48);
+		//tft.setTextColor(TFT_GREEN);
+		tft.drawString("Magic Image Wand", 10, 5);
+		//tft.setTextSize(2);
+		//tft.setTextColor(TFT_BLUE);
+		tft.drawString("Version 0.01", 30, 50);
+		//tft.setTextSize(2);
+		tft.drawString(__DATE__, 35, 80);
+		//tft.setTextColor(TFT_BLACK);
 	}
+	tft.setTextFont(2);
+	tft.setTextSize(1);
+	delay(500);
+	//Serial.println("font height: " + String(tft.fontHeight()));
 	//tft.setFont(ArialMT_Plain_10);
-	charHeight = 13;
+	charHeight = tft.fontHeight() + 1;
+	tft.setTextColor(TFT_WHITE);
 
 	EEPROM.begin(1024);
 	// this will fix the signature if necessary
@@ -623,9 +637,10 @@ bool RunMenus(int button)
 	}
 }
 
+#define MENU_LINES 8
 // display the menu
-// if MenuStack.peek()->index is > 5, then shift the lines up by enough to display them
-// remember that we only have room for 5 lines
+// if MenuStack.peek()->index is > MENU_LINES, then shift the lines up by enough to display them
+// remember that we only have room for MENU_LINES lines
 void ShowMenu(struct MenuItem* menu)
 {
 	MenuStack.peek()->menucount = 0;
@@ -749,14 +764,14 @@ void ShowMenu(struct MenuItem* menu)
 	//Serial.println("menu: " + String(offsetLines) + ":" + String(y) + " active: " + String(MenuStack.peek()->index));
 	MenuStack.peek()->menucount = y;
 	// blank the rest of the lines
-	for (int ix = y; ix < 5; ++ix) {
+	for (int ix = y; ix < MENU_LINES; ++ix) {
 		DisplayLine(ix, "");
 	}
 	// show line if menu has been scrolled
 	if (MenuStack.peek()->offset > 0)
 		tft.drawLine(0, 0, 5, 0, TFT_WHITE);
 	// show bottom line if last line is showing
-	if (MenuStack.peek()->offset + 4 < MenuStack.peek()->menucount - 1)
+	if (MenuStack.peek()->offset + (MENU_LINES - 1) < MenuStack.peek()->menucount - 1)
 		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_WHITE);
 }
 
@@ -1000,8 +1015,8 @@ bool HandleMenus()
 			MenuStack.peek()->offset = 0;
 		}
 		// see if we need to scroll the menu
-		if (MenuStack.peek()->index - MenuStack.peek()->offset > 4) {
-			if (MenuStack.peek()->offset < MenuStack.peek()->menucount - 5) {
+		if (MenuStack.peek()->index - MenuStack.peek()->offset > (MENU_LINES - 1)) {
+			if (MenuStack.peek()->offset < MenuStack.peek()->menucount - MENU_LINES) {
 				++MenuStack.peek()->offset;
 			}
 		}
@@ -1013,7 +1028,7 @@ bool HandleMenus()
 		if (MenuStack.peek()->index < 0) {
 			MenuStack.peek()->index = MenuStack.peek()->menucount - 1;
 			bMenuChanged = true;
-			MenuStack.peek()->offset = MenuStack.peek()->menucount - 5;
+			MenuStack.peek()->offset = MenuStack.peek()->menucount - MENU_LINES;
 		}
 		// see if we need to adjust the offset
 		if (MenuStack.peek()->offset && MenuStack.peek()->index < MenuStack.peek()->offset) {
@@ -2628,23 +2643,24 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	readByte(true);
 }
 
-void DisplayLine(int line, String text, bool bOverRide)
+void DisplayLine(int line, String text, int32_t color)
 {
-	if (bPauseDisplay && !bOverRide)
+	if (bPauseDisplay)
 		return;
 	int y = line * charHeight + (bSettingsMode && !bRunningMacro ? 0 : 6);
 	tft.fillRect(0, y, tft.width(), charHeight, TFT_BLACK);
-	tft.setTextColor(TFT_WHITE);
+	tft.setTextColor(color);
 	tft.drawString(text, 0, y);
 }
 
 // the star is used to indicate active menu line
 void DisplayMenuLine(int line, int displine, String text)
 {
-	String mline = (MenuStack.peek()->index == line ? "* " : "  ") + text;
+	bool hilite = MenuStack.peek()->index == line;
+	String mline = (hilite ? "* " : "  ") + text;
 	//if (MenuStack.peek()->index == line)
 		//tft.setFont(SansSerif_bold_10);
-	DisplayLine(displine, mline);
+	DisplayLine(displine, mline, hilite ? TFT_WHITE : TFT_BLUE);
 	//tft.setFont(ArialMT_Plain_10);
 }
 
@@ -2761,15 +2777,16 @@ void DisplayCurrentFile(bool path)
 		}
 	}
 	if (!bIsRunning && bShowNextFiles) {
-		for (int ix = 1; ix < 4; ++ix) {
+		for (int ix = 1; ix < MENU_LINES - 1; ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
-				DisplayLine(ix, "");
+				DisplayLine(ix, "", TFT_BLUE);
 			}
 			else {
-				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix]);
+				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], TFT_BLUE);
 			}
 		}
 	}
+	tft.setTextColor(TFT_WHITE);
 	// for debugging keypresses
 	//DisplayLine(3, String(nButtonDowns) + " " + nButtonUps);
 }
@@ -2796,7 +2813,9 @@ void WriteMessage(String txt, bool error, int wait)
 	tft.fillScreen(TFT_BLACK);
 	if (error)
 		txt = "**" + txt + "**";
-	DisplayLine(0, txt);
+	tft.setCursor(0, 0);
+	tft.setTextWrap(true);
+	tft.print(txt);
 	delay(wait);
 }
 
@@ -3517,3 +3536,67 @@ void TestWedge()
 //		delay(1);
 //	}
 //}
+// #########################################################################
+// Fill screen with a rainbow pattern
+// #########################################################################
+byte red = 31;
+byte green = 0;
+byte blue = 0;
+byte state = 0;
+unsigned int colour = red << 11; // Colour order is RGB 5+6+5 bits each
+
+void rainbow_fill()
+{
+	// The colours and state are not initialised so the start colour changes each time the function is called
+
+	for (int i = 319; i >= 0; i--) {
+		// Draw a vertical line 1 pixel wide in the selected colour
+		tft.drawFastHLine(0, i, tft.width(), colour); // in this example tft.width() returns the pixel width of the display
+		// This is a "state machine" that ramps up/down the colour brightnesses in sequence
+		switch (state) {
+		case 0:
+			green++;
+			if (green == 64) {
+				green = 63;
+				state = 1;
+			}
+			break;
+		case 1:
+			red--;
+			if (red == 255) {
+				red = 0;
+				state = 2;
+			}
+			break;
+		case 2:
+			blue++;
+			if (blue == 32) {
+				blue = 31;
+				state = 3;
+			}
+			break;
+		case 3:
+			green--;
+			if (green == 255) {
+				green = 0;
+				state = 4;
+			}
+			break;
+		case 4:
+			red++;
+			if (red == 32) {
+				red = 31;
+				state = 5;
+			}
+			break;
+		case 5:
+			blue--;
+			if (blue == 255) {
+				blue = 0;
+				state = 0;
+			}
+			break;
+		}
+		colour = red << 11 | green << 5 | blue;
+	}
+}

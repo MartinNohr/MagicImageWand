@@ -24,9 +24,6 @@
     <ClInclude Include="MagicImageWand.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="morefonts.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RotaryDialButton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
