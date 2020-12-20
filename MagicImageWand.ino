@@ -2312,7 +2312,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	uint16_t bmpReserved1 = readInt();
 	uint16_t bmpReserved2 = readInt();
 	uint32_t bmpOffBits = readLong();
-	Serial.println("\nBMPtype: " + String(bmpType) + " offset: " + String(bmpOffBits));
+	//Serial.println("\nBMPtype: " + String(bmpType) + " offset: " + String(bmpOffBits));
 
 	/* Check file header */
 	if (bmpType != MYBMP_BF_TYPE) {
@@ -2333,13 +2333,13 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	uint32_t imgClrUsed = readLong();
 	uint32_t imgClrImportant = readLong();
 
-	Serial.println("imgSize: " + String(imgSize));
-	Serial.println("imgWidth: " + String(imgWidth));
-	Serial.println("imgHeight: " + String(imgHeight));
-	Serial.println("imgPlanes: " + String(imgPlanes));
-	Serial.println("imgBitCount: " + String(imgBitCount));
-	Serial.println("imgCompression: " + String(imgCompression));
-	Serial.println("imgSizeImage: " + String(imgSizeImage));
+	//Serial.println("imgSize: " + String(imgSize));
+	//Serial.println("imgWidth: " + String(imgWidth));
+	//Serial.println("imgHeight: " + String(imgHeight));
+	//Serial.println("imgPlanes: " + String(imgPlanes));
+	//Serial.println("imgBitCount: " + String(imgBitCount));
+	//Serial.println("imgCompression: " + String(imgCompression));
+	//Serial.println("imgSizeImage: " + String(imgSizeImage));
 	/* Check info header */
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
