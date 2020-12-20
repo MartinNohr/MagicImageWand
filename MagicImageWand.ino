@@ -879,7 +879,7 @@ void GetIntegerValue(MenuItem* menu)
 		//OLEDDISPLAY_COLOR oldColor = tft.getColor();
 		tft.fillRect(0, 30, tft.width() - 1, 6, TFT_BLACK);
 		//tft.setColor(oldColor);
-		DrawProgressBar(0, 30, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
+		DrawProgressBar(0, 2 * charHeight + 5, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
 		if (menu->decimals == 0) {
 			sprintf(line, menu->text, *(int*)menu->value);
 		}
