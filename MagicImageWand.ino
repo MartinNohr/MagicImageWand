@@ -878,7 +878,7 @@ void GetIntegerValue(MenuItem* menu)
 		//OLEDDISPLAY_COLOR oldColor = tft.getColor();
 		tft.fillRect(0, 30, tft.width() - 1, 6, TFT_BLACK);
 		//tft.setColor(oldColor);
-		//tft.drawProgressBar(0, 30, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
+		DrawProgressBar(0, 30, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
 		if (menu->decimals == 0) {
 			sprintf(line, menu->text, *(int*)menu->value);
 		}
@@ -2656,7 +2656,7 @@ void ShowProgressBar(int percent)
 	if (percent == 0) {
 		tft.fillRect(0, 0, tft.width() - 1, 6, TFT_BLACK);
 	}
-	//tft.drawProgressBar(0, 0, tft.width() - 1, 6, percent);
+	DrawProgressBar(0, 0, tft.width() - 1, 6, percent);
 	lastpercent = percent;
 }
 
@@ -2896,8 +2896,8 @@ bool GetFileNamesFromSD(String dir) {
 bool CompareNames(const String& a, const String& b)
 {
 	String a1 = a, b1 = b;
-	a1.toLowerCase();
-	b1.toLowerCase();
+	a1.toUpperCase();
+	b1.toUpperCase();
 	return a1.compareTo(b1) < 0;
 }
 
@@ -3456,4 +3456,11 @@ void rainbow_fill()
 		}
 		colour = red << 11 | green << 5 | blue;
 	}
+}
+
+// draw a progress bar
+void DrawProgressBar(int x, int y, int dx, int dy, int percent)
+{
+	tft.drawRoundRect(x, y, dx, dy, 2, TFT_WHITE);
+	tft.fillRect(x + 1, y + 1, (dx - 2) * percent / 100, dy - 2, TFT_WHITE);
 }
