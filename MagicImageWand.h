@@ -108,8 +108,8 @@ RTC_DATA_ATTR int nDisplayBrightness = 100;           // this is in %
 RTC_DATA_ATTR bool bDisplayInvert = false;            // set to reverse display
 bool bSdCardValid = false;              // set to true when card is found
 // strip leds
-#define DATA_PIN1 17
-#define DATA_PIN2 2
+#define DATA_PIN1 2
+#define DATA_PIN2 17
 #define NUM_LEDS 144
 // Define the array of leds, up to 288
 CRGB leds[NUM_LEDS * 2];
