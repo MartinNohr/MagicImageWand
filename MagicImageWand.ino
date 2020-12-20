@@ -2114,9 +2114,9 @@ void ProcessFileOrTest()
 	}
 	bIsRunning = true;
 	nProgress = 0;
-	DisplayLine(1, "");
-	DisplayLine(2, "");
-	DisplayLine(3, "");
+	// clear the rest of the lines
+	for (int ix = 1; ix < MENU_LINES - 1; ++ix)
+		DisplayLine(ix, "");
 	//DisplayCurrentFile();
 	if (startDelay) {
 		// set a timer
@@ -3462,5 +3462,5 @@ void rainbow_fill()
 void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 {
 	tft.drawRoundRect(x, y, dx, dy, 2, TFT_WHITE);
-	tft.fillRect(x + 1, y + 1, (dx - 2) * percent / 100, dy - 2, TFT_WHITE);
+	tft.fillRect(x + 1, y + 1, (dx - 2) * percent / 100, dy - 2, TFT_GREEN);
 }
