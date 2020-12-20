@@ -32,6 +32,13 @@
 //#include <stack>
 //std::stack<int> menuStack;
 
+#if USE_STANDARD_SD
+SPIClass spiSDCard;
+#else
+//SPIClass spi1(VSPI);
+SdFs SD; // fat16/32 and exFAT
+#endif
+
 // the display
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
@@ -102,7 +109,7 @@ RTC_DATA_ATTR bool bDisplayInvert = false;            // set to reverse display
 bool bSdCardValid = false;              // set to true when card is found
 // strip leds
 #define DATA_PIN1 17
-#define DATA_PIN2 25
+#define DATA_PIN2 2
 #define NUM_LEDS 144
 // Define the array of leds, up to 288
 CRGB leds[NUM_LEDS * 2];
@@ -263,13 +270,6 @@ void ReadBattery(MenuItem* menu);
 #define SDSckPin   25  // GIPO25
 #define SDMisoPin  27  // GPIO27
 #define SDMosiPin  26  // GPIO26
-
-#if USE_STANDARD_SD
-SPIClass spiSDCard;
-#else
-SPIClass spi1(VSPI);
-SdFs SD; // fat16/32 and exFAT
-#endif
 
 // adjustment values for builtins
 RTC_DATA_ATTR uint8_t gHue = 0; // rotating "base color" used by many of the patterns
