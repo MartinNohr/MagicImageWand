@@ -2307,6 +2307,8 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 #define MYBMP_BI_RLE4           2L
 #define MYBMP_BI_BITFIELDS      3L
 
+	// clear the buffer
+	readByte(true);
 	uint16_t bmpType = readInt();
 	uint32_t bmpSize = readLong();
 	uint16_t bmpReserved1 = readInt();
@@ -2316,6 +2318,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 
 	/* Check file header */
 	if (bmpType != MYBMP_BF_TYPE || bmpOffBits != MYBMP_BF_OFF_BITS) {
+		Serial.println("BMPtype: " + String(bmpType) + " Bits: " + String(bmpOffBits));
 		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
