@@ -695,7 +695,7 @@ void ShowMenu(struct MenuItem* menu)
 			}
 			else {
 				if (menu->op == eTextCurrentFile) {
-					sprintf(line, menu->text, MakeIPCFilename(FileNames[CurrentFileIndex], false).c_str());
+					sprintf(line, menu->text, MakeMIWFilename(FileNames[CurrentFileIndex], false).c_str());
 					//Serial.println("menu text2: " + String(line));
 				}
 				else {
@@ -712,7 +712,7 @@ void ShowMenu(struct MenuItem* menu)
 			// min holds the macro number
 			val = menu->min;
 			// see if the macro is there and append the text
-			exists = SD.exists("/" + String(val) + ".ipc");
+			exists = SD.exists("/" + String(val) + ".miw");
 			sprintf(line, menu->text, val, exists ? menu->on : menu->off);
 			// next line
 			++y;
@@ -2259,7 +2259,7 @@ void SendFile(String Filename) {
 	Filename.toCharArray(temp, 14);
 	// see if there is an associated config file
 	String cfFile = temp;
-	cfFile = MakeIPCFilename(cfFile, true);
+	cfFile = MakeMIWFilename(cfFile, true);
 	SettingsSaveRestore(true, 0);
 	ProcessConfigFile(cfFile);
 	String fn = currentFolder + temp;
@@ -2503,6 +2503,11 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	readByte(true);
 }
 
+// put the current file on the display
+void ShowBmp(MenuItem* menu)
+{
+}
+
 void DisplayLine(int line, String text, int32_t color)
 {
 	if (bPauseDisplay)
@@ -2679,13 +2684,13 @@ void WriteMessage(String txt, bool error, int wait)
 	delay(wait);
 }
 
-// create the associated IPC name
-String MakeIPCFilename(String filename, bool addext)
+// create the associated MIW name
+String MakeMIWFilename(String filename, bool addext)
 {
 	String cfFile = filename;
 	cfFile = cfFile.substring(0, cfFile.lastIndexOf('.'));
 	if (addext)
-		cfFile += String(".IPC");
+		cfFile += String(".MIW");
 	return cfFile;
 }
 
@@ -2816,7 +2821,7 @@ bool ProcessConfigFile(String filename)
 }
 
 // read the files from the card or list the built-ins
-// look for start.IPC, and process it, but don't add it to the list
+// look for start.MIW, and process it, but don't add it to the list
 bool GetFileNamesFromSD(String dir) {
 	// start over
 	// first empty the current file names
@@ -2882,7 +2887,7 @@ bool GetFileNamesFromSD(String dir) {
 						//Serial.println("name: " + CurrentFilename);
 						FileNames.push_back(CurrentFilename);
 					}
-					else if (uppername == "START.IPC") {
+					else if (uppername == "START.MIW") {
 						startfile = CurrentFilename;
 					}
 				}
@@ -2967,7 +2972,7 @@ void SaveAssociatedFile(MenuItem* menu)
 void LoadAssociatedFile(MenuItem* menu)
 {
 	String name = FileNames[CurrentFileIndex];
-	name = MakeIPCFilename(name, true);
+	name = MakeMIWFilename(name, true);
 	if (ProcessConfigFile(name)) {
 		WriteMessage(String("Processed:\n") + name);
 	}
@@ -2978,7 +2983,7 @@ void LoadAssociatedFile(MenuItem* menu)
 
 void LoadStartFile(MenuItem* menu)
 {
-	String name = "START.IPC";
+	String name = "START.MIW";
 	if (ProcessConfigFile(name)) {
 		WriteMessage(String("Processed:\n") + name);
 	}
@@ -2988,16 +2993,16 @@ void LoadStartFile(MenuItem* menu)
 }
 
 // create the config file, or remove it
-// startfile true makes it use the start.IPC file, else it handles the associated name file
+// startfile true makes it use the start.MIW file, else it handles the associated name file
 bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 {
 	bool retval = true;
 	String filepath;
 	if (startfile) {
-		filepath = currentFolder + String("START.IPC");
+		filepath = currentFolder + String("START.MIW");
 	}
 	else {
-		filepath = ((bRecordingMacro || bRunningMacro) ? String("/") : currentFolder) + MakeIPCFilename(filename, true);
+		filepath = ((bRecordingMacro || bRunningMacro) ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
 	}
 	if (remove) {
 		if (!SD.exists(filepath.c_str()))
@@ -3177,7 +3182,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	}
 	bRunningMacro = true;
 	bRecordingMacro = false;
-	String line = String(nCurrentMacro) + ".ipc";
+	String line = String(nCurrentMacro) + ".miw";
 	if (!ProcessConfigFile(line)) {
 		line += " not found";
 		WriteMessage(line, true);

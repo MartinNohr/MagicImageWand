@@ -262,6 +262,7 @@ void DeleteMacro(MenuItem* menu);
 void LightBar(MenuItem* menu);
 void Sleep(MenuItem* menu);
 void ReadBattery(MenuItem* menu);
+void ShowBmp(MenuItem* menu);
 
 // SD details
 #define SDcsPin    33  // GPIO33
@@ -740,19 +741,19 @@ MenuItem StripMenu[] = {
     {eTerminate}
 };
 MenuItem AssociatedFileMenu[] = {
-    {eExit,false,"IPC Files Menu"},
-    {eTextCurrentFile,false,"Save  %s.IPC",SaveAssociatedFile},
-    {eTextCurrentFile,false,"Load  %s.IPC",LoadAssociatedFile},
-    {eTextCurrentFile,false,"Erase %s.IPC",EraseAssociatedFile},
-    {eExit,false,"IPC Files Menu"},
+    {eExit,false,"MIW Files Menu"},
+    {eTextCurrentFile,false,"Save  %s.MIW",SaveAssociatedFile},
+    {eTextCurrentFile,false,"Load  %s.MIW",LoadAssociatedFile},
+    {eTextCurrentFile,false,"Erase %s.MIW",EraseAssociatedFile},
+    {eExit,false,"MIW Files Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem StartFileMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eText,false,"Save  START.IPC",SaveStartFile},
-    {eText,false,"Load  START.IPC",LoadStartFile},
-    {eText,false,"Erase START.IPC",EraseStartFile},
+    {eText,false,"Save  START.MIW",SaveStartFile},
+    {eText,false,"Load  START.MIW",LoadStartFile},
+    {eText,false,"Erase START.MIW",EraseStartFile},
     {eMenu,false,"Associated Files",{.menu = AssociatedFileMenu}},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
@@ -825,13 +826,14 @@ MenuItem MainMenu[] = {
     {eElse},
         {eBool,false,"Switch to Built-ins",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
     {eEndif},
+    {eText,false,"Preview BMP",ShowBmp},
     {eMenu,false,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,false,"Repeat Settings",{.menu = RepeatMenu}},
     {eMenu,false,"LED Strip Settings",{.menu = StripMenu}},
     {eIfEqual,false,"",NULL,&bShowBuiltInTests,true},
         {eBuiltinOptions,false,"%s Options",{.builtin = BuiltInFiles}},
     {eElse},
-        {eMenu,false,"IPC File Operations",{.menu = StartFileMenu}},
+        {eMenu,false,"MIW File Operations",{.menu = StartFileMenu}},
     {eEndif},
     {eMenu,false,"Macros: #%d",{.menu = MacroMenu},&nCurrentMacro},
     {eMenu,false,"Saved Settings",{.menu = EepromMenu}},
@@ -883,7 +885,7 @@ std::stack<MenuInfo*> MenuStack;
 bool bMenuChanged = true;
 
 char FileToShow[40];
-// save and load variables from IPC files
+// save and load variables from MIW files
 enum SETVARTYPE {
     vtInt,
     vtBool,
