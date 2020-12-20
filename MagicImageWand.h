@@ -101,6 +101,9 @@ char signature[] = { "LIP0001" };   // set to make sure saved values are valid, 
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
+// a place to keep a copy of the display screen, also used for ShowBmp()
+static uint16_t screenBuffer[240 * 135];
+
 // settings
 RTC_DATA_ATTR int nDisplayBrightness = 100;           // this is in %
 RTC_DATA_ATTR bool bDisplayInvert = false;            // set to reverse display

@@ -1129,14 +1129,13 @@ enum CRotaryDialButton::Button ReadButton()
 // save or restore the display
 void SaveRestoreDisplay(bool save)
 {
-	static uint16_t scr[240 * 135];
 	if (save) {
-		tft.readRect(0, 0, 240, 135, scr);
+		tft.readRect(0, 0, 240, 135, screenBuffer);
 		bPauseDisplay = true;
 		tft.fillScreen(TFT_BLACK);
 	}
 	else {
-		tft.pushRect(0, 0, 240, 135, scr);
+		tft.pushRect(0, 0, 240, 135, screenBuffer);
 		bPauseDisplay = false;
 	}
 }
@@ -2295,17 +2294,19 @@ void SendFile(String Filename) {
 	SettingsSaveRestore(false, 0);
 }
 
+// some useful BMP constants
+#define MYBMP_BF_TYPE           0x4D42	// "BM"
+#define MYBMP_BI_RGB            0L
+//#define MYBMP_BI_RLE8           1L
+//#define MYBMP_BI_RLE4           2L
+//#define MYBMP_BI_BITFIELDS      3L
+
 void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	static int totalSeconds;
 	if (doingFirstHalf)
 		totalSeconds = -1;
-#define MYBMP_BF_TYPE           0x4D42
-#define MYBMP_BI_RGB            0L
-#define MYBMP_BI_RLE8           1L
-#define MYBMP_BI_RLE4           2L
-#define MYBMP_BI_BITFIELDS      3L
 
-	// clear the buffer
+	// clear the file cache buffer
 	readByte(true);
 	uint16_t bmpType = readInt();
 	uint32_t bmpSize = readLong();
@@ -2506,6 +2507,83 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 // put the current file on the display
 void ShowBmp(MenuItem* menu)
 {
+	bool bOldGamma = bGammaCorrection;
+	bGammaCorrection = false;
+	tft.fillScreen(TFT_BLACK);
+	memset(screenBuffer, 0xff, sizeof(screenBuffer));
+	String fn = currentFolder + FileNames[CurrentFileIndex];
+	dataFile = SD.open(fn);
+	// if the file is available send it to the LED's
+	if (!dataFile.available()) {
+		WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
+		return;
+	}
+	// clear the file cache buffer
+	readByte(true);
+	uint16_t bmpType = readInt();
+	uint32_t bmpSize = readLong();
+	uint16_t bmpReserved1 = readInt();
+	uint16_t bmpReserved2 = readInt();
+	uint32_t bmpOffBits = readLong();
+
+	/* Check file header */
+	if (bmpType != MYBMP_BF_TYPE) {
+		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+		return;
+	}
+
+	/* Read info header */
+	uint32_t imgSize = readLong();
+	uint32_t imgWidth = readLong();
+	uint32_t imgHeight = readLong();
+	uint16_t imgPlanes = readInt();
+	uint16_t imgBitCount = readInt();
+	uint32_t imgCompression = readLong();
+	uint32_t imgSizeImage = readLong();
+	uint32_t imgXPelsPerMeter = readLong();
+	uint32_t imgYPelsPerMeter = readLong();
+	uint32_t imgClrUsed = readLong();
+	uint32_t imgClrImportant = readLong();
+
+	/* Check info header */
+	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
+		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
+	{
+		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+		return;
+	}
+
+	int displayWidth = imgWidth;
+	if (imgWidth > STRIPLENGTH) {
+		displayWidth = STRIPLENGTH;           //only display the number of led's we have
+	}
+
+	/* compute the line length */
+	uint32_t lineLength = imgWidth * 3;
+	// fix for padding to 4 byte words
+	if ((lineLength % 4) != 0)
+		lineLength = (lineLength / 4 + 1) * 4;
+	// note that y is 0 based and x is 0 based in the following code, the original code had y 1 based
+	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
+		int bufpos = 0;
+		CRGB pixel;
+		// get to start of pixel data
+		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
+		for (int x = 0; x < displayWidth; x++) {
+			// this reads three bytes
+			pixel = getRGBwithGamma();
+			// add to the display memory
+			if (x < 135 && y < 240) {
+				screenBuffer[x * y] = tft.color24to16(pixel);
+			}
+		}
+	}
+	// got it all, go show it
+	tft.pushRect(0, 0, 240, 135, screenBuffer);
+	CRotaryDialButton::getInstance()->waitButton(true, 20000);
+	// all done
+	readByte(true);
+	bGammaCorrection = bOldGamma;
 }
 
 void DisplayLine(int line, String text, int32_t color)
@@ -2592,6 +2670,7 @@ int IRAM_ATTR readByte(bool clear) {
 	//    retbyte = dataFile.read();
 	//return retbyte;
 }
+
 
 // make sure we are the right place
 void IRAM_ATTR FileSeekBuf(uint32_t place)
