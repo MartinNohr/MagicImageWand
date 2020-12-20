@@ -2510,7 +2510,7 @@ void ShowBmp(MenuItem* menu)
 	bool bOldGamma = bGammaCorrection;
 	bGammaCorrection = false;
 	tft.fillScreen(TFT_BLACK);
-	memset(screenBuffer, 0xff, sizeof(screenBuffer));
+	memset(screenBuffer, 0, sizeof(screenBuffer));
 	String fn = currentFolder + FileNames[CurrentFileIndex];
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
@@ -2563,18 +2563,19 @@ void ShowBmp(MenuItem* menu)
 	// fix for padding to 4 byte words
 	if ((lineLength % 4) != 0)
 		lineLength = (lineLength / 4 + 1) * 4;
-	// note that y is 0 based and x is 0 based in the following code, the original code had y 1 based
-	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
+	// loop through the image, y is the image width, and x is the image height
+	for (int y = 0; y < imgHeight; ++y) {
 		int bufpos = 0;
 		CRGB pixel;
-		// get to start of pixel data
+		// get to start of pixel data for this column
 		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
-		for (int x = 0; x < displayWidth; x++) {
+		for (int x = 0; x < displayWidth; ++x) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
+			//Serial.println(String(pixel.r) + " " + String(pixel.g) + " " + String(pixel.b));
 			// add to the display memory
 			if (x < 135 && y < 240) {
-				screenBuffer[x * y] = tft.color24to16(pixel);
+				screenBuffer[(134 - x) * 240 + (239 - y)] = tft.color565(pixel.b, pixel.r, pixel.g);
 			}
 		}
 	}
