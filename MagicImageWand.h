@@ -27,10 +27,8 @@
 #include "RotaryDialButton.h"
 #include <TFT_eSPI.h>
 #include <vector>
+#include <stack>
 //#include <fonts/GFXFF/FreeMono18pt7b.h>
-
-//#include <stack>
-//std::stack<int> menuStack;
 
 #if USE_STANDARD_SD
 SPIClass spiSDCard;
@@ -868,9 +866,8 @@ BuiltInItem BuiltInFiles[] = {
     {"Wedge",TestWedge,WedgeMenu},
 };
 
-#include <StackArray.h>
 // a stack to hold the file indexes as we navigate folders
-StackArray<int> FileIndexStack;
+std::stack<int> FileIndexStack;
 
 // a stack for menus so we can find our way back
 struct MENUINFO {
@@ -881,7 +878,7 @@ struct MENUINFO {
 };
 typedef MENUINFO MenuInfo;
 MenuInfo* menuPtr;
-StackArray<MenuInfo*> MenuStack;
+std::stack<MenuInfo*> MenuStack;
 
 bool bMenuChanged = true;
 

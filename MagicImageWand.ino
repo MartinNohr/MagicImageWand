@@ -306,9 +306,9 @@ void setup()
 
 	menuPtr = new MenuInfo;
 	MenuStack.push(menuPtr);
-	MenuStack.peek()->menu = MainMenu;
-	MenuStack.peek()->index = 0;
-	MenuStack.peek()->offset = 0;
+	MenuStack.top()->menu = MainMenu;
+	MenuStack.top()->index = 0;
+	MenuStack.top()->offset = 0;
 	//const int ledPin = 16;  // 16 corresponds to GPIO16
 
 	//// configure LED PWM functionalitites
@@ -548,65 +548,65 @@ bool RunMenus(int button)
 	int menuix = 0;
 	MenuInfo* oldMenu;
 	bool bExit = false;
-	for (int ix = 0; !gotmatch && MenuStack.peek()->menu[ix].op != eTerminate; ++ix) {
+	for (int ix = 0; !gotmatch && MenuStack.top()->menu[ix].op != eTerminate; ++ix) {
 		// see if this is one is valid
-		if (!MenuStack.peek()->menu[ix].valid) {
+		if (!MenuStack.top()->menu[ix].valid) {
 			continue;
 		}
 		//Serial.println("menu button: " + String(button));
-		if (button == BTN_SELECT && menuix == MenuStack.peek()->index) {
-			//Serial.println("got match " + String(menuix) + " " + String(MenuStack.peek()->index));
+		if (button == BTN_SELECT && menuix == MenuStack.top()->index) {
+			//Serial.println("got match " + String(menuix) + " " + String(MenuStack.top()->index));
 			gotmatch = true;
 			//Serial.println("clicked on menu");
 			// got one, service it
-			switch (MenuStack.peek()->menu[ix].op) {
+			switch (MenuStack.top()->menu[ix].op) {
 			case eText:
 			case eTextInt:
 			case eTextCurrentFile:
 			case eBool:
 				bMenuChanged = true;
-				if (MenuStack.peek()->menu[ix].function) {
-					(*MenuStack.peek()->menu[ix].function)(&MenuStack.peek()->menu[ix]);
+				if (MenuStack.top()->menu[ix].function) {
+					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
 				}
 				break;
 			case eList:
 				bMenuChanged = true;
-				if (MenuStack.peek()->menu[ix].function) {
-					(*MenuStack.peek()->menu[ix].function)(&MenuStack.peek()->menu[ix]);
+				if (MenuStack.top()->menu[ix].function) {
+					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
 				}
 				bExit = true;
 				// if there is a value, set the min value in it
-				if (MenuStack.peek()->menu[ix].value) {
-					*(int*)MenuStack.peek()->menu[ix].value = MenuStack.peek()->menu[ix].min;
+				if (MenuStack.top()->menu[ix].value) {
+					*(int*)MenuStack.top()->menu[ix].value = MenuStack.top()->menu[ix].min;
 				}
 				break;
 			case eMenu:
-				if (MenuStack.peek()->menu) {
-					oldMenu = MenuStack.peek();
+				if (MenuStack.top()->menu) {
+					oldMenu = MenuStack.top();
 					MenuStack.push(new MenuInfo);
-					MenuStack.peek()->menu = oldMenu->menu[ix].menu;
+					MenuStack.top()->menu = oldMenu->menu[ix].menu;
 					bMenuChanged = true;
-					MenuStack.peek()->index = 0;
-					MenuStack.peek()->offset = 0;
+					MenuStack.top()->index = 0;
+					MenuStack.top()->offset = 0;
 					//Serial.println("change menu");
 					// check if the new menu is an eList and if it has a value, if it does, set the index to it
-					if (MenuStack.peek()->menu->op == eList && MenuStack.peek()->menu->value) {
-						int ix = *(int*)MenuStack.peek()->menu->value;
-						MenuStack.peek()->index = ix;
+					if (MenuStack.top()->menu->op == eList && MenuStack.top()->menu->value) {
+						int ix = *(int*)MenuStack.top()->menu->value;
+						MenuStack.top()->index = ix;
 						// adjust offset if necessary
 						if (ix > 4) {
-							MenuStack.peek()->offset = ix - 4;
+							MenuStack.top()->offset = ix - 4;
 						}
 					}
 				}
 				break;
 			case eBuiltinOptions: // find it in builtins
 				if (BuiltInFiles[CurrentFileIndex].menu != NULL) {
-					MenuStack.peek()->index = MenuStack.peek()->index;
+					MenuStack.top()->index = MenuStack.top()->index;
 					MenuStack.push(new MenuInfo);
-					MenuStack.peek()->menu = BuiltInFiles[CurrentFileIndex].menu;
-					MenuStack.peek()->index = 0;
-					MenuStack.peek()->offset = 0;
+					MenuStack.top()->menu = BuiltInFiles[CurrentFileIndex].menu;
+					MenuStack.top()->index = 0;
+					MenuStack.top()->offset = 0;
 				}
 				else {
 					WriteMessage("No settings available for:\n" + String(BuiltInFiles[CurrentFileIndex].text));
@@ -625,9 +625,10 @@ bool RunMenus(int button)
 		++menuix;
 	}
 	// if no match, and we are in a submenu, go back one level, or if bExit is set
-	if (bExit || (!bMenuChanged && MenuStack.count() > 1)) {
+	if (bExit || (!bMenuChanged && MenuStack.size() > 1)) {
 		bMenuChanged = true;
-		menuPtr = MenuStack.pop();
+		menuPtr = MenuStack.top();
+		MenuStack.pop();
 		delete menuPtr;
 	}
 	// see if the autoload flag changed
@@ -639,11 +640,11 @@ bool RunMenus(int button)
 
 #define MENU_LINES 8
 // display the menu
-// if MenuStack.peek()->index is > MENU_LINES, then shift the lines up by enough to display them
+// if MenuStack.top()->index is > MENU_LINES, then shift the lines up by enough to display them
 // remember that we only have room for MENU_LINES lines
 void ShowMenu(struct MenuItem* menu)
 {
-	MenuStack.peek()->menucount = 0;
+	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
 	char line[100];
@@ -757,21 +758,21 @@ void ShowMenu(struct MenuItem* menu)
 			//Serial.println("menu text4: " + String(line));
 			break;
 		}
-		if (strlen(line) && y >= MenuStack.peek()->offset) {
-			DisplayMenuLine(y - 1, y - 1 - MenuStack.peek()->offset, line);
+		if (strlen(line) && y >= MenuStack.top()->offset) {
+			DisplayMenuLine(y - 1, y - 1 - MenuStack.top()->offset, line);
 		}
 	}
-	//Serial.println("menu: " + String(offsetLines) + ":" + String(y) + " active: " + String(MenuStack.peek()->index));
-	MenuStack.peek()->menucount = y;
+	//Serial.println("menu: " + String(offsetLines) + ":" + String(y) + " active: " + String(MenuStack.top()->index));
+	MenuStack.top()->menucount = y;
 	// blank the rest of the lines
 	for (int ix = y; ix < MENU_LINES; ++ix) {
 		DisplayLine(ix, "");
 	}
 	// show line if menu has been scrolled
-	if (MenuStack.peek()->offset > 0)
+	if (MenuStack.top()->offset > 0)
 		tft.drawLine(0, 0, 5, 0, TFT_WHITE);
 	// show bottom line if last line is showing
-	if (MenuStack.peek()->offset + (MENU_LINES - 1) < MenuStack.peek()->menucount - 1)
+	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
 		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_WHITE);
 }
 
@@ -991,14 +992,14 @@ void UpdateOledInvert(MenuItem* menu, int flag)
 bool HandleMenus()
 {
 	if (bMenuChanged) {
-		ShowMenu(MenuStack.peek()->menu);
+		ShowMenu(MenuStack.top()->menu);
 		bMenuChanged = false;
 	}
 	bool didsomething = true;
 	CRotaryDialButton::Button button = ReadButton();
-	int lastOffset = MenuStack.peek()->offset;
-	int lastMenu = MenuStack.peek()->index;
-	int lastMenuCount = MenuStack.peek()->menucount;
+	int lastOffset = MenuStack.top()->offset;
+	int lastMenu = MenuStack.top()->index;
+	int lastMenuCount = MenuStack.top()->menucount;
 	bool lastRecording = bRecordingMacro;
 	switch (button) {
 	case BTN_SELECT:
@@ -1006,33 +1007,33 @@ bool HandleMenus()
 		bMenuChanged = true;
 		break;
 	case BTN_RIGHT:
-		if (bAllowMenuWrap || MenuStack.peek()->index < MenuStack.peek()->menucount - 1) {
-			++MenuStack.peek()->index;
+		if (bAllowMenuWrap || MenuStack.top()->index < MenuStack.top()->menucount - 1) {
+			++MenuStack.top()->index;
 		}
-		if (MenuStack.peek()->index >= MenuStack.peek()->menucount) {
-			MenuStack.peek()->index = 0;
+		if (MenuStack.top()->index >= MenuStack.top()->menucount) {
+			MenuStack.top()->index = 0;
 			bMenuChanged = true;
-			MenuStack.peek()->offset = 0;
+			MenuStack.top()->offset = 0;
 		}
 		// see if we need to scroll the menu
-		if (MenuStack.peek()->index - MenuStack.peek()->offset > (MENU_LINES - 1)) {
-			if (MenuStack.peek()->offset < MenuStack.peek()->menucount - MENU_LINES) {
-				++MenuStack.peek()->offset;
+		if (MenuStack.top()->index - MenuStack.top()->offset > (MENU_LINES - 1)) {
+			if (MenuStack.top()->offset < MenuStack.top()->menucount - MENU_LINES) {
+				++MenuStack.top()->offset;
 			}
 		}
 		break;
 	case BTN_LEFT:
-		if (bAllowMenuWrap || MenuStack.peek()->index > 0) {
-			--MenuStack.peek()->index;
+		if (bAllowMenuWrap || MenuStack.top()->index > 0) {
+			--MenuStack.top()->index;
 		}
-		if (MenuStack.peek()->index < 0) {
-			MenuStack.peek()->index = MenuStack.peek()->menucount - 1;
+		if (MenuStack.top()->index < 0) {
+			MenuStack.top()->index = MenuStack.top()->menucount - 1;
 			bMenuChanged = true;
-			MenuStack.peek()->offset = MenuStack.peek()->menucount - MENU_LINES;
+			MenuStack.top()->offset = MenuStack.top()->menucount - MENU_LINES;
 		}
 		// see if we need to adjust the offset
-		if (MenuStack.peek()->offset && MenuStack.peek()->index < MenuStack.peek()->offset) {
-			--MenuStack.peek()->offset;
+		if (MenuStack.top()->offset && MenuStack.top()->index < MenuStack.top()->offset) {
+			--MenuStack.top()->offset;
 		}
 		break;
 	case BTN_LONG:
@@ -1046,14 +1047,14 @@ bool HandleMenus()
 		break;
 	}
 	// check some conditions that should redraw the menu
-	if (lastMenu != MenuStack.peek()->index || lastOffset != MenuStack.peek()->offset) {
+	if (lastMenu != MenuStack.top()->index || lastOffset != MenuStack.top()->offset) {
 		bMenuChanged = true;
 		//Serial.println("menu changed");
 	}
 	// see if the recording status changed
 	if (lastRecording != bRecordingMacro) {
-		MenuStack.peek()->index = 0;
-		MenuStack.peek()->offset = 0;
+		MenuStack.top()->index = 0;
+		MenuStack.top()->offset = 0;
 		bMenuChanged = true;
 	}
 	return didsomething;
@@ -2104,7 +2105,8 @@ void ProcessFileOrTest()
 		// change folder, reload files
 		currentFolder = tmp;
 		GetFileNamesFromSD(currentFolder);
-		CurrentFileIndex = FileIndexStack.pop();
+		CurrentFileIndex = FileIndexStack.top();
+		FileIndexStack.pop();
 		DisplayCurrentFile();
 		return;
 	}
@@ -2509,9 +2511,9 @@ void DisplayLine(int line, String text, int32_t color)
 // the star is used to indicate active menu line
 void DisplayMenuLine(int line, int displine, String text)
 {
-	bool hilite = MenuStack.peek()->index == line;
+	bool hilite = MenuStack.top()->index == line;
 	String mline = (hilite ? "* " : "  ") + text;
-	//if (MenuStack.peek()->index == line)
+	//if (MenuStack.top()->index == line)
 		//tft.setFont(SansSerif_bold_10);
 	DisplayLine(displine, mline, hilite ? TFT_WHITE : TFT_BLUE);
 	//tft.setFont(ArialMT_Plain_10);
