@@ -2300,8 +2300,6 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	if (doingFirstHalf)
 		totalSeconds = -1;
 #define MYBMP_BF_TYPE           0x4D42
-#define MYBMP_BF_OFF_BITS       54
-#define MYBMP_BI_SIZE           40
 #define MYBMP_BI_RGB            0L
 #define MYBMP_BI_RLE8           1L
 #define MYBMP_BI_RLE4           2L
@@ -2314,11 +2312,10 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	uint16_t bmpReserved1 = readInt();
 	uint16_t bmpReserved2 = readInt();
 	uint32_t bmpOffBits = readLong();
-	bmpOffBits = 54;
+	Serial.println("\nBMPtype: " + String(bmpType) + " offset: " + String(bmpOffBits));
 
 	/* Check file header */
-	if (bmpType != MYBMP_BF_TYPE || bmpOffBits != MYBMP_BF_OFF_BITS) {
-		Serial.println("BMPtype: " + String(bmpType) + " Bits: " + String(bmpOffBits));
+	if (bmpType != MYBMP_BF_TYPE) {
 		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
@@ -2336,11 +2333,16 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	uint32_t imgClrUsed = readLong();
 	uint32_t imgClrImportant = readLong();
 
+	Serial.println("imgSize: " + String(imgSize));
+	Serial.println("imgWidth: " + String(imgWidth));
+	Serial.println("imgHeight: " + String(imgHeight));
+	Serial.println("imgPlanes: " + String(imgPlanes));
+	Serial.println("imgBitCount: " + String(imgBitCount));
+	Serial.println("imgCompression: " + String(imgCompression));
+	Serial.println("imgSizeImage: " + String(imgSizeImage));
 	/* Check info header */
-	if (imgSize != MYBMP_BI_SIZE || imgWidth <= 0 ||
-		imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB ||
-		imgSizeImage == 0)
+	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
+		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
 	{
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
@@ -2402,15 +2404,15 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 			ShowProgressBar(percent);
 		}
 		int bufpos = 0;
-		//uint32_t offset = (MYBMP_BF_OFF_BITS + (y * lineLength));
+		//uint32_t offset = (bmpOffBits + (y * lineLength));
 		//dataFile.seekSet(offset);
 		CRGB pixel;
 		// get to start of pixel data, moved this out of the loop below to speed things up
 		//Serial.println("y=" + String(y));
-		FileSeekBuf((uint32_t)MYBMP_BF_OFF_BITS + (y * lineLength));
+		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
 		for (int x = 0; x < displayWidth; x++) {
-			//FileSeekBuf((uint32_t)MYBMP_BF_OFF_BITS + ((y * lineLength) + (x * 3)));
-			//dataFile.seekSet((uint32_t)MYBMP_BF_OFF_BITS + ((y * lineLength) + (x * 3)));
+			//FileSeekBuf((uint32_t)bmpOffBits + ((y * lineLength) + (x * 3)));
+			//dataFile.seekSet((uint32_t)bmpOffBits + ((y * lineLength) + (x * 3)));
 			// this reads three bytes
 			pixel = getRGBwithGamma();
 			// see if we want this one
