@@ -2508,7 +2508,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 void ShowBmp(MenuItem* menu)
 {
 	bool bOldGamma = bGammaCorrection;
-	bGammaCorrection = false;
+	bGammaCorrection = true;
 	tft.fillScreen(TFT_BLACK);
 	memset(screenBuffer, 0, sizeof(screenBuffer));
 	String fn = currentFolder + FileNames[CurrentFileIndex];
@@ -2574,8 +2574,10 @@ void ShowBmp(MenuItem* menu)
 			pixel = getRGBwithGamma();
 			//Serial.println(String(pixel.r) + " " + String(pixel.g) + " " + String(pixel.b));
 			// add to the display memory
-			if (x < 135 && y < 240) {
-				screenBuffer[(134 - x) * 240 + (239 - y)] = tft.color565(pixel.b, pixel.r, pixel.g);
+			int row = x - 5;
+			int col = y - imgHeight + 240;
+			if (row > 0 && row < 135 && col > 0 && col < 240) {
+				screenBuffer[(134 - row) * 240 + (239 - col)] = tft.color565(pixel.b, pixel.r, pixel.g);
 			}
 		}
 	}
