@@ -281,8 +281,8 @@ void setup()
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
 		tft.drawString("Version 0.01", 30, 50);
-		//tft.setTextSize(2);
-		tft.drawString(__DATE__, 35, 80);
+		tft.setTextSize(1);
+		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
 	}
 	tft.setTextFont(2);
@@ -2508,7 +2508,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 void ShowBmp(MenuItem* menu)
 {
 	bool bOldGamma = bGammaCorrection;
-	bGammaCorrection = true;
+	bGammaCorrection = false;
 	tft.fillScreen(TFT_BLACK);
 	memset(screenBuffer, 0, sizeof(screenBuffer));
 	String fn = currentFolder + FileNames[CurrentFileIndex];
@@ -2563,27 +2563,51 @@ void ShowBmp(MenuItem* menu)
 	// fix for padding to 4 byte words
 	if ((lineLength % 4) != 0)
 		lineLength = (lineLength / 4 + 1) * 4;
-	// loop through the image, y is the image width, and x is the image height
-	for (int y = 0; y < imgHeight; ++y) {
-		int bufpos = 0;
-		CRGB pixel;
-		// get to start of pixel data for this column
-		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
-		for (int x = 0; x < displayWidth; ++x) {
-			// this reads three bytes
-			pixel = getRGBwithGamma();
-			//Serial.println(String(pixel.r) + " " + String(pixel.g) + " " + String(pixel.b));
-			// add to the display memory
-			int row = x - 5;
-			int col = y - imgHeight + 240;
-			if (row > 0 && row < 135 && col > 0 && col < 240) {
-				screenBuffer[(134 - row) * 240 + (239 - col)] = tft.color565(pixel.b, pixel.r, pixel.g);
+	// offset for showing the image
+	int imgOffset = imgHeight;
+	bool done = false;
+	while (!done) {
+		// loop through the image, y is the image width, and x is the image height
+		for (int y = 0; y < imgHeight; ++y) {
+			int bufpos = 0;
+			CRGB pixel;
+			// get to start of pixel data for this column
+			FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
+			for (int x = 0; x < displayWidth; ++x) {
+				// this reads three bytes
+				pixel = getRGBwithGamma();
+				//Serial.println(String(pixel.r) + " " + String(pixel.g) + " " + String(pixel.b));
+				// add to the display memory
+				int row = x - 5;
+				int col = y - imgOffset + 240;
+				if (row > 0 && row < 135 && col > 0 && col < 240) {
+					screenBuffer[(134 - row) * 240 + (239 - col)] = tft.color565(pixel.b, pixel.r, pixel.g);
+				}
 			}
 		}
+		// got it all, go show it
+		tft.pushRect(0, 0, 240, 135, screenBuffer);
+		CRotaryDialButton::getInstance()->clear();
+		switch (CRotaryDialButton::getInstance()->waitButton(true, 20000)) {
+		case CRotaryDialButton::BTN_LEFT:
+			imgOffset -= 240;
+			break;
+		case CRotaryDialButton::BTN_RIGHT:
+			imgOffset += 240;
+			break;
+		case CRotaryDialButton::BTN_LONGPRESS:
+			done = true;
+			CRotaryDialButton::getInstance()->pushButton(CRotaryDialButton::BTN_LONGPRESS);
+			break;
+		case CRotaryDialButton::BTN_CLICK:
+			done = true;
+			break;
+		}
+		tft.fillScreen(TFT_BLACK);
+		// check imgOffset value
+		imgOffset = max(-240, imgOffset);
+		imgOffset = min((int32_t)imgHeight, imgOffset);
 	}
-	// got it all, go show it
-	tft.pushRect(0, 0, 240, 135, screenBuffer);
-	CRotaryDialButton::getInstance()->waitButton(true, 20000);
 	// all done
 	readByte(true);
 	bGammaCorrection = bOldGamma;
