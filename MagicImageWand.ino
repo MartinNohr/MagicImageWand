@@ -2580,8 +2580,12 @@ void ShowBmp(MenuItem* menu)
 				// add to the display memory
 				int row = x - 5;
 				int col = y - imgOffset + 240;
-				if (row > 0 && row < 135 && col > 0 && col < 240) {
-					screenBuffer[(134 - row) * 240 + (239 - col)] = tft.color565(pixel.b, pixel.r, pixel.g);
+				if (row >= 0 && row < 135 && col >= 0 && col < 240) {
+					uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
+					uint16_t sbcolor;
+					// the memory image colors are byte swapped
+					swab(&color, &sbcolor, 2);
+					screenBuffer[(134 - row) * 240 + (239 - col)] = sbcolor;
 				}
 			}
 		}
@@ -2591,9 +2595,11 @@ void ShowBmp(MenuItem* menu)
 		switch (CRotaryDialButton::getInstance()->waitButton(true, 20000)) {
 		case CRotaryDialButton::BTN_LEFT:
 			imgOffset -= 240;
+			imgOffset = max(240, imgOffset);
 			break;
 		case CRotaryDialButton::BTN_RIGHT:
 			imgOffset += 240;
+			imgOffset = min((int32_t)imgHeight, imgOffset);
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
@@ -2604,9 +2610,6 @@ void ShowBmp(MenuItem* menu)
 			break;
 		}
 		tft.fillScreen(TFT_BLACK);
-		// check imgOffset value
-		imgOffset = max(-240, imgOffset);
-		imgOffset = min((int32_t)imgHeight, imgOffset);
 	}
 	// all done
 	readByte(true);
