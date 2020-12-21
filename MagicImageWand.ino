@@ -3138,7 +3138,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 #if USE_STANDARD_SD
 		File file = SD.open(filepath.c_str(), bRecordingMacro ? FILE_APPEND : FILE_WRITE);
 #else
-		FsFile file = SD.open(filepath.c_str(), bRecordingMacro ? O_APPEND : (O_WRITE | O_TRUNC));
+		FsFile file = SD.open(filepath.c_str(), bRecordingMacro ? (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC));
 #endif
 		if (file) {
 			// loop through the var list
