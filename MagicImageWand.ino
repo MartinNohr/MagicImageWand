@@ -2566,7 +2566,9 @@ void ShowBmp(MenuItem* menu)
 	// offset for showing the image
 	int imgOffset = imgHeight;
 	bool done = false;
-	while (!done) {
+	bool redraw = true;
+	bool allowScroll = imgHeight > 240;
+	while (!done && redraw) {
 		// loop through the image, y is the image width, and x is the image height
 		for (int y = 0; y < imgHeight; ++y) {
 			int bufpos = 0;
@@ -2589,17 +2591,22 @@ void ShowBmp(MenuItem* menu)
 				}
 			}
 		}
+		int oldImgOffset = imgOffset;
 		// got it all, go show it
 		tft.pushRect(0, 0, 240, 135, screenBuffer);
 		CRotaryDialButton::getInstance()->clear();
 		switch (CRotaryDialButton::getInstance()->waitButton(true, 20000)) {
 		case CRotaryDialButton::BTN_LEFT:
-			imgOffset -= 240;
-			imgOffset = max(240, imgOffset);
+			if (allowScroll) {
+				imgOffset -= 240;
+				imgOffset = max(240, imgOffset);
+			}
 			break;
 		case CRotaryDialButton::BTN_RIGHT:
-			imgOffset += 240;
-			imgOffset = min((int32_t)imgHeight, imgOffset);
+			if (allowScroll) {
+				imgOffset += 240;
+				imgOffset = min((int32_t)imgHeight, imgOffset);
+			}
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
@@ -2609,7 +2616,10 @@ void ShowBmp(MenuItem* menu)
 			done = true;
 			break;
 		}
-		tft.fillScreen(TFT_BLACK);
+		if (oldImgOffset != imgOffset) {
+			//tft.fillScreen(TFT_BLACK);
+			redraw = true;
+		}
 	}
 	// all done
 	readByte(true);
