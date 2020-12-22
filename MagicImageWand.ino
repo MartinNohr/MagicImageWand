@@ -2254,14 +2254,11 @@ void ProcessFileOrTest()
 }
 
 void SendFile(String Filename) {
-	char temp[14];
-	Filename.toCharArray(temp, 14);
 	// see if there is an associated config file
-	String cfFile = temp;
-	cfFile = MakeMIWFilename(cfFile, true);
+	String cfFile = MakeMIWFilename(Filename, true);
 	SettingsSaveRestore(true, 0);
 	ProcessConfigFile(cfFile);
-	String fn = currentFolder + temp;
+	String fn = currentFolder + Filename;
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
 	if (dataFile.available()) {
@@ -2280,14 +2277,7 @@ void SendFile(String Filename) {
 		dataFile.close();
 	}
 	else {
-		//lcd.clear();
-		//lcd.print("* Error reading ");
-		//lcd.setCursor(0, 1);
-		//lcd.print(CurrentFilename);
-		//bBackLightOn = true;
-		//delay(1000);
-		//lcd.clear();
-		//setupSDcard();
+		WriteMessage("open fail: " + fn, true, 5000);
 		return;
 	}
 	ShowProgressBar(100);

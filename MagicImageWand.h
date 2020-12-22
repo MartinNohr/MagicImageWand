@@ -120,7 +120,7 @@ int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void SetPixel(int ix, CRGB pixel);
 //#define LEDIX(ix) (((ix)<NUM_LEDS)?(NUM_LEDS-1-(ix)):(ix))
-RTC_DATA_ATTR int nStripBrightness = 25;                // Variable and default for the Brightness of the strip, from 1 to 255
+RTC_DATA_ATTR int nStripBrightness = 10;                // Variable and default for the Brightness of the strip, from 1 to 255
 RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
 //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
 RTC_DATA_ATTR int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
