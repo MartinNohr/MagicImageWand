@@ -250,8 +250,7 @@ void ShowWhiteBalance(MenuItem* menu);
 void GetIntegerValue(MenuItem*);
 void ToggleBool(MenuItem*);
 void ToggleFilesBuiltin(MenuItem* menu);
-void UpdateOledBrightness(MenuItem* menu, int flag);
-void UpdateOledInvert(MenuItem* manu, int flag);
+void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -682,7 +681,7 @@ MenuItem RandomBarsMenu[] = {
 };
 MenuItem SystemMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Display Brightness: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateOledBrightness},
+    {eTextInt,false,"Display Brightness: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eBool,false,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,false,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},

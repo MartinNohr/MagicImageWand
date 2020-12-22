@@ -239,11 +239,24 @@ void EnableBLE()
 	BLEDevice::startAdvertising();
 }
 
+#define TFT_ENABLE 4
+// use these to control the LCD brightness
+const int freq = 5000;
+const int ledChannel = 0;
+const int resolution = 8;
+
 void setup()
 {
 	Serial.begin(115200);
 	delay(10);
 	tft.init();
+	// configure LCD PWM functionalitites
+	pinMode(TFT_ENABLE, OUTPUT);
+	digitalWrite(TFT_ENABLE, 1);
+	ledcSetup(ledChannel, freq, resolution);
+	// attach the channel to the GPIO to be controlled
+	ledcAttachPin(TFT_ENABLE, ledChannel);
+	SetDisplayBrightness(nDisplayBrightness);
 	tft.fillScreen(TFT_BLACK);
 	tft.setRotation(3);
 	tft.setFreeFont();
@@ -435,19 +448,7 @@ void loop()
 	static bool didsomething = false;
 	bool lastStrip = bSecondStrip;
 	bool bLastEnableBLE = bEnableBLE;
-	//int lastDisplayBrightness = displayBrightness;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
-	// special handling for things that might have changed
-	//if (lastDisplayBrightness != displayBrightness) {
-	//	tft.setBrightness(displayBrightness);
-	//}
-	//if (lastStrip != bSecondStrip) {
-		//******** this crashes
-		//if (bSecondStrip)
-		//	FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, NUM_LEDS, NUM_LEDS);
-		//else
-		//	FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, NUM_LEDS, 0);
-	//}
 	// wait for no keys
 	if (didsomething) {
 		//Serial.println("calling wait for none");
@@ -977,14 +978,15 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 	}
 }
 
-void UpdateOledBrightness(MenuItem* menu, int flag)
+void UpdateDisplayBrightness(MenuItem* menu, int flag)
 {
-	//tft.setBrightness(map(*(int*)menu->value, 0, 100, 0, 255));
+	// control LCD brightness
+	SetDisplayBrightness(*(int*)menu->value);
 }
 
-void UpdateOledInvert(MenuItem* menu, int flag)
+void SetDisplayBrightness(int val)
 {
-	tft.invertDisplay(*(bool*)menu->value);
+	ledcWrite(ledChannel, map(val, 0, 100, 0, 255));
 }
 
 // handle the menus
@@ -3224,7 +3226,7 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 			CurrentFileIndex = 0;
 		}
 		// set the brightness values since they might have changed
-		//tft.setBrightness(nDisplayBrightness);
+		SetDisplayBrightness(nDisplayBrightness);
 		// don't need to do this here since it is always set right before running
 		//FastLED.setBrightness(nStripBrightness);
 	}
@@ -3581,5 +3583,9 @@ void rainbow_fill()
 void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 {
 	tft.drawRoundRect(x, y, dx, dy, 2, TFT_WHITE);
-	tft.fillRect(x + 1, y + 1, (dx - 2) * percent / 100, dy - 2, TFT_GREEN);
+	int fill = (dx - 2) * percent / 100;
+	// fill the filled part
+	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_GREEN);
+	// blank the empty part
+	tft.fillRect(x + 1 + fill, y + 1, dx - 2 - fill, dy - 2, TFT_BLACK);
 }
