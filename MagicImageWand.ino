@@ -280,7 +280,7 @@ void setup()
 		tft.drawString("Magic Image Wand", 10, 5);
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version 0.01", 30, 50);
+		tft.drawString("Version 0.02", 30, 50);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
@@ -980,7 +980,6 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 void UpdateOledBrightness(MenuItem* menu, int flag)
 {
 	//tft.setBrightness(map(*(int*)menu->value, 0, 100, 0, 255));
-	//bDisplayInvert ? tft.invertDisplay() : tft.normalDisplay();
 }
 
 void UpdateOledInvert(MenuItem* menu, int flag)
@@ -3226,7 +3225,6 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 		}
 		// set the brightness values since they might have changed
 		//tft.setBrightness(nDisplayBrightness);
-		tft.invertDisplay(bDisplayInvert);
 		// don't need to do this here since it is always set right before running
 		//FastLED.setBrightness(nStripBrightness);
 	}

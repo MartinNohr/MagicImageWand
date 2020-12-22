@@ -97,7 +97,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "LIP0001" };   // set to make sure saved values are valid, change when savevalues is changed
+char signature[] = { "LIP0002" };   // set to make sure saved values are valid, change when savevalues is changed
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
@@ -106,7 +106,6 @@ static uint16_t screenBuffer[240 * 135];
 
 // settings
 RTC_DATA_ATTR int nDisplayBrightness = 100;           // this is in %
-RTC_DATA_ATTR bool bDisplayInvert = false;            // set to reverse display
 bool bSdCardValid = false;              // set to true when card is found
 // strip leds
 #define DATA_PIN1 2
@@ -395,7 +394,6 @@ const saveValues saveValueList[] = {
     {&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
     {&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
     {&nDisplayBrightness,sizeof(nDisplayBrightness)},
-    {&bDisplayInvert,sizeof(bDisplayInvert)},
     // the built-in values
     // display all color
     {&bDisplayAllRGB,sizeof(bDisplayAllRGB)},
@@ -685,7 +683,6 @@ MenuItem RandomBarsMenu[] = {
 MenuItem SystemMenu[] = {
     {eExit,false,"Previous Menu"},
     {eTextInt,false,"Display Brightness: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateOledBrightness},
-    {eBool,false,"Display: %s",ToggleBool,&bDisplayInvert,0,0,0,"Reverse","Normal",UpdateOledInvert},
     {eBool,false,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,false,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
@@ -920,7 +917,6 @@ struct SETTINGVAR SettingsVarList[] = {
     {"CHAIN DELAY",&nChainDelay,vtInt},
     {"WHITE BALANCE",&whiteBalance,vtRGB},
     {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
-    {"DISPLAY INVERT",&bDisplayInvert,vtBool},
     {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},
