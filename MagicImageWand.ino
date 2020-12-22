@@ -322,13 +322,7 @@ void setup()
 	MenuStack.top()->menu = MainMenu;
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
-	//const int ledPin = 16;  // 16 corresponds to GPIO16
 
-	//// configure LED PWM functionalitites
-	//ledcSetup(ledChannel, freq, resolution);
-	//// attach the channel to the GPIO to be controlled
-	//ledcAttachPin(WandPin, ledChannel);
-	//ledcWrite(ledChannel, 200);
 	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, NUM_LEDS);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
 	//if (bSecondStrip)
@@ -341,6 +335,9 @@ void setup()
 		//bool oldSecond = bSecondStrip;
 		//bSecondStrip = true;
 		RainbowPulse();
+		//fill_noise8(leds, 144, 2, 0, 10, 2, 0, 0, 10);
+		//FastSPI_LED.show();
+		//delay(5000);
 		//bSecondStrip = oldSecond;
 		//// Turn the LED on, then pause
 		//SetPixel(0, CRGB::Red);
@@ -1694,9 +1691,18 @@ void DisplayAllColor()
 			increment = constrain(increment, 1, 100);
 			if (bDisplayAllRGB) {
 				if (bAllowRollover) {
-					nDisplayAllRed %= 256;
-					nDisplayAllGreen %= 256;
-					nDisplayAllBlue %= 256;
+					if (nDisplayAllRed < 0)
+						nDisplayAllRed = 255;
+					if (nDisplayAllRed > 255)
+						nDisplayAllRed = 0;
+					if (nDisplayAllGreen < 0)
+						nDisplayAllGreen = 255;
+					if (nDisplayAllGreen > 255)
+						nDisplayAllGreen = 0;
+					if (nDisplayAllBlue < 0)
+						nDisplayAllBlue = 255;
+					if (nDisplayAllBlue > 255)
+						nDisplayAllBlue = 0;
 				}
 				else {
 					nDisplayAllRed = constrain(nDisplayAllRed, 0, 255);
@@ -1706,10 +1712,15 @@ void DisplayAllColor()
 				FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
 			}
 			else {
-				if (bDisplayAllRGB) {
-					nDisplayAllHue %= 256;
-					nDisplayAllSaturation %= 256;
-					//nDisplayAllBrightness %= 256;
+				if (bAllowRollover) {
+					if (nDisplayAllHue < 0)
+						nDisplayAllHue = 255;
+					if (nDisplayAllHue > 255)
+						nDisplayAllHue = 0;
+					if (nDisplayAllSaturation < 0)
+						nDisplayAllSaturation = 255;
+					if (nDisplayAllSaturation > 255)
+						nDisplayAllSaturation = 0;
 				}
 				else {
 					nDisplayAllHue = constrain(nDisplayAllHue, 0, 255);

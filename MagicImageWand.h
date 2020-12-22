@@ -658,7 +658,7 @@ MenuItem MeteorMenu[] = {
 };
 MenuItem DisplayAllColorMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eBool,false,"Allow rollover",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
+    {eBool,false,"Allow rollover: %s",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
     {eBool,false,"Color Mode: %s",ToggleBool,&bDisplayAllRGB,0,0,0,"RGB","HSL"},
     {eIfEqual,false,"",NULL,&bDisplayAllRGB,true},
         {eTextInt,false,"Red: %d",GetIntegerValue,&nDisplayAllRed,0,255},
