@@ -97,7 +97,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "LIP0002" };   // set to make sure saved values are valid, change when savevalues is changed
+char signature[] = { "LIP1000" };   // set to make sure saved values are valid, change when savevalues is changed
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
@@ -294,6 +294,7 @@ RTC_DATA_ATTR int nMeteorRed = 255;
 RTC_DATA_ATTR int nMeteorGreen = 255;
 RTC_DATA_ATTR int nMeteorBlue = 255;
 // display all color
+RTC_DATA_ATTR bool bAllowRollover = true;       // lets 255->0 and 0->255
 RTC_DATA_ATTR bool bDisplayAllRGB = false;    // true for RGB, else HSV
 RTC_DATA_ATTR int nDisplayAllRed = 255;
 RTC_DATA_ATTR int nDisplayAllGreen = 255;
@@ -395,6 +396,7 @@ const saveValues saveValueList[] = {
     {&nDisplayBrightness,sizeof(nDisplayBrightness)},
     // the built-in values
     // display all color
+    {&bAllowRollover,sizeof(bAllowRollover)},
     {&bDisplayAllRGB,sizeof(bDisplayAllRGB)},
     {&nDisplayAllRed,sizeof(nDisplayAllRed)},
     {&nDisplayAllGreen,sizeof(nDisplayAllGreen)},
@@ -656,6 +658,7 @@ MenuItem MeteorMenu[] = {
 };
 MenuItem DisplayAllColorMenu[] = {
     {eExit,false,"Previous Menu"},
+    {eBool,false,"Allow rollover",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
     {eBool,false,"Color Mode: %s",ToggleBool,&bDisplayAllRGB,0,0,0,"RGB","HSL"},
     {eIfEqual,false,"",NULL,&bDisplayAllRGB,true},
         {eTextInt,false,"Red: %d",GetIntegerValue,&nDisplayAllRed,0,255},

@@ -293,7 +293,7 @@ void setup()
 		tft.drawString("Magic Image Wand", 10, 5);
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version 0.02", 30, 50);
+		tft.drawString("Version 1.00", 30, 50);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
@@ -1692,18 +1692,29 @@ void DisplayAllColor()
 			return;
 		if (bChange) {
 			increment = constrain(increment, 1, 100);
-			// let these values roll over as bytes
 			if (bDisplayAllRGB) {
-				nDisplayAllRed %= 256;
-				nDisplayAllGreen %= 256;
-				nDisplayAllBlue %= 256;
+				if (bAllowRollover) {
+					nDisplayAllRed %= 256;
+					nDisplayAllGreen %= 256;
+					nDisplayAllBlue %= 256;
+				}
+				else {
+					nDisplayAllRed = constrain(nDisplayAllRed, 0, 255);
+					nDisplayAllGreen = constrain(nDisplayAllGreen, 0, 255);
+					nDisplayAllBlue = constrain(nDisplayAllBlue, 0, 255);
+				}
 				FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
 			}
 			else {
-				nDisplayAllHue %= 256;
-				nDisplayAllSaturation %= 256;
-				//nDisplayAllBrightness %= 256;
-				// it might be jarring to have the brightness roll over, so let's pin it
+				if (bDisplayAllRGB) {
+					nDisplayAllHue %= 256;
+					nDisplayAllSaturation %= 256;
+					//nDisplayAllBrightness %= 256;
+				}
+				else {
+					nDisplayAllHue = constrain(nDisplayAllHue, 0, 255);
+					nDisplayAllSaturation = constrain(nDisplayAllSaturation, 0, 255);
+				}
 				nDisplayAllBrightness = constrain(nDisplayAllBrightness, 0, 255);
 				FastLED.showColor(CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
 			}
