@@ -1383,15 +1383,15 @@ void DisplayAllColor()
 			if (bDisplayAllRGB) {
 				if (bAllowRollover) {
 					if (nDisplayAllRed < 0)
-						nDisplayAllRed = 255;
+						nDisplayAllRed = RollDownRollOver(increment);
 					if (nDisplayAllRed > 255)
 						nDisplayAllRed = 0;
 					if (nDisplayAllGreen < 0)
-						nDisplayAllGreen = 255;
+						nDisplayAllGreen = RollDownRollOver(increment);
 					if (nDisplayAllGreen > 255)
 						nDisplayAllGreen = 0;
 					if (nDisplayAllBlue < 0)
-						nDisplayAllBlue = 255;
+						nDisplayAllBlue = RollDownRollOver(increment);
 					if (nDisplayAllBlue > 255)
 						nDisplayAllBlue = 0;
 				}
@@ -1405,11 +1405,11 @@ void DisplayAllColor()
 			else {
 				if (bAllowRollover) {
 					if (nDisplayAllHue < 0)
-						nDisplayAllHue = 255;
+						nDisplayAllHue = RollDownRollOver(increment);
 					if (nDisplayAllHue > 255)
 						nDisplayAllHue = 0;
 					if (nDisplayAllSaturation < 0)
-						nDisplayAllSaturation = 255;
+						nDisplayAllSaturation = RollDownRollOver(increment);
 					if (nDisplayAllSaturation > 255)
 						nDisplayAllSaturation = 0;
 				}
@@ -1423,6 +1423,17 @@ void DisplayAllColor()
 		}
 		delay(10);
 	}
+}
+
+// handle rollover when -ve
+// inc 1 gives 255, inc 10 gives 250, inc 100 gives 200
+int RollDownRollOver(int inc)
+{
+	if (inc == 1)
+		return 255;
+	int retval = 256;
+	retval -= retval % inc;
+	return retval;
 }
 
 void TestTwinkle() {
