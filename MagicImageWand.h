@@ -10,10 +10,12 @@
 #define FRAMEBUTTON 22
 
 #include <ArduinoJson.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
+
+//#include <BLEDevice.h>
+//#include <BLEUtils.h>
+//#include <BLEServer.h>
+//#include <BLE2902.h>
+
 #include <time.h>
 #if USE_STANDARD_SD
     #include "SD.h"
@@ -22,6 +24,14 @@
     #include <sdfat.h>
 #endif
 #include "SPI.h"
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiAP.h>
+const char *ssid = "MIW-23896"; //maybe use parts of the mac address to make this unique in case you shoot with friends and you gifted them a MIW
+const char *password = "12345678"; // not critical stuff, therefore simple password is enough
+WiFiServer server(80);
+
 #include <FastLED.h>
 #include <EEPROM.h>
 #include "RotaryDialButton.h"
@@ -46,26 +56,10 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 #define BTN_RIGHT   CRotaryDialButton::BTN_RIGHT
 #define BTN_LONG    CRotaryDialButton::BTN_LONGPRESS
 
-// bluetooth stuff
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
-#define SERVICE_UUID					    "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID_FILEINFO	    "4faf0000-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID_WANDSETTINGS	"4faf0100-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID_RUN			    "4faf0200-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID_FILELIST	    "4faf0300-1fb5-459e-8fcc-c5c9c331914b"
 
-BLECharacteristic* pCharacteristicFileInfo = NULL;
-BLECharacteristic* pCharacteristicWandSettings = NULL;
-BLECharacteristic* pCharacteristicRun = NULL;
-BLECharacteristic* pCharacteristicFileList = NULL;
-std::string sBLECommand = ""; // remote commands come in here
-volatile bool BLEDeviceConnected = false;
-volatile bool oldBLEDeviceConnected = false;
-bool bEnableBLE = false;
+
 
 // functions
-void UpdateBLE(bool bProgressOnly);
 void DisplayCurrentFile(bool path = true);
 void DisplayLine(int line, String text, int32_t color = TFT_WHITE);
 void DisplayMenuLine(int line, int displine, String text);
@@ -388,7 +382,6 @@ const saveValues saveValueList[] = {
     {&bShowFolder,sizeof(bShowFolder)},
     {&bAllowMenuWrap,sizeof(bAllowMenuWrap)},
     {&bShowNextFiles,sizeof(bShowNextFiles)},
-    {&bEnableBLE,sizeof(bEnableBLE)},
     {&CRotaryDialButton::m_bReverseDial,sizeof(CRotaryDialButton::m_bReverseDial)},
     {&CRotaryDialButton::m_nDialSensitivity,sizeof(CRotaryDialButton::m_nDialSensitivity)},
     {&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
@@ -693,7 +686,6 @@ MenuItem SystemMenu[] = {
     {eTextInt,false,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,false,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
     {eTextInt,false,"Long Press counter: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200,0,NULL,NULL},
-    {eBool,false,"BlueTooth Link: %s",ToggleBool,&bEnableBLE,0,0,0,"On","Off"},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

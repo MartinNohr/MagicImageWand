@@ -3,9 +3,7 @@
  Created:	12/18/2020 6:12:01 PM
  Author:	Martin
 */
-/*
-	BLE code based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleServer.cpp
-*/
+
 #include "MagicImageWand.h"
 
 RTC_DATA_ATTR int nBootCount = 0;
@@ -25,218 +23,6 @@ void IRAM_ATTR oneshot_LED_timer_callback(void* arg)
 	//int64_t time_since_boot = esp_timer_get_time();
 	//Serial.println("in isr");
 	//ESP_LOGI(TAG, "One-shot timer called, time since boot: %lld us", time_since_boot);
-}
-
-class MyServerCallbacks : public BLEServerCallbacks {
-	void onConnect(BLEServer* pServer) {
-		BLEDeviceConnected = true;
-		//tft.clear();
-		//WriteMessage("BLE connected");
-		//tft.clear();
-		//DisplayCurrentFile();
-		//Serial.println("BLE connected");
-	};
-
-	void onDisconnect(BLEServer* pServer) {
-		BLEDeviceConnected = false;
-		//tft.clear();
-		//WriteMessage("BLE disconnected");
-		//tft.clear();
-		//DisplayCurrentFile();
-		//Serial.println("BLE disconnected");
-	}
-};
-
-class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
-	void onWrite(BLECharacteristic* pCharacteristic) {
-		BLEUUID uuid = pCharacteristic->getUUID();
-		//Serial.println("UUID:" + String(uuid.toString().c_str()));
-		std::string value = pCharacteristic->getValue();
-		//String stmp = value.c_str();
-
-		if (value.length() > 0) {
-			//Serial.println("*********");
-			//Serial.print("New value: ");
-			//for (int i = 0; i < value.length(); i++) {
-			//	Serial.print(value[i]);
-			//}
-			//Serial.println();
-			//Serial.println("*********");
-			// see if this a UUID we can change
-			if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_RUN))) {
-				sBLECommand = value;
-			}
-			else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_WANDSETTINGS))) {
-				//Serial.println(value.c_str());
-				ARDUINOJSON_NAMESPACE::StaticJsonDocument<200> doc;
-				const char* json = value.c_str();
-
-				// Deserialize the JSON document
-				DeserializationError error = deserializeJson(doc, json);
-
-				// Test if parsing succeeds.
-				if (error) {
-					//Serial.print("deserializeJson() failed: ");
-					//Serial.println(error.c_str());
-					return;
-				}
-				JsonObject object = doc.as<JsonObject>();
-				// see if brightness is there
-				JsonVariant jv = doc.getMember("bright");
-				if (!jv.isNull()) {
-					nStripBrightness = jv.as<int>();
-				}
-				// see if repeat
-				jv = doc.getMember("repeatcount");
-				if (!jv.isNull()) {
-					repeatCount = jv.as<int>();
-				}
-				// see if repeat delay
-				jv = doc.getMember("repeatdelay");
-				if (!jv.isNull()) {
-					repeatDelay = jv.as<int>();
-				}
-				// change the current file
-				jv = doc.getMember("current");
-				if (!jv.isNull()) {
-					String fn = jv.as<char*>();
-					// lets search for the file
-					int ix = LookUpFile(fn);
-					if (ix != -1) {
-						CurrentFileIndex = ix;
-						DisplayCurrentFile();
-					}
-				}
-				// change framehold
-				jv = doc.getMember("framehold");
-				if (!jv.isNull()) {
-					nFrameHold = jv.as<int>();
-				}
-				// change builtin setting
-				jv = doc.getMember("builtin");
-				if (!jv.isNull()) {
-					String bist = jv.as<char*>();
-					bist.toUpperCase();
-					bool bi = bist[0] == 'T';
-					if (bi != bShowBuiltInTests) {
-						ToggleFilesBuiltin(NULL);
-						//Serial.println("builtin:" + String(bShowBuiltInTests ? "true" : "false"));
-						CurrentFileIndex = 0;
-						tft.fillScreen(TFT_BLACK);
-						DisplayCurrentFile();
-					}
-				}
-			}
-			//else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_LEDBRIGHT))) {
-			//	nStripBrightness = stmp.toInt();
-			//	nStripBrightness = constrain(nStripBrightness, 1, 100);
-			//}
-			//else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_BUILTIN))) {
-			//	stmp.toUpperCase();
-			//	bool newval = stmp.equals("TRUE") ? true : false;
-			//	//Serial.println("newval:" + String(newval ? "true" : "false"));
-			//	if (newval != bShowBuiltInTests) {
-			//		//Serial.println("builtin:" + String(bShowBuiltInTests ? "true" : "false"));
-			//		ToggleFilesBuiltin(NULL);
-			//		//Serial.println("builtin:" + String(bShowBuiltInTests ? "true" : "false"));
-			//		tft.clear();
-			//		DisplayCurrentFile();
-			//	}
-			//}
-			//else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_2LEDSTRIPS))) {
-			//	stmp.toUpperCase();
-			//	bSecondStrip = stmp.compareTo("TRUE") == 0 ? true : false;
-			//}
-			else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_FILEINFO))) {
-				// change the current file here, maybe we search for it?
-			}
-			//else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_FRAMETIME))) {
-			//	frameHold = stmp.toInt();
-			//}
-			//else if (uuid.equals(BLEUUID(CHARACTERISTIC_UUID_STARTDELAY))) {
-			//	startDelay = stmp.toInt();
-			//}
-			UpdateBLE(false);
-		}
-	}
-};
-
-void EnableBLE()
-{
-	BLEDevice::init("MN LED Image Painter");
-	BLEServer* pServer = BLEDevice::createServer();
-	pServer->setCallbacks(new MyServerCallbacks());
-
-	BLEService* pServiceDevInfo = pServer->createService(BLEUUID((uint16_t)0x180a));
-	BLECharacteristic* pCharacteristicDevInfo = pServiceDevInfo->createCharacteristic(
-		BLEUUID((uint16_t)0x2a29),
-		BLECharacteristic::PROPERTY_READ
-	);
-	pCharacteristicDevInfo->setValue("NOHR PHOTO");
-
-	pCharacteristicDevInfo = pServiceDevInfo->createCharacteristic(
-		BLEUUID((uint16_t)0x2a24),	// model
-		BLECharacteristic::PROPERTY_READ
-	);
-	pCharacteristicDevInfo->setValue("LED Image Painter Small Display");
-
-	pCharacteristicDevInfo = pServiceDevInfo->createCharacteristic(
-		BLEUUID((uint16_t)0x2a28),	// software version
-		BLECharacteristic::PROPERTY_READ
-	);
-	pCharacteristicDevInfo->setValue("1.1");
-
-	pCharacteristicDevInfo = pServiceDevInfo->createCharacteristic(
-		BLEUUID((uint16_t)0x2a27),	// hardware version
-		BLECharacteristic::PROPERTY_READ
-	);
-	pCharacteristicDevInfo->setValue("1.0");
-
-	BLEService* pService = pServer->createService(SERVICE_UUID);
-	// filepath
-	pCharacteristicFileInfo = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_FILEINFO,
-		BLECharacteristic::PROPERTY_READ |
-		BLECharacteristic::PROPERTY_WRITE
-	);
-	// Create a BLE Descriptor
-	//pCharacteristicFilename->addDescriptor(new BLE2902());
-
-	// Wand settins
-	pCharacteristicWandSettings = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_WANDSETTINGS,
-		BLECharacteristic::PROPERTY_READ |
-		BLECharacteristic::PROPERTY_WRITE
-	);
-
-	// run command
-	pCharacteristicRun = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_RUN,
-		BLECharacteristic::PROPERTY_READ |
-		BLECharacteristic::PROPERTY_WRITE
-	);
-
-	// all the filenames
-	pCharacteristicFileList = pService->createCharacteristic(
-		CHARACTERISTIC_UUID_FILELIST,
-		BLECharacteristic::PROPERTY_READ
-	);
-
-	// add anybody that can be changed or can call us with something to do
-	MyCharacteristicCallbacks* pCallBacks = new MyCharacteristicCallbacks();
-	pCharacteristicRun->setCallbacks(pCallBacks);
-	pCharacteristicWandSettings->setCallbacks(pCallBacks);
-	pCharacteristicFileInfo->setCallbacks(pCallBacks);
-	UpdateBLE(false);
-	pService->start();
-	pServiceDevInfo->start();
-	BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
-	pAdvertising->addServiceUUID(SERVICE_UUID);
-	pAdvertising->addServiceUUID(BLEUUID((uint16_t)0x180a));
-	pAdvertising->setScanResponse(true);
-	pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-	pAdvertising->setMinPreferred(0x12);
-	BLEDevice::startAdvertising();
 }
 
 #define TFT_ENABLE 4
@@ -276,6 +62,14 @@ void setup()
 				"one-shotLED"
 	};
 	esp_timer_create(&oneshot_LED_timer_args, &oneshot_LED_timer);
+
+//WiFi
+  WiFi.softAP(ssid, password);
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+  server.begin();
+  Serial.println("Server started");
 
 	int width = tft.width();
 	int height = tft.height();
@@ -402,9 +196,6 @@ void setup()
 	delay(100);
 	tft.fillScreen(TFT_BLACK);
 
-	if (bEnableBLE) {
-		EnableBLE();
-	}
 	// wait for button release
 	while (!digitalRead(DIAL_BTN))
 		;
@@ -444,96 +235,12 @@ void loop()
 {
 	static bool didsomething = false;
 	bool lastStrip = bSecondStrip;
-	bool bLastEnableBLE = bEnableBLE;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	// wait for no keys
 	if (didsomething) {
 		//Serial.println("calling wait for none");
-		UpdateBLE(false);
 		didsomething = false;
-		// see if BLE enabled
-		if (bEnableBLE != bLastEnableBLE) {
-			if (bEnableBLE) {
-				EnableBLE();
-			}
-			else {
-				// shutdown BLE
-				BLEDeviceConnected = false;
-				// TODO: is there anything else we need to do here?
-			}
-		}
 		delay(1);
-	}
-	// disconnecting
-	if (!BLEDeviceConnected && oldBLEDeviceConnected) {
-		delay(500); // give the bluetooth stack the chance to get things ready
-		BLEDevice::startAdvertising();
-		//Serial.println("start advertising");
-		oldBLEDeviceConnected = BLEDeviceConnected;
-	}
-	// connecting
-	if (BLEDeviceConnected && !oldBLEDeviceConnected) {
-		// do stuff here on connecting
-		oldBLEDeviceConnected = BLEDeviceConnected;
-		UpdateBLE(false);
-	}
-}
-
-void UpdateBLE(bool bProgressOnly)
-{
-	// update the settings, except for progress percent which is done in ShowProgress.
-	if (BLEDeviceConnected) {
-		String js;
-		// running information and commands
-		DynamicJsonDocument runinfo(256);
-		runinfo["running"] = bIsRunning;
-		runinfo["progress"] = nProgress;
-		runinfo["repeatsleft"] = nRepeatsLeft;
-		js = "";
-		serializeJson(runinfo, js);
-		pCharacteristicRun->setValue(js.c_str());
-		if (!bProgressOnly) {
-			// file information
-			DynamicJsonDocument filesdoc(1024);
-			filesdoc["builtin"] = bShowBuiltInTests;
-			filesdoc["path"] = currentFolder.c_str();
-			filesdoc["current"] = FileNames[CurrentFileIndex].c_str();
-			js = "";
-			serializeJson(filesdoc, js);
-			pCharacteristicFileInfo->setValue(js.c_str());
-			// settings
-			DynamicJsonDocument wsdoc(1024);
-			wsdoc["secondstrip"] = bSecondStrip;
-			wsdoc["bright"] = nStripBrightness;
-			wsdoc["framehold"] = nFrameHold;
-			wsdoc["framebutton"] = nFramePulseCount;
-			wsdoc["startdelay"] = startDelay;
-			wsdoc["repeatdelay"] = repeatDelay;
-			wsdoc["repeatcount"] = repeatCount;
-			wsdoc["gamma"] = bGammaCorrection;
-			wsdoc["reverse"] = bReverseImage;
-			wsdoc["upsidedown"] = bUpsideDown;
-			wsdoc["mirror"] = bMirrorPlayImage;
-			wsdoc["chain"] = bChainFiles;
-			wsdoc["chainrepeats"] = nChainRepeats;
-			wsdoc["scaley"] = bScaleHeight;
-			js = "";
-			serializeJson(wsdoc, js);
-			pCharacteristicWandSettings->setValue(js.c_str());
-			// file list
-			DynamicJsonDocument filelist(512);
-			filelist["builtin"] = bShowBuiltInTests;
-			filelist["path"] = currentFolder.c_str();
-			filelist["count"] = FileNames.size();
-			filelist["ix"] = CurrentFileIndex;
-			JsonArray data = filelist.createNestedArray("files");
-			for (auto st : FileNames) {
-				data.add(st.c_str());
-			}
-			js = "";
-			serializeJson(filelist, js);
-			pCharacteristicFileList->setValue(js.c_str());
-		}
 	}
 }
 
@@ -1101,22 +808,6 @@ bool HandleRunMode()
 enum CRotaryDialButton::Button ReadButton()
 {
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
-	// see if we got any BLE commands
-	if (!sBLECommand.empty()) {
-		//Serial.println(sBLECommand.c_str());
-		String stmp = sBLECommand.c_str();
-		stmp.toUpperCase();
-		sBLECommand = "";
-		if (stmp == "RUN") {
-			return BTN_SELECT;
-		}
-		if (stmp == "RIGHT") {
-			return BTN_RIGHT;
-		}
-		if (stmp == "LEFT") {
-			return BTN_LEFT;
-		}
-	}
 	// read the next button, or NONE it none there
 	retValue = CRotaryDialButton::getInstance()->dequeue();
 	//if (retValue != BTN_NONE)
@@ -2794,7 +2485,6 @@ void DisplayCurrentFile(bool path)
 void ShowProgressBar(int percent)
 {
 	nProgress = percent;
-	UpdateBLE(true);
 	if (!bShowProgress || bPauseDisplay)
 		return;
 	static int lastpercent;
