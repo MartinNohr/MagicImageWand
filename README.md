@@ -14,3 +14,5 @@ It has optional exFat reading to support SD cards >32GB. This is enabled with a 
 <br>#include &ltUser_Setups/Setup25_TTGO_T_Display.h&gt 
 <br>comment:
 <br>//#include &ltUser_Setup.h&gt
+
+A more detailed setup Instruction for Arduino IDE is available in the Wiki https://github.com/MartinNohr/MagicImageWand/wiki/9.-Compiling-from-source
