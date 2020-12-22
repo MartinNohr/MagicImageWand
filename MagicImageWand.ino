@@ -1692,15 +1692,18 @@ void DisplayAllColor()
 			return;
 		if (bChange) {
 			increment = constrain(increment, 1, 100);
+			// let these values roll over as bytes
 			if (bDisplayAllRGB) {
-				nDisplayAllRed = constrain(nDisplayAllRed, 0, 255);
-				nDisplayAllGreen = constrain(nDisplayAllGreen, 0, 255);
-				nDisplayAllBlue = constrain(nDisplayAllBlue, 0, 255);
+				nDisplayAllRed %= 256;
+				nDisplayAllGreen %= 256;
+				nDisplayAllBlue %= 256;
 				FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
 			}
 			else {
-				nDisplayAllHue = constrain(nDisplayAllHue, 0, 255);
-				nDisplayAllSaturation = constrain(nDisplayAllSaturation, 0, 255);
+				nDisplayAllHue %= 256;
+				nDisplayAllSaturation %= 256;
+				//nDisplayAllBrightness %= 256;
+				// it might be jarring to have the brightness roll over, so let's pin it
 				nDisplayAllBrightness = constrain(nDisplayAllBrightness, 0, 255);
 				FastLED.showColor(CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
 			}
