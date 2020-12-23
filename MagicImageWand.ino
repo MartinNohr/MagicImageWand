@@ -74,20 +74,20 @@ void setup()
 	int width = tft.width();
 	int height = tft.height();
 	tft.fillScreen(TFT_BLACK);
-	tft.setTextColor(TFT_WHITE);
+	tft.setTextColor(menuLineActiveColor);
 	rainbow_fill();
 	if (nBootCount == 0)
 	{
 		tft.setTextColor(TFT_BLACK);
 		//tft.setFreeFont(&FreeMono18pt7b);
 		tft.setTextFont(2);
-		tft.drawRect(0, 0, width - 1, height - 1, TFT_WHITE);
+		tft.drawRect(0, 0, width - 1, height - 1, menuLineActiveColor);
 		tft.setTextSize(2);
 		//tft.setTextColor(TFT_GREEN);
 		tft.drawString("Magic Image Wand", 10, 5);
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version 1.00", 30, 50);
+		tft.drawString("Version 1.01", 30, 50);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
@@ -97,7 +97,7 @@ void setup()
 	//Serial.println("font height: " + String(tft.fontHeight()));
 	//tft.setFont(ArialMT_Plain_10);
 	charHeight = tft.fontHeight() + 1;
-	tft.setTextColor(TFT_WHITE);
+	tft.setTextColor(menuLineActiveColor);
 
 	EEPROM.begin(1024);
 	// this will fix the signature if necessary
@@ -475,10 +475,10 @@ void ShowMenu(struct MenuItem* menu)
 	}
 	// show line if menu has been scrolled
 	if (MenuStack.top()->offset > 0)
-		tft.drawLine(0, 0, 5, 0, TFT_WHITE);
+		tft.drawLine(0, 0, 5, 0, menuLineActiveColor);
 	// show bottom line if last line is showing
 	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
-		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_WHITE);
+		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, menuLineActiveColor);
 }
 
 // switch between SD and built-ins
@@ -2088,8 +2088,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	int percent;
 	unsigned minLoopTime = 0; // the minimum time it takes to process a line
 	bool bLoopTimed = false;
-	// note that y is 0 based and x is 0 based in the following code, the original code had y 1 based
-	// also remember that height and width are effectively reversed since we rotated the BMP image for ease of reading and displaying here
+	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
 	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
 		// approximate time left
 		if (bReverseImage)
@@ -2282,7 +2281,7 @@ void ShowBmp(MenuItem* menu)
 	if ((lineLength % 4) != 0)
 		lineLength = (lineLength / 4 + 1) * 4;
 	// offset for showing the image
-	int imgOffset = imgHeight;
+	int imgOffset = 0;
 	bool done = false;
 	bool redraw = true;
 	bool allowScroll = imgHeight > 240;
@@ -2292,20 +2291,19 @@ void ShowBmp(MenuItem* menu)
 			int bufpos = 0;
 			CRGB pixel;
 			// get to start of pixel data for this column
-			FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
-			for (int x = 0; x < displayWidth; ++x) {
+			FileSeekBuf((uint32_t)bmpOffBits + ((y + imgOffset) * lineLength));
+			for (int x = displayWidth - 1; x >= 0; --x) {
 				// this reads three bytes
 				pixel = getRGBwithGamma();
-				//Serial.println(String(pixel.r) + " " + String(pixel.g) + " " + String(pixel.b));
 				// add to the display memory
 				int row = x - 5;
-				int col = y - imgOffset + 240;
+				int col = y;
 				if (row >= 0 && row < 135 && col >= 0 && col < 240) {
 					uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 					uint16_t sbcolor;
 					// the memory image colors are byte swapped
 					swab(&color, &sbcolor, 2);
-					screenBuffer[(134 - row) * 240 + (239 - col)] = sbcolor;
+					screenBuffer[(134 - row) * 240 + col] = sbcolor;
 				}
 			}
 		}
@@ -2317,13 +2315,13 @@ void ShowBmp(MenuItem* menu)
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
 				imgOffset -= 240;
-				imgOffset = max(240, imgOffset);
+				imgOffset = max(0, imgOffset);
 			}
 			break;
 		case CRotaryDialButton::BTN_RIGHT:
 			if (allowScroll) {
 				imgOffset += 240;
-				imgOffset = min((int32_t)imgHeight, imgOffset);
+				imgOffset = min((int32_t)imgHeight - 240, imgOffset);
 			}
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
@@ -2344,7 +2342,7 @@ void ShowBmp(MenuItem* menu)
 	bGammaCorrection = bOldGamma;
 }
 
-void DisplayLine(int line, String text, int32_t color)
+void DisplayLine(int line, String text, int16_t color)
 {
 	if (bPauseDisplay)
 		return;
@@ -2361,7 +2359,7 @@ void DisplayMenuLine(int line, int displine, String text)
 	String mline = (hilite ? "* " : "  ") + text;
 	//if (MenuStack.top()->index == line)
 		//tft.setFont(SansSerif_bold_10);
-	DisplayLine(displine, mline, hilite ? TFT_WHITE : TFT_BLUE);
+	DisplayLine(displine, mline, hilite ? menuLineActiveColor : menuLineColor);
 	//tft.setFont(ArialMT_Plain_10);
 }
 
@@ -2467,6 +2465,7 @@ void DisplayCurrentFile(bool path)
 	//upper.toUpperCase();
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
+	tft.setTextColor(menuLineActiveColor);
 	if (bShowBuiltInTests) {
 		DisplayLine(0, FileNames[CurrentFileIndex]);
 	}
@@ -2481,14 +2480,14 @@ void DisplayCurrentFile(bool path)
 	if (!bIsRunning && bShowNextFiles) {
 		for (int ix = 1; ix < MENU_LINES - 1; ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
-				DisplayLine(ix, "", TFT_BLUE);
+				DisplayLine(ix, "", menuLineColor);
 			}
 			else {
-				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], TFT_BLUE);
+				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], menuLineColor);
 			}
 		}
 	}
-	tft.setTextColor(TFT_WHITE);
+	tft.setTextColor(menuLineActiveColor);
 	// for debugging keypresses
 	//DisplayLine(3, String(nButtonDowns) + " " + nButtonUps);
 }
@@ -2746,6 +2745,16 @@ bool CompareNames(const String& a, const String& b)
 	String a1 = a, b1 = b;
 	a1.toUpperCase();
 	b1.toUpperCase();
+	// force folders to sort last
+	if (a1[0] == NEXT_FOLDER_CHAR)
+		a1[0] = '0x7e';
+	if (b1[0] == NEXT_FOLDER_CHAR)
+		b1[0] = '0x7e';
+	// force previous folder to sort first
+	if (a1[0] == PREVIOUS_FOLDER_CHAR)
+		a1[0] = '0' - 1;
+	if (b1[0] == PREVIOUS_FOLDER_CHAR)
+		b1[0] = '0' - 1;
 	return a1.compareTo(b1) < 0;
 }
 
@@ -3074,20 +3083,20 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel)
 {
 	if (bUpsideDown) {
 		if (bDoublePixels) {
-			leds[AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix)] = pixel;
-			leds[AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix)] = pixel;
-		}
-		else {
-			leds[AdjustStripIndex(STRIPLENGTH - 1 - ix)] = pixel;
-		}
-	}
-	else {
-		if (bDoublePixels) {
 			leds[AdjustStripIndex(2 * ix)] = pixel;
 			leds[AdjustStripIndex(2 * ix + 1)] = pixel;
 		}
 		else {
 			leds[AdjustStripIndex(ix)] = pixel;
+		}
+	}
+	else {
+		if (bDoublePixels) {
+			leds[AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix)] = pixel;
+			leds[AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix)] = pixel;
+		}
+		else {
+			leds[AdjustStripIndex(STRIPLENGTH - 1 - ix)] = pixel;
 		}
 	}
 }
@@ -3308,7 +3317,7 @@ void rainbow_fill()
 // draw a progress bar
 void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 {
-	tft.drawRoundRect(x, y, dx, dy, 2, TFT_WHITE);
+	tft.drawRoundRect(x, y, dx, dy, 2, menuLineActiveColor);
 	int fill = (dx - 2) * percent / 100;
 	// fill the filled part
 	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_GREEN);

@@ -61,7 +61,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
 // functions
 void DisplayCurrentFile(bool path = true);
-void DisplayLine(int line, String text, int32_t color = TFT_WHITE);
+void DisplayLine(int line, String text, int16_t color = TFT_WHITE);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
 void WriteMessage(String txt, bool error = false, int wait = 2000);
@@ -91,7 +91,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "LIP1000" };   // set to make sure saved values are valid, change when savevalues is changed
+char signature[] = { "MIW101" };   // set to make sure saved values are valid, change when savevalues is changed
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
@@ -130,9 +130,11 @@ struct {
     int b;
 } whiteBalance = { 255,255,255 };
 // settings
-RTC_DATA_ATTR int charHeight = 19;
-#define NEXT_FOLDER_CHAR '~'
-#define PREVIOUS_FOLDER_CHAR '^'
+int charHeight = 19;
+RTC_DATA_ATTR uint16_t menuLineColor = TFT_CYAN;
+RTC_DATA_ATTR uint16_t menuLineActiveColor = TFT_WHITE;
+#define NEXT_FOLDER_CHAR '>'
+#define PREVIOUS_FOLDER_CHAR '<'
 String currentFolder = "/";
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 int lastFileIndex = 0;                                  // save between switching of internal and SD
@@ -387,6 +389,9 @@ const saveValues saveValueList[] = {
     {&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
     {&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
     {&nDisplayBrightness,sizeof(nDisplayBrightness)},
+    {&menuLineColor,sizeof(menuLineColor)},
+    {&menuLineActiveColor,sizeof(menuLineActiveColor)},
+
     // the built-in values
     // display all color
     {&bAllowRollover,sizeof(bAllowRollover)},
@@ -702,7 +707,7 @@ MenuItem ImageMenu[] = {
     {eTextInt,false,"Start Delay (S): %d.%d",GetIntegerValue,&startDelay,0,100,1},
     {eBool,false,"Upside Down Image: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
     {eIfEqual,false,"",NULL,&bShowBuiltInTests,false},
-        {eBool,false,"Direction: %s",ToggleBool,&bReverseImage,0,0,0,"Right-Left","Left-Right"},
+        {eBool,false,"Walk Direction: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,false,"Play Mirror Image: %s",ToggleBool,&bMirrorPlayImage,0,0,0,"Yes","No"},
         {eIfEqual,false,"",NULL,&bMirrorPlayImage,true},
             {eTextInt,false,"Mirror Delay (S): %d.%d",GetIntegerValue,&nMirrorDelay,0,10,1},
@@ -912,6 +917,8 @@ struct SETTINGVAR SettingsVarList[] = {
     {"CHAIN DELAY",&nChainDelay,vtInt},
     {"WHITE BALANCE",&whiteBalance,vtRGB},
     {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
+    {"DISPLAY MENULINE COLOR",&menuLineColor,vtInt},
+    {"DISPLAY MENULINE ACTIVE COLOR",&menuLineActiveColor,vtInt},
     {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},
