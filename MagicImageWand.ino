@@ -1261,17 +1261,17 @@ void Sleep(MenuItem* menu)
 void LightBar(MenuItem* menu)
 {
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(0, "Light Bar");
+	DisplayLine(0, "LED Light Bar");
 	DisplayLine(3, "Rotate Dial to Change");
 	DisplayLine(4, "Click to Set Operation");
-	DisplayAllColor();
+	DisplayLedLightBar();
 	FastLED.clear(true);
 	// these were set by CheckCancel() in DisplayAllColor() and need to be cleared
 	bCancelMacro = bCancelRun = false;
 }
 
-// show all in a color
-void DisplayAllColor()
+// Used LEDs as a light bar
+void DisplayLedLightBar()
 {
 	DisplayLine(1, "");
 	if (bDisplayAllRGB)
