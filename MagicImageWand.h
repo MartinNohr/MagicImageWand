@@ -79,7 +79,7 @@ void TestJuggle();
 void TestSine();
 void TestBpm();
 void TestConfetti();
-void DisplayAllColor();
+void DisplayLedLightBar();
 void TestStripes();
 void TestLines();
 void RainbowPulse();
@@ -649,7 +649,7 @@ MenuItem MeteorMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-MenuItem DisplayAllColorMenu[] = {
+MenuItem LedLightBarMenu[] = {
     {eExit,false,"Previous Menu"},
     {eBool,false,"Allow rollover: %s",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
     {eBool,false,"Color Mode: %s",ToggleBool,&bDisplayAllRGB,0,0,0,"RGB","HSL"},
@@ -682,6 +682,7 @@ MenuItem SystemMenu[] = {
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,false,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
     {eBool,false,"Progress Bar: %s",ToggleBool,&bShowProgress,0,0,0,"Yes","No"},
+    {eMenu,false,"Light Bar Settings",{.menu = LedLightBarMenu}},
     {eBool,false,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,false,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,false,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
@@ -855,7 +856,7 @@ BuiltInItem BuiltInFiles[] = {
     {"Rainbow Pulse",RainbowPulse,RainbowPulseMenu},
     {"Random Bars",RandomBars,RandomBarsMenu},
     {"Sine Trails",TestSine,SineMenu},
-    {"Solid Color",DisplayAllColor,DisplayAllColorMenu},
+    {"Solid Color",DisplayLedLightBar,LedLightBarMenu},
     {"Stripes",TestStripes},
     {"Twinkle",TestTwinkle,TwinkleMenu},
     {"Two Dots",OppositeRunningDots},
