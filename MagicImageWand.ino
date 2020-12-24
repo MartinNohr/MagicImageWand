@@ -87,7 +87,7 @@ void setup()
 		tft.drawString("Magic Image Wand", 10, 5);
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version 1.01", 30, 50);
+		tft.drawString("Version 1.02", 30, 50);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
@@ -969,31 +969,19 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 		Dampening[i] = 0.90 - float(i) / pow(balls, 2);
 	}
 
-	// run for allowed seconds
-	long start = millis();
 	long percent;
-	//nTimerSeconds = nBouncingBallsRuntime;
-	//int lastSeconds = 0;
-	//EventTimers.every(1000L, SecondsTimer);
 	int colorChangeCounter = 0;
-	while (millis() < start + ((long)nBouncingBallsRuntime * 1000)) {
-		ShowProgressBar((time(NULL) - startsec) * 100 / nBouncingBallsRuntime);
-		//if (nTimerSeconds != lastSeconds) {
-		//    tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-		//    tft.setTextSize(2);
-		//    tft.setCursor(0, 38);
-		//    char num[50];
-		//    nTimerSeconds = nTimerSeconds;
-		//    sprintf(num, "%3d seconds", nTimerSeconds);
-		//    tft.print(num);
-		//}
-		//percent = map(millis() - start, 0, nBouncingBallsRuntime * 1000, 0, 100);
-		//ShowProgressBar(percent);
-		if (CheckCancel())
-			return;
+	bool done = false;
+	while (!done) {
+		if (CheckCancel()) {
+			done = true;
+			break;
+		}
 		for (int i = 0; i < balls; i++) {
-			if (CheckCancel())
-				return;
+			if (CheckCancel()) {
+				done = true;
+				break;
+			}
 			TimeSinceLastBounce[i] = millis() - ClockTimeSinceLastBounce[i];
 			Height[i] = 0.5 * Gravity * pow(TimeSinceLastBounce[i] / nBouncingBallsDecay, 2.0) + ImpactVelocity[i] * TimeSinceLastBounce[i] / nBouncingBallsDecay;
 
@@ -1011,8 +999,10 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 
 		for (int i = 0; i < balls; i++) {
 			int ix;
-			if (CheckCancel())
-				return;
+			if (CheckCancel()) {
+				done = true;
+				break;
+			}
 			ix = (i + nBouncingBallsFirstColor) % 32;
 			SetPixel(Position[i], colors[ix]);
 		}
@@ -1023,7 +1013,6 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 		FastLED.show();
 		delayMicroseconds(50);
 		FastLED.clear();
-		// increment the starting color if they want it
 	}
 	free(Height);
 	free(ImpactVelocity);
@@ -1048,16 +1037,17 @@ CRGB:CRGB red, white, blue;
 	r = 0, g = 0, b = 255;
 	fixRGBwithGamma(&r, &g, &b);
 	blue = CRGB(r, g, b);
-	//ShowProgressBar(0);
-	for (int loop = 0; loop < (8 * BARBERCOUNT); ++loop) {
-		//Serial.println("barber:" + String(loop));
-		if ((loop % 10) == 0)
-			ShowProgressBar(loop * 100 / (8 * BARBERCOUNT));
-		if (CheckCancel())
-			return;
+	bool done = false;
+	for (int loop = 0; !done; ++loop) {
+		if (CheckCancel()) {
+			done = true;
+			break;
+		}
 		for (int ledIx = 0; ledIx < STRIPLENGTH; ++ledIx) {
-			if (CheckCancel())
-				return;
+			if (CheckCancel()) {
+				done = true;
+				break;
+			}
 			// figure out what color
 			switch (((ledIx + loop) % BARBERCOUNT) / BARBERSIZE) {
 			case 0: // red
@@ -1075,31 +1065,26 @@ CRGB:CRGB red, white, blue;
 		FastLED.show();
 		delay(nFrameHold);
 	}
-	ShowProgressBar(100);
 }
 
 // checkerboard
 void CheckerBoard()
 {
-	time_t start = time(NULL);
 	int width = nCheckboardBlackWidth + nCheckboardWhiteWidth;
-	bStripWaiting = true;
 	int times = 0;
 	CRGB color1 = CRGB::Black, color2 = CRGB::White;
-	esp_timer_start_once(oneshot_LED_timer, nCheckerBoardRuntime * 1000000);
 	int addPixels = 0;
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		for (int y = 0; y < STRIPLENGTH; ++y) {
 			SetPixel(y, ((y + addPixels) % width) < nCheckboardBlackWidth ? color1 : color2);
 		}
 		FastLED.show();
-		ShowProgressBar((time(NULL) - start) * 100 / nCheckerBoardRuntime);
 		int count = nCheckerboardHoldframes;
 		while (count-- > 0) {
 			delay(nFrameHold);
 			if (CheckCancel()) {
-				esp_timer_stop(oneshot_LED_timer);
-				bStripWaiting = false;
+				done = true;
 				break;
 			}
 		}
@@ -1110,25 +1095,27 @@ void CheckerBoard()
 			color2 = temp;
 		}
 		addPixels += nCheckerboardAddPixels;
+		if (CheckCancel()) {
+			done = true;
+			break;
+		}
 	}
 }
 
 void RandomBars()
 {
-	ShowRandomBars(bRandomBarsBlacks, nRandomBarsRuntime);
+	ShowRandomBars(bRandomBarsBlacks);
 }
 
 // show random bars of lights with optional blacks between
-void ShowRandomBars(bool blacks, int runtime)
+void ShowRandomBars(bool blacks)
 {
 	time_t start = time(NULL);
 	byte r, g, b;
 	srand(millis());
 	char line[40];
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, runtime * 1000000);
-	for (int pass = 0; bStripWaiting; ++pass) {
-		ShowProgressBar((time(NULL) - start) * 100 / runtime);
+	bool done = false;
+	for (int pass = 0; !done; ++pass) {
 		if (blacks && (pass % 2)) {
 			// odd numbers, clear
 			FastLED.clear(true);
@@ -1146,8 +1133,7 @@ void ShowRandomBars(bool blacks, int runtime)
 		while (count-- > 0) {
 			delay(nFrameHold);
 			if (CheckCancel()) {
-				esp_timer_stop(oneshot_LED_timer);
-				bStripWaiting = false;
+				done = true;
 				break;
 			}
 		}
@@ -1158,8 +1144,6 @@ void ShowRandomBars(bool blacks, int runtime)
 void RunningDot()
 {
 	for (int colorvalue = 0; colorvalue <= 3; ++colorvalue) {
-		if (CheckCancel())
-			return;
 		// RGBW
 		byte r, g, b;
 		switch (colorvalue) {
@@ -1187,11 +1171,9 @@ void RunningDot()
 		fixRGBwithGamma(&r, &g, &b);
 		char line[10];
 		for (int ix = 0; ix < STRIPLENGTH; ++ix) {
-			if (CheckCancel())
-				return;
-			//lcd.setCursor(11, 0);
-			//sprintf(line, "%3d", ix);
-			//lcd.print(line);
+			if (CheckCancel()) {
+				break;
+			}
 			if (ix > 0) {
 				SetPixel(ix - 1, CRGB::Black);
 			}
@@ -1203,13 +1185,14 @@ void RunningDot()
 		SetPixel(STRIPLENGTH - 1, CRGB::Black);
 		FastLED.show();
 	}
+	FastLED.clear(true);
 }
 
 void OppositeRunningDots()
 {
 	for (int mode = 0; mode <= 3; ++mode) {
 		if (CheckCancel())
-			return;
+			break;;
 		// RGBW
 		byte r, g, b;
 		switch (mode) {
@@ -1437,14 +1420,12 @@ int RollDownRollOver(int inc)
 }
 
 void TestTwinkle() {
-	TwinkleRandom(nTwinkleRuntime, nFrameHold, bTwinkleOnlyOne);
+	TwinkleRandom(nFrameHold, bTwinkleOnlyOne);
 }
-void TwinkleRandom(int Runtime, int SpeedDelay, boolean OnlyOne) {
+void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	time_t start = time(NULL);
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, Runtime * 1000000);
-	while (bStripWaiting) {
-		ShowProgressBar((time(NULL) - start) * 100 / nTwinkleRuntime);
+	bool done = false;
+	while (!done) {
 		SetPixel(random(STRIPLENGTH), CRGB(random(0, 255), random(0, 255), random(0, 255)));
 		FastLED.show();
 		delay(SpeedDelay);
@@ -1452,8 +1433,8 @@ void TwinkleRandom(int Runtime, int SpeedDelay, boolean OnlyOne) {
 			FastLED.clear(true);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
+			break;
 		}
 	}
 }
@@ -1466,9 +1447,7 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 {
 	for (int i = 0; i < STRIPLENGTH - EyeSize - 2; i++) {
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
-			return;
+			break;
 		}
 		FastLED.clear();
 		SetPixel(i, CRGB(red / 10, green / 10, blue / 10));
@@ -1480,12 +1459,9 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 		delay(SpeedDelay);
 	}
 	delay(ReturnDelay);
-
 	for (int i = STRIPLENGTH - EyeSize - 2; i > 0; i--) {
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
-			return;
+			break;
 		}
 		FastLED.clear();
 		SetPixel(i, CRGB(red / 10, green / 10, blue / 10));
@@ -1496,7 +1472,7 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 		FastLED.show();
 		delay(SpeedDelay);
 	}
-	delay(ReturnDelay);
+	FastLED.clear(true);
 }
 
 void TestMeteor() {
@@ -1509,20 +1485,19 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 
 	for (int i = 0; i < STRIPLENGTH + STRIPLENGTH; i++) {
 		if (CheckCancel())
-			return;
+			break;;
 		// fade brightness all LEDs one step
 		for (int j = 0; j < STRIPLENGTH; j++) {
 			if (CheckCancel())
-				return;
+				break;
 			if ((!meteorRandomDecay) || (random(10) > 5)) {
 				fadeToBlack(j, meteorTrailDecay);
 			}
 		}
-
 		// draw meteor
 		for (int j = 0; j < meteorSize; j++) {
 			if (CheckCancel())
-				return;
+				break;
 			if ((i - j < STRIPLENGTH) && (i - j >= 0)) {
 				SetPixel(i - j, CRGB(red, green, blue));
 			}
@@ -1536,19 +1511,17 @@ void TestConfetti()
 {
 	time_t start = time(NULL);
 	gHue = 0;
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, nConfettiRuntime * 1000000);
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			if (bConfettiCycleHue)
 				++gHue;
 			confetti();
 			FastLED.show();
-			ShowProgressBar((time(NULL) - start) * 100 / nConfettiRuntime);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
+			break;
 		}
 	}
 	// wait for timeout so strip will be blank
@@ -1565,18 +1538,15 @@ void confetti()
 
 void TestJuggle()
 {
-	time_t start = time(NULL);
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, nJuggleRuntime * 1000000);
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			juggle();
 			FastLED.show();
-			ShowProgressBar((time(NULL) - start) * 100 / nJuggleRuntime);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
+			break;
 		}
 	}
 }
@@ -1598,19 +1568,16 @@ void juggle()
 
 void TestSine()
 {
-	time_t start = time(NULL);
 	gHue = nSineStartingHue;
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, nSineRuntime * 1000000);
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			sinelon();
 			FastLED.show();
-			ShowProgressBar((time(NULL) - start) * 100 / nSineRuntime);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
+			break;
 		}
 	}
 }
@@ -1626,19 +1593,16 @@ void sinelon()
 
 void TestBpm()
 {
-	time_t start = time(NULL);
 	gHue = 0;
-	bStripWaiting = true;
-	esp_timer_start_once(oneshot_LED_timer, nBpmRuntime * 1000000);
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			bpm();
 			FastLED.show();
-			ShowProgressBar((time(NULL) - start) * 100 / nBpmRuntime);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
+			break;
 		}
 	}
 }
@@ -1671,14 +1635,11 @@ void FillRainbow(struct CRGB* pFirstLED, int numToFill,
 
 void TestRainbow()
 {
-	time_t start = time(NULL);
 	gHue = nRainbowInitialHue;
-	bStripWaiting = true;
-	ShowProgressBar(0);
 	FillRainbow(leds, STRIPLENGTH, gHue, nRainbowHueDelta);
 	FadeInOut(nRainbowFadeTime * 100, true);
-	esp_timer_start_once(oneshot_LED_timer, nRainbowRuntime * 1000000);
-	while (bStripWaiting) {
+	bool done = false;
+	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			if (bRainbowCycleHue)
 				++gHue;
@@ -1686,13 +1647,11 @@ void TestRainbow()
 			if (bRainbowAddGlitter)
 				addGlitter(80);
 			FastLED.show();
-			ShowProgressBar((time(NULL) - start) * 100 / nRainbowRuntime);
 		}
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
+			done = true;
 			FastLED.setBrightness(nStripBrightness);
-			return;
+			break;
 		}
 	}
 	FadeInOut(nRainbowFadeTime * 100, false);
@@ -1711,7 +1670,6 @@ struct {
 
 void TestStripes()
 {
-	time_t start = time(NULL);
 	FastLED.setBrightness(nStripBrightness);
 	// let's fill in some data
 	for (int ix = 0; ix < NUM_STRIPES; ++ix) {
@@ -1728,16 +1686,12 @@ void TestStripes()
 			SetPixel(pix++, CRGB(Stripes[ix].color));
 		}
 	}
-	bStripWaiting = true;
-	ShowProgressBar(0);
 	FastLED.show();
-	esp_timer_start_once(oneshot_LED_timer, nStripesRuntime * 1000000);
-	while (bStripWaiting) {
-		ShowProgressBar((time(NULL) - start) * 100 / nStripesRuntime);
+	bool done = false;
+	while (!done) {
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
-			return;
+			done = true;
+			break;
 		}
 		delay(1000);
 	}
@@ -1746,7 +1700,6 @@ void TestStripes()
 // alternating white and black lines
 void TestLines()
 {
-	time_t start = time(NULL);
 	FastLED.setBrightness(nStripBrightness);
 	FastLED.clear(true);
 	bool bWhite = true;
@@ -1757,16 +1710,12 @@ void TestLines()
 		}
 		bWhite = !bWhite;
 	}
-	bStripWaiting = true;
-	ShowProgressBar(0);
 	FastLED.show();
-	esp_timer_start_once(oneshot_LED_timer, nLinesRuntime * 1000000);
-	while (bStripWaiting) {
-		ShowProgressBar((time(NULL) - start) * 100 / nStripesRuntime);
+	bool done = false;
+	while (!done) {
 		if (CheckCancel()) {
-			esp_timer_stop(oneshot_LED_timer);
-			bStripWaiting = false;
-			return;
+			done = true;
+			break;
 		}
 		delay(1000);
 		// might make this work to toggle blacks and whites eventually
@@ -2125,12 +2074,9 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		//uint32_t offset = (bmpOffBits + (y * lineLength));
 		//dataFile.seekSet(offset);
 		CRGB pixel;
-		// get to start of pixel data, moved this out of the loop below to speed things up
-		//Serial.println("y=" + String(y));
+		// seek to the column start
 		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
-		for (int x = 0; x < displayWidth; x++) {
-			//FileSeekBuf((uint32_t)bmpOffBits + ((y * lineLength) + (x * 3)));
-			//dataFile.seekSet((uint32_t)bmpOffBits + ((y * lineLength) + (x * 3)));
+		for (int x = displayWidth - 1; x >= 0; --x) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
 			// see if we want this one
@@ -3083,20 +3029,20 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel)
 {
 	if (bUpsideDown) {
 		if (bDoublePixels) {
-			leds[AdjustStripIndex(2 * ix)] = pixel;
-			leds[AdjustStripIndex(2 * ix + 1)] = pixel;
-		}
-		else {
-			leds[AdjustStripIndex(ix)] = pixel;
-		}
-	}
-	else {
-		if (bDoublePixels) {
 			leds[AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix)] = pixel;
 			leds[AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix)] = pixel;
 		}
 		else {
 			leds[AdjustStripIndex(STRIPLENGTH - 1 - ix)] = pixel;
+		}
+	}
+	else {
+		if (bDoublePixels) {
+			leds[AdjustStripIndex(2 * ix)] = pixel;
+			leds[AdjustStripIndex(2 * ix + 1)] = pixel;
+		}
+		else {
+			leds[AdjustStripIndex(ix)] = pixel;
 		}
 	}
 }
@@ -3185,7 +3131,7 @@ void RainbowPulse()
 			highest_element = max(highest_element, element);
 		}
 		if (CheckCancel()) {
-			return;
+			break;
 		}
 		delayMicroseconds(nRainbowPulsePause * 10);
 		if (element < last_element) {

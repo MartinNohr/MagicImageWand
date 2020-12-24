@@ -91,7 +91,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "MIW101" };   // set to make sure saved values are valid, change when savevalues is changed
+char signature[] = { "MIW102" };   // set to make sure saved values are valid, change when savevalues is changed, nice to keep in sync with version from .ino file
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
@@ -112,8 +112,7 @@ RTC_DATA_ATTR bool bSecondStrip = false;                // set true when two str
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void SetPixel(int ix, CRGB pixel);
-//#define LEDIX(ix) (((ix)<NUM_LEDS)?(NUM_LEDS-1-(ix)):(ix))
-RTC_DATA_ATTR int nStripBrightness = 10;                // Variable and default for the Brightness of the strip, from 1 to 255
+RTC_DATA_ATTR int nStripBrightness = 20;                // Variable and default for the Brightness of the strip, from 1 to 255
 RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
 //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
 RTC_DATA_ATTR int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
@@ -272,7 +271,6 @@ RTC_DATA_ATTR uint8_t gHue = 0; // rotating "base color" used by many of the pat
 // bouncing balls
 RTC_DATA_ATTR int nBouncingBallsCount = 4;
 RTC_DATA_ATTR int nBouncingBallsDecay = 1000;
-RTC_DATA_ATTR int nBouncingBallsRuntime = 30; // in seconds
 RTC_DATA_ATTR int nBouncingBallsFirstColor = 0;   // first color, wraps to get all 32
 RTC_DATA_ATTR int nBouncingBallsChangeColors = 0; // how many 100 count cycles to wait for change
 // cylon eye
@@ -282,7 +280,6 @@ RTC_DATA_ATTR int nCylonEyeGreen = 0;
 RTC_DATA_ATTR int nCylonEyeBlue = 0;
 // random bars
 RTC_DATA_ATTR bool bRandomBarsBlacks = true;
-RTC_DATA_ATTR int nRandomBarsRuntime = 20;
 RTC_DATA_ATTR int nRandomBarsHoldframes = 10;
 // meteor
 RTC_DATA_ATTR int nMeteorSize = 10;
@@ -300,41 +297,34 @@ RTC_DATA_ATTR int nDisplayAllSaturation = 255;
 RTC_DATA_ATTR int nDisplayAllBrightness = 255;
 // rainbow
 RTC_DATA_ATTR int nRainbowHueDelta = 4;
-RTC_DATA_ATTR int nRainbowRuntime = 20;
 RTC_DATA_ATTR int nRainbowInitialHue = 0;
 RTC_DATA_ATTR int nRainbowFadeTime = 10;       // fade in out 0.1 Sec
 RTC_DATA_ATTR bool bRainbowAddGlitter = false;
 RTC_DATA_ATTR bool bRainbowCycleHue = false;
 // twinkle
-RTC_DATA_ATTR int nTwinkleRuntime = 20;
 RTC_DATA_ATTR bool bTwinkleOnlyOne = false;
 // confetti
-RTC_DATA_ATTR int nConfettiRuntime = 20;
 RTC_DATA_ATTR bool bConfettiCycleHue = false;
 // juggle
-RTC_DATA_ATTR int nJuggleRuntime = 20;
+
 // sine
-RTC_DATA_ATTR int nSineRuntime = 20;
 RTC_DATA_ATTR int nSineStartingHue = 0;
 RTC_DATA_ATTR bool bSineCycleHue = false;
 RTC_DATA_ATTR int nSineSpeed = 13;
 // bpm
-RTC_DATA_ATTR int nBpmRuntime = 20;
 RTC_DATA_ATTR int nBpmBeatsPerMinute = 62;
 RTC_DATA_ATTR bool bBpmCycleHue = false;
 // checkerboard/bars
-RTC_DATA_ATTR int nCheckerBoardRuntime = 20;
 RTC_DATA_ATTR int nCheckerboardHoldframes = 10;
 RTC_DATA_ATTR int nCheckboardBlackWidth = 12;
 RTC_DATA_ATTR int nCheckboardWhiteWidth = 12;
 RTC_DATA_ATTR bool bCheckerBoardAlternate = true;
 RTC_DATA_ATTR int nCheckerboardAddPixels = 0;
 // stripes
-RTC_DATA_ATTR int nStripesRuntime = 10;
+
 // black and white lines
 RTC_DATA_ATTR int nLinesWhite = 5;
 RTC_DATA_ATTR int nLinesBlack = 5;
-RTC_DATA_ATTR int nLinesRuntime = 10;
 // rainbow pulse settings
 RTC_DATA_ATTR int nRainbowPulseColorScale = 10;
 RTC_DATA_ATTR int nRainbowPulsePause = 5;
@@ -405,7 +395,6 @@ const saveValues saveValueList[] = {
     // bouncing balls
     {&nBouncingBallsCount,sizeof(nBouncingBallsCount)},
     {&nBouncingBallsDecay,sizeof(nBouncingBallsDecay)},
-    {&nBouncingBallsRuntime,sizeof(nBouncingBallsRuntime)},
     {&nBouncingBallsFirstColor,sizeof(nBouncingBallsFirstColor)},
     {&nBouncingBallsChangeColors,sizeof(nBouncingBallsChangeColors)},
     // cylon eye
@@ -415,7 +404,6 @@ const saveValues saveValueList[] = {
     {&nCylonEyeBlue,sizeof(nCylonEyeBlue)},
     // random bars
     {&bRandomBarsBlacks,sizeof(bRandomBarsBlacks)},
-    {&nRandomBarsRuntime,sizeof(nRandomBarsRuntime)},
     {&nRandomBarsHoldframes,sizeof(nRandomBarsHoldframes)},
     // meteor
     {&nMeteorSize,sizeof(nMeteorSize)},
@@ -425,29 +413,23 @@ const saveValues saveValueList[] = {
     // rainbow
     {&nRainbowHueDelta,sizeof(nRainbowHueDelta)},
     {&nRainbowInitialHue,sizeof(nRainbowInitialHue)},
-    {&nRainbowRuntime,sizeof(nRainbowRuntime)},
     {&nRainbowFadeTime,sizeof(nRainbowFadeTime)},
     {&bRainbowAddGlitter,sizeof(bRainbowAddGlitter)},
     {&bRainbowCycleHue,sizeof(bRainbowCycleHue)},
     // twinkle
-    {&nTwinkleRuntime,sizeof(nTwinkleRuntime)},
     {&bTwinkleOnlyOne,sizeof(bTwinkleOnlyOne)},
     // confetti
-    {&nConfettiRuntime,sizeof(nConfettiRuntime)},
     {&bConfettiCycleHue,sizeof(bConfettiCycleHue)},
     // juggle
-    {&nJuggleRuntime,sizeof(nJuggleRuntime)},
+
     // sine
-    {&nSineRuntime,sizeof(nSineRuntime)},
     {&nSineStartingHue,sizeof(nSineStartingHue)},
     {&bSineCycleHue,sizeof(bSineCycleHue)},
     {&nSineSpeed,sizeof(nSineSpeed)},
     // bpm
-    {&nBpmRuntime,sizeof(nBpmRuntime)},
     {&nBpmBeatsPerMinute,sizeof(nBpmBeatsPerMinute)},
     {&bBpmCycleHue,sizeof(bBpmCycleHue)},
     // checkerboard/bars
-    {&nCheckerBoardRuntime,sizeof(nCheckerBoardRuntime)},
     {&nCheckerboardHoldframes,sizeof(nCheckerboardHoldframes)},
     {&nCheckboardBlackWidth,sizeof(nCheckboardBlackWidth)},
     {&nCheckboardWhiteWidth,sizeof(nCheckboardWhiteWidth)},
@@ -457,7 +439,6 @@ const saveValues saveValueList[] = {
     {&nRepeatCountMacro,sizeof(nRepeatCountMacro)},
     {&nRepeatWaitMacro,sizeof(nRepeatWaitMacro)},
     // lines values
-    {&nLinesRuntime,sizeof(nLinesRuntime)},
     {&nLinesWhite,sizeof(nLinesWhite)},
     {&nLinesBlack,sizeof(nLinesBlack)},
     // rainbow pulse
@@ -532,7 +513,6 @@ MenuItem BouncingBallsMenu[] = {
     {eExit,false,"Previous Menu"},
     {eTextInt,false,"Ball Count: %d",GetIntegerValue,&nBouncingBallsCount,1,32},
     {eTextInt,false,"Decay (500-10000): %d",GetIntegerValue,&nBouncingBallsDecay,500,10000},
-    {eTextInt,false,"Runtime (seconds): %d",GetIntegerValue,&nBouncingBallsRuntime,1,120},
     {eTextInt,false,"First Color: %d",GetIntegerValue,&nBouncingBallsFirstColor,0,31},
     {eTextInt,false,"Change Color Rate: %d",GetIntegerValue,&nBouncingBallsChangeColors,0,10,0},
     {eExit,false,"Previous Menu"},
@@ -541,7 +521,6 @@ MenuItem BouncingBallsMenu[] = {
 };
 MenuItem CheckerBoardMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nCheckerBoardRuntime,1,120},
     {eTextInt,false,"Hold Frames: %d",GetIntegerValue,&nCheckerboardHoldframes,1,100},
     {eTextInt,false,"Black Width (pixels): %d",GetIntegerValue,&nCheckboardBlackWidth,1,288},
     {eTextInt,false,"White Width (pixels): %d",GetIntegerValue,&nCheckboardWhiteWidth,1,288},
@@ -553,7 +532,6 @@ MenuItem CheckerBoardMenu[] = {
 };
 MenuItem RainbowMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nRainbowRuntime,1,120},
     {eTextInt,false,"Fade Time (S): %d.%d",GetIntegerValue,&nRainbowFadeTime,0,100,1},
     {eTextInt,false,"Starting Hue: %d",GetIntegerValue,&nRainbowInitialHue,0,255},
     {eBool,false,"Cycle Hue: %s",ToggleBool,&bRainbowCycleHue,0,0,0,"Yes","No"},
@@ -575,22 +553,13 @@ MenuItem RainbowPulseMenu[] = {
 };
 MenuItem ConfettiMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nConfettiRuntime,1,120},
     {eBool,false,"Cycle Hue: %s",ToggleBool,&bConfettiCycleHue,0,0,0,"Yes","No"},
-    {eExit,false,"Previous Menu"},
-    // make sure this one is last
-    {eTerminate}
-};
-MenuItem JuggleMenu[] = {
-    {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nJuggleRuntime,1,120},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem TwinkleMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nTwinkleRuntime,1,120},
     {eBool,false,"One or Many: %s",ToggleBool,&bTwinkleOnlyOne,0,0,0,"One","Many"},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
@@ -608,7 +577,6 @@ MenuItem WedgeMenu[] = {
 };
 MenuItem SineMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nSineRuntime,1,120},
     {eTextInt,false,"Starting Hue: %d",GetIntegerValue,&nSineStartingHue,0,255},
     {eBool,false,"Cycle Hue: %s",ToggleBool,&bSineCycleHue,0,0,0,"Yes","No"},
     {eTextInt,false,"Speed: %d",GetIntegerValue,&nSineSpeed,1,500},
@@ -618,7 +586,6 @@ MenuItem SineMenu[] = {
 };
 MenuItem BpmMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nBpmRuntime,1,120},
     {eTextInt,false,"Beats per minute: %d",GetIntegerValue,&nBpmBeatsPerMinute,1,300},
     {eBool,false,"Cycle Hue: %s",ToggleBool,&bBpmCycleHue,0,0,0,"Yes","No"},
     {eExit,false,"Previous Menu"},
@@ -627,7 +594,6 @@ MenuItem BpmMenu[] = {
 };
 MenuItem LinesMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nLinesRuntime,1,120},
     {eTextInt,false,"White Pixels: %d",GetIntegerValue,&nLinesWhite,0,NUM_LEDS},
     {eTextInt,false,"Black Pixels: %d",GetIntegerValue,&nLinesBlack,0,NUM_LEDS},
     {eExit,false,"Previous Menu"},
@@ -673,7 +639,6 @@ MenuItem LedLightBarMenu[] = {
 };
 MenuItem RandomBarsMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Runtime (S): %d",GetIntegerValue,&nRandomBarsRuntime,1,120},
     {eTextInt,false,"Hold Frames: %d",GetIntegerValue,&nRandomBarsHoldframes,1,100},
     {eBool,false,"Alternating Blacks: %s",ToggleBool,&bRandomBarsBlacks,0,0,0,"Yes","No"},
     {eExit,false,"Previous Menu"},
@@ -853,7 +818,7 @@ BuiltInItem BuiltInFiles[] = {
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
-    {"Juggle",TestJuggle,JuggleMenu},
+    {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},
     {"One Dot",RunningDot},
