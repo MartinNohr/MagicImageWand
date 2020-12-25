@@ -70,6 +70,12 @@ void setup()
   Serial.println(myIP);
   server.begin();
   Serial.println("Server started");
+  server.on("/",         HomePage);
+  server.on("/download", File_Download);
+  server.on("/upload",   File_Upload);
+  server.on("/fupload",  HTTP_POST,[](){ server.send(200);}, handleFileUpload);
+  ///////////////////////////// End of Request commands
+  server.begin();
 
 	int width = tft.width();
 	int height = tft.height();
@@ -87,7 +93,7 @@ void setup()
 		tft.drawString("Magic Image Wand", 10, 5);
 		//tft.setTextSize(2);
 		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version 1.02", 30, 50);
+		tft.drawString("Version " + myVersion, 30, 50);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
@@ -233,6 +239,7 @@ void loop()
 	static bool didsomething = false;
 	bool lastStrip = bSecondStrip;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
+  server.handleClient(); 
 	// wait for no keys
 	if (didsomething) {
 		//Serial.println("calling wait for none");
@@ -3338,4 +3345,193 @@ void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_GREEN);
 	// blank the empty part
 	tft.fillRect(x + 1 + fill, y + 1, dx - 2 - fill, dy - 2, TFT_BLACK);
+}
+
+void ReportCouldNotCreateFile(String target){
+  SendHTML_Header();
+  webpage += F("<h3>Could Not Create Uploaded File (write-protected?)</h3>"); 
+  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();
+}
+
+FsFile UploadFile; // I would need some Help here, Martin
+void handleFileUpload(){ // upload a new file to the Filing system
+  HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
+                                            // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
+  if(uploadfile.status == UPLOAD_FILE_START)
+  {
+    String filename = uploadfile.filename;
+    String filepath = String("/");
+    if(!filename.startsWith("/")) filename = "/"+filename;
+    Serial.print("Upload File Name: "); Serial.println(filename);
+    SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
+    //UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
+   // UploadFile = SD.open(filepath.c_str(), filename (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
+    filename = String();
+  }
+  else if (uploadfile.status == UPLOAD_FILE_WRITE)
+  {
+    if(UploadFile) UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
+  } 
+  else if (uploadfile.status == UPLOAD_FILE_END)
+  {
+    if(UploadFile)          // If the file was successfully created
+    {                                    
+      UploadFile.close();   // Close the file again
+      Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
+      webpage = "";
+      append_page_header();
+      webpage += F("<h3>File was successfully uploaded</h3>"); 
+      webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename+"</h2>";
+      webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>"; 
+      append_page_footer();
+      server.send(200,"text/html",webpage);
+    } 
+    else
+    {
+      ReportCouldNotCreateFile("upload");
+    }
+  }
+}
+
+
+void append_page_header() {
+  webpage  = F("<!DOCTYPE html><html>");
+  webpage += F("<head>");
+  webpage += F("<title>MagicImageWand</title>");
+  webpage += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
+  webpage += F("<style>");
+  webpage += F("body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}");
+  webpage += F("ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}");
+  webpage += F("li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}");
+  webpage += F("li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}");
+  webpage += F("li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}");
+  webpage += F("section {font-size:0.88em;}");
+  webpage += F("h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}");
+  webpage += F("h2{color:orange;font-size:1.0em;}");
+  webpage += F("h3{font-size:0.8em;}");
+  webpage += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:100%;}"); 
+  webpage += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}"); 
+  webpage += F("tr:nth-child(odd) {background-color:#eeeeee;}");
+  webpage += F(".rcorners_n {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+  webpage += F(".rcorners_m {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+  webpage += F(".rcorners_w {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+  webpage += F(".column{float:left;width:100%;height:100%;}");
+  webpage += F(".row:after{content:'';display:table;clear:both;}");
+  webpage += F("*{box-sizing:border-box;}");
+  webpage += F("footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}");
+  webpage += F("button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}");
+  webpage += F(".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}");
+  webpage += F(".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}");
+  webpage += F(".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
+  webpage += F(".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
+  webpage += F("a{font-size:75%;}");
+  webpage += F("p{font-size:75%;}");
+  webpage += F("</style></head><body><h1>MIW Server<br>"); webpage + "</h1>";
+}
+
+void append_page_footer(){
+  webpage += F("<ul>");
+  webpage += F("<li><a href='/'>Home</a></li>");
+  webpage += F("<li><a href='/download'>Download</a></li>"); 
+  webpage += F("<li><a href='/upload'>Upload</a></li>"); 
+  webpage += F("</ul>");
+  webpage += "<footer>MagicImageWand ";
+  webpage += myVersion;
+  webpage += "</footer>";
+  webpage += F("</body></html>");
+}
+
+void SendHTML_Header(){
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate"); 
+  server.sendHeader("Pragma", "no-cache"); 
+  server.sendHeader("Expires", "-1"); 
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN); 
+  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves. 
+  append_page_header();
+  server.sendContent(webpage);
+  webpage = "";
+}
+
+void SendHTML_Content(){
+  server.sendContent(webpage);
+  webpage = "";
+}
+
+void SendHTML_Stop(){
+  server.sendContent("");
+  server.client().stop(); // Stop is needed because no content length was sent
+}
+
+void HomePage(){
+  SendHTML_Header();
+  webpage += F("<a href='/download'><button>Download</button></a>");
+  webpage += F("<a href='/upload'><button>Upload</button></a>");
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();
+}
+
+
+void SelectInput(String heading1, String command, String arg_calling_name){
+  SendHTML_Header();
+  webpage += F("<h3>"); webpage += heading1 + "</h3>"; 
+  webpage += F("<FORM action='/"); webpage += command + "' method='post'>";
+  webpage += F("<input type='text' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
+  webpage += F("<type='submit' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
+  webpage += F("<a href='/'>[Back]</a>");
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();
+}
+
+void File_Download(){ // This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
+  if (server.args() > 0 ) { // Arguments were received
+    if (server.hasArg("download")) SD_file_download(server.arg(0));
+  }
+  else SelectInput("Enter filename to download","download","download");
+}
+
+void ReportFileNotPresent(String target){
+  SendHTML_Header();
+  webpage += F("<h3>File does not exist</h3>"); 
+  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();
+}
+
+void ReportSDNotPresent(){
+  SendHTML_Header();
+  webpage += F("<h3>No SD Card present</h3>"); 
+  webpage += F("<a href='/'>[Back]</a><br><br>");
+  append_page_footer();
+  SendHTML_Content();
+  SendHTML_Stop();
+}
+
+void SD_file_download(String filename){
+  if (bSdCardValid) { 
+    FsFile download = SD.open("/"+filename);
+    if (download) {
+      server.sendHeader("Content-Type", "text/text");
+      server.sendHeader("Content-Disposition", "attachment; filename="+filename);
+      server.sendHeader("Connection", "close");
+      server.streamFile(download, "application/octet-stream");
+      download.close();
+    } else ReportFileNotPresent("download"); 
+  } else ReportSDNotPresent();
+}
+
+void File_Upload(){
+  append_page_header();
+  webpage += F("<h3>Select File to Upload</h3>"); 
+  webpage += F("<FORM action='/fupload' method='post' enctype='multipart/form-data'>");
+  webpage += F("<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>");
+  webpage += F("<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>");
+  webpage += F("<a href='/'>[Back]</a><br><br>");
+  append_page_footer();
+  server.send(200, "text/html",webpage);
 }
