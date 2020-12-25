@@ -195,7 +195,7 @@ enum eDisplayOperation {
     eEndif,             // ends an if block
     eBuiltinOptions,    // use an internal settings menu if available, see the internal name,function list below (BuiltInFiles[])
     eReboot,            // reboot the system
-    eList,             // used to make a selection from multiple choices
+    eList,              // used to make a selection from multiple choices
     eTerminate,         // must be last in a menu
 };
 
@@ -246,6 +246,7 @@ void GetIntegerValue(MenuItem*);
 void ToggleBool(MenuItem*);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
+void SetMenuColors(MenuItem* menu);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -648,6 +649,7 @@ MenuItem RandomBarsMenu[] = {
 MenuItem SystemMenu[] = {
     {eExit,false,"Previous Menu"},
     {eTextInt,false,"Display Brightness: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eText,false,"Set Menu Colors",SetMenuColors},
     {eBool,false,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,false,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},

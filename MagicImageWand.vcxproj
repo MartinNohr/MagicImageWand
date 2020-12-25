@@ -112,6 +112,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="fonts.h" />
     <ClInclude Include="MagicImageWand.h" />
     <ClInclude Include="RotaryDialButton.h" />
     <ClInclude Include="__vm\.MagicImageWand.vsarduino.h" />

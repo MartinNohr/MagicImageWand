@@ -5,6 +5,7 @@
 */
 
 #include "MagicImageWand.h"
+#include "fonts.h"
 
 RTC_DATA_ATTR int nBootCount = 0;
 
@@ -45,7 +46,6 @@ void setup()
 	SetDisplayBrightness(nDisplayBrightness);
 	tft.fillScreen(TFT_BLACK);
 	tft.setRotation(3);
-	tft.setFreeFont();
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::getInstance()->begin(DIAL_A, DIAL_B, DIAL_BTN);
 	setupSDcard();
@@ -92,11 +92,8 @@ void setup()
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
 	}
-	tft.setTextFont(2);
-	tft.setTextSize(1);
-	//Serial.println("font height: " + String(tft.fontHeight()));
-	//tft.setFont(ArialMT_Plain_10);
-	charHeight = tft.fontHeight() + 1;
+	tft.setFreeFont(&Open_Sans_Condensed_Bold_16);
+	charHeight = tft.fontHeight();
 	tft.setTextColor(menuLineActiveColor);
 
 	EEPROM.begin(1024);
@@ -343,7 +340,7 @@ bool RunMenus(int button)
 	}
 }
 
-#define MENU_LINES 8
+#define MENU_LINES 6
 // display the menu
 // if MenuStack.top()->index is > MENU_LINES, then shift the lines up by enough to display them
 // remember that we only have room for MENU_LINES lines
@@ -691,6 +688,78 @@ void UpdateDisplayBrightness(MenuItem* menu, int flag)
 void SetDisplayBrightness(int val)
 {
 	ledcWrite(ledChannel, map(val, 0, 100, 0, 255));
+}
+
+uint16_t ColorList[] = {
+	//TFT_NAVY,
+	//TFT_MAROON,
+	//TFT_OLIVE,
+	TFT_WHITE,
+	TFT_LIGHTGREY,
+	TFT_BLUE,
+	TFT_SKYBLUE,
+	TFT_CYAN,
+	TFT_RED,
+	TFT_BROWN,
+	TFT_GREEN,
+	TFT_MAGENTA,
+	TFT_YELLOW,
+	TFT_ORANGE,
+	TFT_GREENYELLOW,
+	TFT_GOLD,
+	TFT_SILVER,
+	TFT_VIOLET,
+	TFT_PURPLE,
+};
+
+void SetMenuColors(MenuItem* menu)
+{
+	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
+	int mode = 0;	// 0 for active menu line, 1 for menu line
+	int colorIndex = 2;
+	int colorActiveIndex = 0;
+	tft.fillScreen(TFT_BLACK);
+	DisplayLine(4, "Rotate change : Long exit");
+	bool done = false;
+	bool change = true;
+	while (!done) {
+		if (change) {
+			DisplayLine(3, String("Click Change: ") + (mode ? "Normal" : "Active") + " Color");
+			DisplayLine(0, "Active", menuLineActiveColor);
+			DisplayLine(1, "Normal", menuLineColor);
+			change = false;
+		}
+		switch (CRotaryDialButton::getInstance()->dequeue()) {
+		case CRotaryDialButton::BTN_CLICK:
+			if (mode == 0)
+				mode = 1;
+			else
+				mode = 0;
+			change = true;
+			break;
+		case CRotaryDialButton::BTN_LONGPRESS:
+			done = true;
+			break;
+		case CRotaryDialButton::BTN_RIGHT:
+			change = true;
+			if(mode)
+				colorIndex = ++colorIndex;
+			else
+				colorActiveIndex = ++colorActiveIndex;
+			break;
+		case CRotaryDialButton::BTN_LEFT:
+			change = true;
+			if (mode)
+				colorIndex = --colorIndex;
+			else
+				colorActiveIndex = --colorActiveIndex;
+			break;
+		}
+		colorIndex = constrain(colorIndex, 0, maxIndex);
+		menuLineColor = ColorList[colorIndex];
+		colorActiveIndex = constrain(colorActiveIndex, 0, maxIndex);
+		menuLineActiveColor = ColorList[colorActiveIndex];
+	}
 }
 
 // handle the menus
@@ -2292,7 +2361,7 @@ void DisplayLine(int line, String text, int16_t color)
 {
 	if (bPauseDisplay)
 		return;
-	int y = line * charHeight + (bSettingsMode && !bRunningMacro ? 0 : 6);
+	int y = line * charHeight + (bSettingsMode && !bRunningMacro ? 0 : 8);
 	tft.fillRect(0, y, tft.width(), charHeight, TFT_BLACK);
 	tft.setTextColor(color);
 	tft.drawString(text, 0, y);
@@ -2459,7 +2528,7 @@ void WriteMessage(String txt, bool error, int wait)
 	tft.fillScreen(TFT_BLACK);
 	if (error)
 		txt = "**" + txt + "**";
-	tft.setCursor(0, 0);
+	tft.setCursor(0, tft.fontHeight());
 	tft.setTextWrap(true);
 	tft.print(txt);
 	delay(wait);
