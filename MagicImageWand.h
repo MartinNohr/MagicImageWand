@@ -1,5 +1,7 @@
 #pragma once
 
+String myVersion = "1.02";
+
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
 #define USE_STANDARD_SD 0
@@ -28,9 +30,21 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiAP.h>
-const char *ssid = "MIW-23896"; //maybe use parts of the mac address to make this unique in case you shoot with friends and you gifted them a MIW
+#include <WebServer.h>
+String wifiMacs = "MIW-" + WiFi.macAddress();
+const char *ssid = wifiMacs.c_str();
 const char *password = "12345678"; // not critical stuff, therefore simple password is enough
-WiFiServer server(80);
+WebServer server(80);
+String webpage = "";
+
+String file_size(int bytes){
+  String fsize = "";
+  if (bytes < 1024)                 fsize = String(bytes)+" B";
+  else if(bytes < (1024*1024))      fsize = String(bytes/1024.0,3)+" KB";
+  else if(bytes < (1024*1024*1024)) fsize = String(bytes/1024.0/1024.0,3)+" MB";
+  else                              fsize = String(bytes/1024.0/1024.0/1024.0,3)+" GB";
+  return fsize;
+}
 
 #include <FastLED.h>
 #include <EEPROM.h>
@@ -41,10 +55,10 @@ WiFiServer server(80);
 //#include <fonts/GFXFF/FreeMono18pt7b.h>
 
 #if USE_STANDARD_SD
-SPIClass spiSDCard;
+  SPIClass spiSDCard;
 #else
-//SPIClass spi1(VSPI);
-SdFs SD; // fat16/32 and exFAT
+  //SPIClass spi1(VSPI);
+  SdFs SD; // fat16/32 and exFAT
 #endif
 
 // the display
@@ -84,6 +98,21 @@ void TestStripes();
 void TestLines();
 void RainbowPulse();
 void TestWedge();
+void ReportCouldNotCreateFile();
+void handleFileUpload();
+void append_page_header();
+void append_page_footer();
+void HomePage();
+void File_Download();
+void SD_file_download();
+void File_Upload();
+void SendHTML_Header();
+void SendHTML_Content();
+void SendHTML_Stop();
+void SelectInput();
+void ReportFileNotPresent();
+void ReportSDNotPresent();
+
 
 bool bPauseDisplay = false; // set this so DisplayLine and Progress won't update display
 CRotaryDialButton::Button ReadButton();
