@@ -98,7 +98,8 @@ void setup()
 		tft.drawString(__DATE__, 70, 90);
 		//tft.setTextColor(TFT_BLACK);
 	}
-	tft.setFreeFont(&Open_Sans_Condensed_Bold_16);
+	//tft.setFreeFont(&Open_Sans_Condensed_Bold_16);
+	tft.setFreeFont(&Dialog_bold_16);
 	charHeight = tft.fontHeight();
 	tft.setTextColor(menuLineActiveColor);
 
@@ -347,7 +348,7 @@ bool RunMenus(int button)
 	}
 }
 
-#define MENU_LINES 6
+#define MENU_LINES 7
 // display the menu
 // if MenuStack.top()->index is > MENU_LINES, then shift the lines up by enough to display them
 // remember that we only have room for MENU_LINES lines
@@ -471,7 +472,6 @@ void ShowMenu(struct MenuItem* menu)
 			DisplayMenuLine(y - 1, y - 1 - MenuStack.top()->offset, line);
 		}
 	}
-	//Serial.println("menu: " + String(offsetLines) + ":" + String(y) + " active: " + String(MenuStack.top()->index));
 	MenuStack.top()->menucount = y;
 	// blank the rest of the lines
 	for (int ix = y; ix < MENU_LINES; ++ix) {
@@ -483,6 +483,14 @@ void ShowMenu(struct MenuItem* menu)
 	// show bottom line if last line is showing
 	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
 		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, menuLineActiveColor);
+	else
+		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_BLACK);
+	// see if we need to clean up the end, like when the menu shrank due to a choice
+	int extra = MenuStack.top()->menucount - MenuStack.top()->offset - MENU_LINES;
+	while (extra < 0) {
+		DisplayLine(MENU_LINES + extra, "");
+		++extra;
+	}
 }
 
 // switch between SD and built-ins
@@ -2379,10 +2387,8 @@ void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
 	String mline = (hilite ? "* " : "  ") + text;
-	//if (MenuStack.top()->index == line)
-		//tft.setFont(SansSerif_bold_10);
-	DisplayLine(displine, mline, hilite ? menuLineActiveColor : menuLineColor);
-	//tft.setFont(ArialMT_Plain_10);
+	if (displine < MENU_LINES)
+		DisplayLine(displine, mline, hilite ? menuLineActiveColor : menuLineColor);
 }
 
 uint32_t IRAM_ATTR readLong() {

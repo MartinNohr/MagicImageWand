@@ -670,14 +670,14 @@ MenuItem LedLightBarMenu[] = {
 MenuItem RandomBarsMenu[] = {
     {eExit,false,"Previous Menu"},
     {eTextInt,false,"Hold Frames: %d",GetIntegerValue,&nRandomBarsHoldframes,1,100},
-    {eBool,false,"Alternating Blacks: %s",ToggleBool,&bRandomBarsBlacks,0,0,0,"Yes","No"},
+    {eBool,false,"Alternating Black: %s",ToggleBool,&bRandomBarsBlacks,0,0,0,"Yes","No"},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem SystemMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Display Brightness: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eTextInt,false,"Display Bright: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eText,false,"Set Menu Colors",SetMenuColors},
     {eBool,false,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
@@ -687,7 +687,7 @@ MenuItem SystemMenu[] = {
     {eBool,false,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,false,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,false,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
-    {eTextInt,false,"Long Press counter: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200,0,NULL,NULL},
+    {eTextInt,false,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200,0,NULL,NULL},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -696,14 +696,14 @@ MenuItem ImageMenu[] = {
     {eExit,false,"Previous Menu"},
     {eBool,false,"Timing Type: %s",ToggleBool,&bFixedTime,0,0,0,"Image","Column"},
     {eIfEqual,false,"",NULL,&bFixedTime,false},
-        {eTextInt,false,"Column Time (mS): %d",GetIntegerValue,&nFrameHold,0,1000},
+        {eTextInt,false,"Column (mS): %d",GetIntegerValue,&nFrameHold,0,1000},
     {eElse},
         {eTextInt,false,"Image Time (S): %d",GetIntegerValue,&nFixedImageTime,1,120},
     {eEndif},
     {eTextInt,false,"Start Delay (S): %d.%d",GetIntegerValue,&startDelay,0,100,1},
-    {eBool,false,"Upside Down Image: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
+    {eBool,false,"Upside Down: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
     {eIfEqual,false,"",NULL,&bShowBuiltInTests,false},
-        {eBool,false,"Walk Direction: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
+        {eBool,false,"Walk: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,false,"Play Mirror Image: %s",ToggleBool,&bMirrorPlayImage,0,0,0,"Yes","No"},
         {eIfEqual,false,"",NULL,&bMirrorPlayImage,true},
             {eTextInt,false,"Mirror Delay (S): %d.%d",GetIntegerValue,&nMirrorDelay,0,10,1},
@@ -716,7 +716,7 @@ MenuItem ImageMenu[] = {
     {eIfEqual,false,"",NULL,&bShowBuiltInTests,false},
         {eBool,false,"Frame Advance: %s",ToggleBool,&bManualFrameAdvance,0,0,0,"Step","Auto"},
         {eIfEqual,false,"",NULL,&bManualFrameAdvance,true},
-            {eTextInt,false,"Frame Pulse Counter: %d",GetIntegerValue,&nFramePulseCount,0,32},
+            {eTextInt,false,"Frame Counter: %d",GetIntegerValue,&nFramePulseCount,0,32},
         {eEndif},
     {eEndif},
     {eExit,false,"Previous Menu"},
