@@ -66,6 +66,8 @@ void setup()
 //WiFi
   WiFi.softAP(ssid, password);
   IPAddress myIP = WiFi.softAPIP();
+  // save for the menu system
+  strncpy(localIpAddress, myIP.toString().c_str(), sizeof(localIpAddress));
   Serial.print("AP IP address: ");
   Serial.println(myIP);
   server.begin();
@@ -82,23 +84,20 @@ void setup()
 	tft.fillScreen(TFT_BLACK);
 	tft.setTextColor(menuLineActiveColor);
 	rainbow_fill();
+	tft.setFreeFont(&Dialog_bold_16);
 	if (nBootCount == 0)
 	{
 		tft.setTextColor(TFT_BLACK);
-		//tft.setFreeFont(&FreeMono18pt7b);
-		tft.setTextFont(2);
 		tft.drawRect(0, 0, width - 1, height - 1, menuLineActiveColor);
 		tft.setTextSize(2);
-		//tft.setTextColor(TFT_GREEN);
-		tft.drawString("Magic Image Wand", 10, 5);
-		//tft.setTextSize(2);
-		//tft.setTextColor(TFT_BLUE);
-		tft.drawString("Version " + myVersion, 30, 50);
+		tft.drawString("Magic", 50, 5);
+		tft.drawString("Image", 50, 30);
+		tft.drawString("Wand", 50, 60);
 		tft.setTextSize(1);
-		tft.drawString(__DATE__, 70, 90);
-		//tft.setTextColor(TFT_BLACK);
+		tft.drawString("Version " + myVersion, 20, 90);
+		tft.setTextSize(1);
+		tft.drawString(__DATE__, 20, 110);
 	}
-	//tft.setFreeFont(&Open_Sans_Condensed_Bold_16);
 	tft.setFreeFont(&Dialog_bold_16);
 	charHeight = tft.fontHeight();
 	tft.setTextColor(menuLineActiveColor);
@@ -391,8 +390,9 @@ void ShowMenu(struct MenuItem* menu)
 			menu->valid = true;
 			if (menu->value) {
 				val = *(int*)menu->value;
-				if (menu->op == eText)
-					sprintf(line, menu->text, val);
+				if (menu->op == eText) {
+					sprintf(line, menu->text, (char*)(menu->value));
+				}
 				else if (menu->op == eTextInt) {
 					if (menu->decimals == 0) {
 						sprintf(line, menu->text, val);
@@ -593,9 +593,7 @@ void GetIntegerValue(MenuItem* menu)
 		// make sure within limits
 		*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
 		// show slider bar
-		//OLEDDISPLAY_COLOR oldColor = tft.getColor();
-		tft.fillRect(0, 30, tft.width() - 1, 6, TFT_BLACK);
-		//tft.setColor(oldColor);
+		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
 		DrawProgressBar(0, 2 * charHeight + 5, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
 		if (menu->decimals == 0) {
 			sprintf(line, menu->text, *(int*)menu->value);
@@ -2386,7 +2384,7 @@ void DisplayLine(int line, String text, int16_t color)
 void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
-	String mline = (hilite ? "* " : "  ") + text;
+	String mline = (hilite ? "*" : " ") + text;
 	if (displine < MENU_LINES)
 		DisplayLine(displine, mline, hilite ? menuLineActiveColor : menuLineColor);
 }

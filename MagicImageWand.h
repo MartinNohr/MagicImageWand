@@ -36,6 +36,7 @@ const char *ssid = wifiMacs.c_str();
 const char *password = "12345678"; // not critical stuff, therefore simple password is enough
 WebServer server(80);
 String webpage = "";
+char localIpAddress[16];
 
 String file_size(int bytes){
   String fsize = "";
@@ -696,7 +697,7 @@ MenuItem ImageMenu[] = {
     {eExit,false,"Previous Menu"},
     {eBool,false,"Timing Type: %s",ToggleBool,&bFixedTime,0,0,0,"Image","Column"},
     {eIfEqual,false,"",NULL,&bFixedTime,false},
-        {eTextInt,false,"Column (mS): %d",GetIntegerValue,&nFrameHold,0,1000},
+        {eTextInt,false,"Column Time (mS): %d",GetIntegerValue,&nFrameHold,0,500},
     {eElse},
         {eTextInt,false,"Image Time (S): %d",GetIntegerValue,&nFixedImageTime,1,120},
     {eEndif},
@@ -836,6 +837,7 @@ MenuItem MainMenu[] = {
     {eMenu,false,"System Settings",{.menu = SystemMenu}},
     {eText,false,"Light Bar",LightBar},
     //{eText,false,"Battery",ReadBattery},
+    {eText,false,"IP: %s",NULL,&localIpAddress},
     {eText,false,"Sleep",Sleep},
     {eReboot,false,"Reboot"},
     // make sure this one is last
