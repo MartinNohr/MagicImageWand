@@ -75,6 +75,7 @@ void setup()
   server.on("/",         HomePage);
   server.on("/download", File_Download);
   server.on("/upload",   File_Upload);
+  server.on("/settings", ShowSettings);
   server.on("/fupload",  HTTP_POST,[](){ server.send(200);}, handleFileUpload);
   ///////////////////////////// End of Request commands
   server.begin();
@@ -3447,15 +3448,16 @@ void append_page_header() {
 }
 
 void append_page_footer(){
-  webpage += F("<ul>");
-  webpage += F("<li><a href='/'>Home</a></li>");
-  webpage += F("<li><a href='/download'>Download</a></li>"); 
-  webpage += F("<li><a href='/upload'>Upload</a></li>"); 
-  webpage += F("</ul>");
+  webpage += "<ul>";
+  webpage += "<li><a href='/'>Home</a></li>";
+  webpage += "<li><a href='/download'>Download</a></li>"; 
+  webpage += "<li><a href='/upload'>Upload</a></li>";
+  webpage += "<li><a href='/settings'>Settings</a></li>";
+  webpage += "</ul>";
   webpage += "<footer>MagicImageWand ";
   webpage += myVersion;
   webpage += "</footer>";
-  webpage += F("</body></html>");
+  webpage += "</body></html>";
 }
 
 void SendHTML_Header(){
@@ -3481,8 +3483,9 @@ void SendHTML_Stop(){
 
 void HomePage(){
   SendHTML_Header();
-  webpage += F("<a href='/download'><button>Download</button></a>");
-  webpage += F("<a href='/upload'><button>Upload</button></a>");
+  webpage += "<a href='/download'><button>Download</button></a>";
+  webpage += "<a href='/upload'><button>Upload</button></a>";
+  webpage += "<a href='/settings'><button>Settings</button></a>";
   append_page_footer();
   SendHTML_Content();
   SendHTML_Stop();
@@ -3494,7 +3497,7 @@ void SelectInput(String heading1, String command, String arg_calling_name){
   webpage += F("<h3>"); webpage += heading1 + "</h3>"; 
   for (String var : FileNames)
   {
-	  webpage += String("<p>") + var + "</p>";
+	  webpage += String("<p>") + var;
   }
   webpage += F("<FORM action='/"); webpage += command + "' method='post'>";
   webpage += F("<input type='text' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
@@ -3542,6 +3545,16 @@ void SD_file_download(String filename){
       download.close();
     } else ReportFileNotPresent("download"); 
   } else ReportSDNotPresent();
+}
+
+void ShowSettings() {
+	append_page_header();
+	webpage += "<h3>Current Settings</h3>";
+	webpage += String("<p>Current File: ") + FileNames[CurrentFileIndex];
+	webpage += String("<p>Column Time: ") + String(nFrameHold) + " mS";
+	webpage += String("<p>Repeat Count: ") + String(repeatCount);
+	append_page_footer();
+	server.send(200, "text/html", webpage);
 }
 
 void File_Upload(){
