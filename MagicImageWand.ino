@@ -3550,9 +3550,15 @@ void SD_file_download(String filename){
 void ShowSettings() {
 	append_page_header();
 	webpage += "<h3>Current Settings</h3>";
-	webpage += String("<p>Current File: ") + FileNames[CurrentFileIndex];
-	webpage += String("<p>Column Time: ") + String(nFrameHold) + " mS";
+	webpage += String("<p>Current File: ") +currentFolder+ FileNames[CurrentFileIndex];
+	if (bFixedTime) {
+		webpage += String("<p>Fixed Image Time: ") + String(nFixedImageTime) + " S";
+	}
+	else {
+		webpage += String("<p>Column Time: ") + String(nFrameHold) + " mS";
+	}
 	webpage += String("<p>Repeat Count: ") + String(repeatCount);
+	webpage += String("<p>LED Brightness: ") + String(nStripBrightness);
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
