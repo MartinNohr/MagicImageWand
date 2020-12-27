@@ -88,12 +88,10 @@ void setup()
 	if (nBootCount == 0)
 	{
 		tft.setTextColor(TFT_BLACK);
+		tft.setFreeFont(&Irish_Grover_Regular_24);
 		tft.drawRect(0, 0, width - 1, height - 1, menuLineActiveColor);
-		tft.setTextSize(2);
-		tft.drawString("Magic", 50, 5);
-		tft.drawString("Image", 50, 30);
-		tft.drawString("Wand", 50, 60);
-		tft.setTextSize(1);
+		tft.drawString("Magic Image Wand", 5, 10);
+		tft.setFreeFont(&Dialog_bold_16);
 		tft.drawString("Version " + myVersion, 20, 90);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 20, 110);
@@ -725,19 +723,32 @@ uint16_t ColorList[] = {
 	TFT_PURPLE,
 };
 
+// find the color in the list
+int FindMenuColor(uint16_t col)
+{
+	int ix;
+	int colors = sizeof(ColorList) / sizeof(*ColorList);
+	for (ix = 0; ix < colors; ++ix) {
+		if (col == ColorList[ix])
+			break;
+	}
+	return constrain(ix, 0, colors - 1);
+}
+
 void SetMenuColors(MenuItem* menu)
 {
 	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
 	int mode = 0;	// 0 for active menu line, 1 for menu line
-	int colorIndex = 2;
-	int colorActiveIndex = 0;
+	int colorIndex = FindMenuColor(menuLineColor);
+	int colorActiveIndex = FindMenuColor(menuLineActiveColor);
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(4, "Rotate change : Long exit");
+	DisplayLine(4, "Rotate change value");
+	DisplayLine(5, "Long Press Exit");
 	bool done = false;
 	bool change = true;
 	while (!done) {
 		if (change) {
-			DisplayLine(3, String("Click Change: ") + (mode ? "Normal" : "Active") + " Color");
+			DisplayLine(3, String("Click: ") + (mode ? "Normal" : "Active") + " Color");
 			DisplayLine(0, "Active", menuLineActiveColor);
 			DisplayLine(1, "Normal", menuLineColor);
 			change = false;
@@ -1371,10 +1382,9 @@ void DisplayLedLightBar()
 					line = "Brightness: " + String(nDisplayAllBrightness);
 				break;
 			case 3:
-				line = "";
+				line = " (step: " + String(increment) + ")";
 				break;
 			}
-			line += " (step: " + String(increment) + ")";
 			DisplayLine(2, line);
 		}
 		btn = ReadButton();
