@@ -3492,6 +3492,10 @@ void HomePage(){
 void SelectInput(String heading1, String command, String arg_calling_name){
   SendHTML_Header();
   webpage += F("<h3>"); webpage += heading1 + "</h3>"; 
+  for (String var : FileNames)
+  {
+	  webpage += String("<p>") + var + "</p>";
+  }
   webpage += F("<FORM action='/"); webpage += command + "' method='post'>";
   webpage += F("<input type='text' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
   webpage += F("<type='submit' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
