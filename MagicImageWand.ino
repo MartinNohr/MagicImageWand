@@ -3483,9 +3483,9 @@ void SendHTML_Stop(){
 
 void HomePage(){
   SendHTML_Header();
-  webpage += "<a href='/download'><button>Download</button></a>";
-  webpage += "<a href='/upload'><button>Upload</button></a>";
-  webpage += "<a href='/settings'><button>Settings</button></a>";
+  webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
+  webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
+  webpage += "<a href='/settings'><button style=\"width:auto\">Settings</button></a>";
   append_page_footer();
   SendHTML_Content();
   SendHTML_Stop();
