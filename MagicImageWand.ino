@@ -3372,7 +3372,7 @@ void handleFileUpload(){ // upload a new file to the Filing system
     Serial.print("Upload File Name: "); Serial.println(filename);
     SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
     //UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
-   // UploadFile = SD.open(filepath.c_str(), filename (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
+	UploadFile = SD.open(filename, O_WRITE | O_CREAT);
     filename = String();
   }
   else if (uploadfile.status == UPLOAD_FILE_WRITE)
@@ -3523,7 +3523,8 @@ void SD_file_download(String filename){
       server.sendHeader("Content-Type", "text/text");
       server.sendHeader("Content-Disposition", "attachment; filename="+filename);
       server.sendHeader("Connection", "close");
-      server.streamFile(download, "application/octet-stream");
+	  //server.streamFile(download, "application/octet-stream");
+	  server.streamFile(download, "image/bmp");
       download.close();
     } else ReportFileNotPresent("download"); 
   } else ReportSDNotPresent();
