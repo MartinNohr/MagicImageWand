@@ -238,12 +238,28 @@ void loop()
 	static bool didsomething = false;
 	bool lastStrip = bSecondStrip;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
-  server.handleClient(); 
+	server.handleClient();
 	// wait for no keys
 	if (didsomething) {
-		//Serial.println("calling wait for none");
 		didsomething = false;
 		delay(1);
+	}
+	static bool bButton0 = false;
+	if (bButton0) {
+		if (digitalRead(0) == 1)
+			bButton0 = false;
+	}
+	if (!bButton0 && digitalRead(0) == 0) {
+		ShowBmp(NULL);
+		bButton0 = true;
+		// restore the screen to what it was doing before the bmp display
+		if (bSettingsMode) {
+			ShowMenu(MenuStack.top()->menu);
+		}
+		else {
+			tft.fillScreen(TFT_BLACK);
+			DisplayCurrentFile(bShowFolder);
+		}
 	}
 }
 
@@ -907,20 +923,6 @@ enum CRotaryDialButton::Button ReadButton()
 	//if (retValue != BTN_NONE)
 	//	Serial.println("button:" + String(retValue));
 	return retValue;
-}
-
-// save or restore the display
-void SaveRestoreDisplay(bool save)
-{
-	if (save) {
-		tft.readRect(0, 0, 240, 135, screenBuffer);
-		bPauseDisplay = true;
-		tft.fillScreen(TFT_BLACK);
-	}
-	else {
-		tft.pushRect(0, 0, 240, 135, screenBuffer);
-		bPauseDisplay = false;
-	}
 }
 
 // just check for longpress and cancel if it was there
@@ -2261,12 +2263,21 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 }
 
 // put the current file on the display
-void ShowBmp(MenuItem* menu)
+// Note that menu is not used, it is called with NULL sometimes
+void ShowBmp(MenuItem*)
 {
+	if (bShowBuiltInTests)
+		return;
+	bool bSawButton0 = !digitalRead(0);
+	uint16_t* scrBuf;
+	scrBuf = (uint16_t*)calloc(240 * 135, sizeof(uint16_t));
+	if (scrBuf == NULL) {
+		WriteMessage("Not enough memory", true, 5000);
+		return;
+	}
 	bool bOldGamma = bGammaCorrection;
 	bGammaCorrection = false;
 	tft.fillScreen(TFT_BLACK);
-	memset(screenBuffer, 0, sizeof(screenBuffer));
 	String fn = currentFolder + FileNames[CurrentFileIndex];
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
@@ -2319,38 +2330,45 @@ void ShowBmp(MenuItem* menu)
 	// fix for padding to 4 byte words
 	if ((lineLength % 4) != 0)
 		lineLength = (lineLength / 4 + 1) * 4;
-	// offset for showing the image
-	int imgOffset = 0;
 	bool done = false;
 	bool redraw = true;
 	bool allowScroll = imgHeight > 240;
-	while (!done && redraw) {
-		// loop through the image, y is the image width, and x is the image height
-		for (int y = 0; y < imgHeight; ++y) {
-			int bufpos = 0;
-			CRGB pixel;
-			// get to start of pixel data for this column
-			FileSeekBuf((uint32_t)bmpOffBits + ((y + imgOffset) * lineLength));
-			for (int x = displayWidth - 1; x >= 0; --x) {
-				// this reads three bytes
-				pixel = getRGBwithGamma();
-				// add to the display memory
-				int row = x - 5;
-				int col = y;
-				if (row >= 0 && row < 135 && col >= 0 && col < 240) {
-					uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
-					uint16_t sbcolor;
-					// the memory image colors are byte swapped
-					swab(&color, &sbcolor, 2);
-					screenBuffer[(134 - row) * 240 + col] = sbcolor;
+	// offset for showing the image
+	int imgOffset = 0;
+	int oldImgOffset;
+	while (!done) {
+		if (redraw) {
+			// loop through the image, y is the image width, and x is the image height
+			for (int y = 0; y < imgHeight; ++y) {
+				int bufpos = 0;
+				CRGB pixel;
+				// get to start of pixel data for this column
+				FileSeekBuf((uint32_t)bmpOffBits + ((y + imgOffset) * lineLength));
+				for (int x = displayWidth - 1; x >= 0; --x) {
+					// this reads three bytes
+					pixel = getRGBwithGamma();
+					// add to the display memory
+					int row = x - 5;
+					int col = y;
+					if (row >= 0 && row < 135 && col >= 0 && col < 240) {
+						uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
+						uint16_t sbcolor;
+						// the memory image colors are byte swapped
+						swab(&color, &sbcolor, 2);
+						scrBuf[(134 - row) * 240 + col] = sbcolor;
+					}
 				}
 			}
+			oldImgOffset = imgOffset;
+			// got it all, go show it
+			tft.pushRect(0, 0, 240, 135, scrBuf);
 		}
-		int oldImgOffset = imgOffset;
-		// got it all, go show it
-		tft.pushRect(0, 0, 240, 135, screenBuffer);
-		CRotaryDialButton::getInstance()->clear();
-		switch (CRotaryDialButton::getInstance()->waitButton(true, 20000)) {
+		if (bSawButton0) {
+			while (digitalRead(0) == 0)
+				;
+			bSawButton0 = false;
+		}
+		switch (CRotaryDialButton::getInstance()->dequeue()) {
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
 				imgOffset -= 240;
@@ -2372,11 +2390,15 @@ void ShowBmp(MenuItem* menu)
 			break;
 		}
 		if (oldImgOffset != imgOffset) {
-			//tft.fillScreen(TFT_BLACK);
 			redraw = true;
+		}
+		// check the 0 button
+		if (digitalRead(0) == 0) {
+			done = true;
 		}
 	}
 	// all done
+	free(scrBuf);
 	readByte(true);
 	bGammaCorrection = bOldGamma;
 }
