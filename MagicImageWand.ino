@@ -2339,18 +2339,18 @@ void ShowBmp(MenuItem*)
 	while (!done) {
 		if (redraw) {
 			// loop through the image, y is the image width, and x is the image height
-			for (int y = 0; y < imgHeight; ++y) {
+			for (int y = imgOffset; y < (imgHeight > 240 ? 240 : imgHeight) + imgOffset; ++y) {
 				int bufpos = 0;
 				CRGB pixel;
 				// get to start of pixel data for this column
-				FileSeekBuf((uint32_t)bmpOffBits + ((y + imgOffset) * lineLength));
+				FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
 				for (int x = displayWidth - 1; x >= 0; --x) {
 					// this reads three bytes
 					pixel = getRGBwithGamma();
 					// add to the display memory
 					int row = x - 5;
-					int col = y;
-					if (row >= 0 && row < 135 && col >= 0 && col < 240) {
+					int col = y - imgOffset;
+					if (row >= 0 && row < 135) {
 						uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 						uint16_t sbcolor;
 						// the memory image colors are byte swapped
