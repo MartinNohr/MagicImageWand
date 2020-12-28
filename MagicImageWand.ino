@@ -3403,6 +3403,10 @@ void handleFileUpload(){ // upload a new file to the Filing system
       webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>"; 
       append_page_footer();
       server.send(200,"text/html",webpage);
+	  // reload the file list, if not showing built-ins
+	  if (!bShowBuiltInTests) {
+		  GetFileNamesFromSD(currentFolder);
+	  }
     } 
     else
     {
