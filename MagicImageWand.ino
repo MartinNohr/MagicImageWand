@@ -2268,6 +2268,13 @@ void ShowBmp(MenuItem*)
 {
 	if (bShowBuiltInTests)
 		return;
+	String fn = currentFolder + FileNames[CurrentFileIndex];
+	// make sure this is a bmp file, of not just quietly go away
+	String tmp = fn.substring(fn.length() - 3);
+	tmp.toLowerCase();
+	if (tmp.compareTo("bmp")) {
+		return;
+	}
 	bool bSawButton0 = !digitalRead(0);
 	uint16_t* scrBuf;
 	scrBuf = (uint16_t*)calloc(240 * 135, sizeof(uint16_t));
@@ -2277,14 +2284,14 @@ void ShowBmp(MenuItem*)
 	}
 	bool bOldGamma = bGammaCorrection;
 	bGammaCorrection = false;
-	tft.fillScreen(TFT_BLACK);
-	String fn = currentFolder + FileNames[CurrentFileIndex];
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
 	if (!dataFile.available()) {
+		free(scrBuf);
 		WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
+	tft.fillScreen(TFT_BLACK);
 	// clear the file cache buffer
 	readByte(true);
 	uint16_t bmpType = readInt();
@@ -2295,6 +2302,7 @@ void ShowBmp(MenuItem*)
 
 	/* Check file header */
 	if (bmpType != MYBMP_BF_TYPE) {
+		free(scrBuf);
 		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
@@ -2316,6 +2324,7 @@ void ShowBmp(MenuItem*)
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
 	{
+		free(scrBuf);
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
