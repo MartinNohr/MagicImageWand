@@ -3583,6 +3583,16 @@ void SD_file_download(String filename){
   } else ReportSDNotPresent();
 }
 
+void IncreaseRepeatButton(){
+  // This can be for sure made into an universal fuction like IncreaseButton(Setting, Value)
+  webpage += String("&nbsp;<a href='/settings/increpeat'><strong>&#8679;</strong></a>");
+}
+
+void DecreaseRepeatButton(){
+  // This can be for sure made into an universal fuction like DecreaseButton(Setting, Value)
+  webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
+}
+
 void ShowSettings() {
 	append_page_header();
 	webpage += "<h3>Current Settings</h3>";
@@ -3594,6 +3604,8 @@ void ShowSettings() {
 		webpage += String("<p>Column Time: ") + String(nFrameHold) + " mS";
 	}
 	webpage += String("<p>Repeat Count: ") + String(repeatCount);
+	IncreaseRepeatButton();
+	DecreaseRepeatButton();
 	webpage += String("<p>LED Brightness: ") + String(nStripBrightness);
 	append_page_footer();
 	server.send(200, "text/html", webpage);
