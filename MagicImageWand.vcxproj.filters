@@ -16,6 +16,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="MagicImageWand.ino" />
+    <None Include="Debug\MagicImageWand.bin">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.MagicImageWand.vsarduino.h">

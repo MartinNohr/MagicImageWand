@@ -15,6 +15,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf);
 uint16_t IRAM_ATTR readInt();
 uint32_t IRAM_ATTR readLong();
 void IRAM_ATTR FileSeekBuf(uint32_t place);
+int FileCountOnly(int start = 0);
 
 //static const char* TAG = "lightwand";
 //esp_timer_cb_t oneshot_timer_callback(void* arg)
@@ -1902,7 +1903,7 @@ void ProcessFileOrTest()
 		}
 		DisplayLine(2, "");
 	}
-	int chainCount = bChainFiles ? FileCountOnly() - CurrentFileIndex : 1;
+	int chainCount = bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
 	int chainRepeatCount = bChainFiles ? nChainRepeats : 1;
 	int lastFileIndex = CurrentFileIndex;
 	// don't allow chaining for built-ins, although maybe we should
@@ -1999,7 +2000,7 @@ void ProcessFileOrTest()
 		}
 		// start again
 		CurrentFileIndex = lastFileIndex;
-		chainCount = bChainFiles ? FileCountOnly() - CurrentFileIndex : 1;
+		chainCount = bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
 		if (repeatDelay && (nRepeatsLeft > 1) || chainRepeatCount >= 1) {
 			FastLED.clear(true);
 			// start timer
@@ -2506,13 +2507,13 @@ void IRAM_ATTR FileSeekBuf(uint32_t place)
 	}
 }
 
-// count the actual files
-int FileCountOnly()
+// count the actual files, at a given starting point
+int FileCountOnly(int start)
 {
 	int count = 0;
 	// ignore folders, at the end
-	for (int files = 0; files < FileNames.size(); ++files) {
-		if (!IsFolder(count))
+	for (int files = start; files < FileNames.size(); ++files) {
+		if (!IsFolder(files))
 			++count;
 	}
 	return count;

@@ -107,6 +107,7 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Debug\MagicImageWand.bin" />
     <None Include="MagicImageWand.ino">
       <FileType>CppCode</FileType>
     </None>
