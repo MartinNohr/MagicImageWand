@@ -140,7 +140,7 @@ RTC_DATA_ATTR bool bSecondStrip = false;                // set true when two str
 #define STRIPLENGTH (NUM_LEDS*(1+(bSecondStrip?1:0)))
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
-void SetPixel(int ix, CRGB pixel);
+void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
 RTC_DATA_ATTR int nStripBrightness = 25;                // Variable and default for the Brightness of the strip, from 1 to 255
 RTC_DATA_ATTR int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
 RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds

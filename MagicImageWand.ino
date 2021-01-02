@@ -2127,10 +2127,8 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	// The x,r,b,g sequence below might need to be changed if your strip is displaying
 	// incorrect colors.  Some strips use an x,r,b,g sequence and some use x,r,g,b
 	// Change the order if needed to make the colors correct.
-
-	int allowedFadeInOutFrames = min(nFadeInOutFrames, (int)imgHeight / 2);
-	// if nFadeInOutFrames is not zero, calculate the brightness each time a frame is displayed
-	int fadeAmount = (allowedFadeInOutFrames == 0) ? 255 : 255 / (allowedFadeInOutFrames);
+	// init the fade settings in SetPixel
+	SetPixel(0, TFT_BLACK, -1, (int)imgHeight);
 	long secondsLeft = 0, lastSeconds = 0;
 	char num[50];
 	int percent;
@@ -2171,35 +2169,17 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		int bufpos = 0;
 		CRGB pixel;
-		int pixelScaleBrightness = 255;
-		if (allowedFadeInOutFrames) {
-			int realFrameCount = bReverseImage ? imgHeight - 1 - y : y;
-			// see if we need to set the brightness from the fade value
-			if (realFrameCount <= allowedFadeInOutFrames) {
-				pixelScaleBrightness = realFrameCount * fadeAmount;
-				pixelScaleBrightness = constrain(pixelScaleBrightness, 0, 255);
-			}
-			// now for some dimming
-			else if (realFrameCount >= (imgHeight - allowedFadeInOutFrames)) {
-				pixelScaleBrightness = (imgHeight - realFrameCount) * fadeAmount;
-				pixelScaleBrightness = constrain(pixelScaleBrightness, 0, 255);
-			}
-		}
-		// seek to the column start
 		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
 		//uint32_t offset = (bmpOffBits + (y * lineLength));
 		//dataFile.seekSet(offset);
 		for (int x = displayWidth - 1; x >= 0; --x) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
-			if (pixelScaleBrightness != 255) {
-				pixel = pixel.nscale8_video(pixelScaleBrightness);
-			}
 			// see if we want this one
 			if (bScaleHeight && (x * displayWidth) % imgWidth) {
 				continue;
 			}
-			SetPixel(x, pixel);
+			SetPixel(x, pixel, y);
 		}
 		// see how long it took to get here
 		if (!bLoopTimed) {
@@ -3167,26 +3147,77 @@ int AdjustStripIndex(int ix)
 // pixel doubling is handled here
 // e.g. pixel 0 will be 0 and 1, 1 will be 2 and 3, etc
 // if upside down n will be n and n-1, n-1 will be n-1 and n-2
-void IRAM_ATTR SetPixel(int ix, CRGB pixel)
+// column = -1 to init fade in/out values
+void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 {
+	static int fadeStep;
+	static int fadeColumns;
+	static int lastColumn;
+	static int maxColumn;
+	static int fade;
+	if (nFadeInOutFrames) {
+		// handle fading
+		if (column == -1) {
+			fadeColumns = min(totalColumns / 2, nFadeInOutFrames);
+			maxColumn = totalColumns;
+			fadeStep = 255 / fadeColumns;
+			//Serial.println("fadeStep: " + String(fadeStep) + " fadeColumns: " + String(fadeColumns) + " maxColumn: " + String(maxColumn));
+			lastColumn = -1;
+			fade = 255;
+			return;
+		}
+		// when the column changes check if we are in the fade areas
+		if (column != lastColumn) {
+			int realColumn = bReverseImage ? maxColumn - 1 - column : column;
+			if (realColumn <= fadeColumns) {
+				// calculate the fade amount
+				fade = realColumn * fadeStep;
+				fade = constrain(fade, 0, 255);
+				// fading up
+				//Serial.println("UP col: " + String(realColumn) + " fade: " + String(fade));
+			}
+			else if (realColumn >= maxColumn - 1 - fadeColumns) {
+				// calculate the fade amount
+				fade = (maxColumn - 1 - realColumn) * fadeStep;
+				fade = constrain(fade, 0, 255);
+				// fading down
+				//Serial.println("DOWN col: " + String(realColumn) + " fade: " + String(fade));
+			}
+			else
+				fade = 255;
+			lastColumn = column;
+		}
+	}
+	else {
+		// no fade
+		fade = 255;
+	}
+	int ix1, ix2;
 	if (bUpsideDown) {
 		if (bDoublePixels) {
-			leds[AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix)] = pixel;
-			leds[AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix)] = pixel;
+			ix1 = AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix);
+			ix2 = AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix);
 		}
 		else {
-			leds[AdjustStripIndex(STRIPLENGTH - 1 - ix)] = pixel;
+			ix1 = AdjustStripIndex(STRIPLENGTH - 1 - ix);
 		}
 	}
 	else {
 		if (bDoublePixels) {
-			leds[AdjustStripIndex(2 * ix)] = pixel;
-			leds[AdjustStripIndex(2 * ix + 1)] = pixel;
+			ix1 = AdjustStripIndex(2 * ix);
+			ix2 = AdjustStripIndex(2 * ix + 1);
 		}
 		else {
-			leds[AdjustStripIndex(ix)] = pixel;
+			ix1 = AdjustStripIndex(ix);
 		}
 	}
+	if (fade != 255) {
+		pixel = pixel.nscale8_video(fade);
+		//Serial.println("col: " + String(column) + " fade: " + String(fade));
+	}
+	leds[ix1] = pixel;
+	if (bDoublePixels)
+		leds[ix2] = pixel;
 }
 
 #define Fbattery    3700  //The default battery is 3700mv when the battery is fully charged.
