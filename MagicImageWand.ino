@@ -2128,6 +2128,9 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	// incorrect colors.  Some strips use an x,r,b,g sequence and some use x,r,g,b
 	// Change the order if needed to make the colors correct.
 
+	int allowedFadeInOutFrames = min(nFadeInOutFrames, (int)imgHeight / 2);
+	// if nFadeInOutFrames is not zero, calculate the brightness each time a frame is displayed
+	int fadeAmount = (allowedFadeInOutFrames == 0) ? 255 : 255 / (allowedFadeInOutFrames);
 	long secondsLeft = 0, lastSeconds = 0;
 	char num[50];
 	int percent;
@@ -2167,14 +2170,31 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 			ShowProgressBar(percent);
 		}
 		int bufpos = 0;
-		//uint32_t offset = (bmpOffBits + (y * lineLength));
-		//dataFile.seekSet(offset);
 		CRGB pixel;
+		int pixelScaleBrightness = 255;
+		if (allowedFadeInOutFrames) {
+			int realFrameCount = bReverseImage ? imgHeight - 1 - y : y;
+			// see if we need to set the brightness from the fade value
+			if (realFrameCount <= allowedFadeInOutFrames) {
+				pixelScaleBrightness = realFrameCount * fadeAmount;
+				pixelScaleBrightness = constrain(pixelScaleBrightness, 0, 255);
+			}
+			// now for some dimming
+			else if (realFrameCount >= (imgHeight - allowedFadeInOutFrames)) {
+				pixelScaleBrightness = (imgHeight - realFrameCount) * fadeAmount;
+				pixelScaleBrightness = constrain(pixelScaleBrightness, 0, 255);
+			}
+		}
 		// seek to the column start
 		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
+		//uint32_t offset = (bmpOffBits + (y * lineLength));
+		//dataFile.seekSet(offset);
 		for (int x = displayWidth - 1; x >= 0; --x) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
+			if (pixelScaleBrightness != 255) {
+				pixel = pixel.nscale8_video(pixelScaleBrightness);
+			}
 			// see if we want this one
 			if (bScaleHeight && (x * displayWidth) % imgWidth) {
 				continue;
@@ -2193,7 +2213,6 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 				nFrameHold = max(nFrameHold, 0);
 			}
 		}
-		//Serial.println("loop: " + String(minLoopTime));
 		// wait for timer to expire before we show the next frame
 		while (bStripWaiting) {
 			delayMicroseconds(100);

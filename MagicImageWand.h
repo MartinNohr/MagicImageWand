@@ -1,6 +1,7 @@
 #pragma once
 
-String myVersion = "1.02";
+String myVersion = "1.03";
+#define MY_EEPROM_VERSION "MIW103"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -121,7 +122,7 @@ bool CheckCancel();
 
 // eeprom values
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { "MIW102" };   // set to make sure saved values are valid, change when savevalues is changed, nice to keep in sync with version from .ino file
+char signature[] = { MY_EEPROM_VERSION };   // set to make sure saved values are valid, change when savevalues is changed, nice to keep in sync with version from .ino file
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
@@ -139,7 +140,8 @@ RTC_DATA_ATTR bool bSecondStrip = false;                // set true when two str
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void SetPixel(int ix, CRGB pixel);
-RTC_DATA_ATTR int nStripBrightness = 20;                // Variable and default for the Brightness of the strip, from 1 to 255
+RTC_DATA_ATTR int nStripBrightness = 25;                // Variable and default for the Brightness of the strip, from 1 to 255
+RTC_DATA_ATTR int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
 RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
 //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
 RTC_DATA_ATTR int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
@@ -373,6 +375,7 @@ const saveValues saveValueList[] = {
     {signature,sizeof(signature)},                      // first
     {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be second
     {&nStripBrightness, sizeof(nStripBrightness)},
+    {&nFadeInOutFrames, sizeof(nFadeInOutFrames)},
     {&nFrameHold, sizeof(nFrameHold)},
     {&bFixedTime,sizeof(bFixedTime)},
     {&nFixedImageTime,sizeof(nFixedImageTime)},
@@ -699,6 +702,7 @@ MenuItem ImageMenu[] = {
         {eTextInt,false,"Image Time (S): %d",GetIntegerValue,&nFixedImageTime,1,120},
     {eEndif},
     {eTextInt,false,"Start Delay (S): %d.%d",GetIntegerValue,&startDelay,0,100,1},
+    {eTextInt,false,"Fade I/O Columns : %d",GetIntegerValue,&nFadeInOutFrames,0,255},
     {eBool,false,"Upside Down: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
     {eIfEqual,false,"",NULL,&bShowBuiltInTests,false},
         {eBool,false,"Walk: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
@@ -897,6 +901,7 @@ struct SETTINGVAR {
 struct SETTINGVAR SettingsVarList[] = {
     {"SECOND STRIP",&bSecondStrip,vtBool},
     {"STRIP BRIGHTNESS",&nStripBrightness,vtInt,1,255},
+    {"FADE IN/OUT FRAMES",&nFadeInOutFrames,vtInt,0,255},
     {"REPEAT COUNT",&repeatCount,vtInt},
     {"REPEAT DELAY",&repeatDelay,vtInt},
     {"FRAME TIME",&nFrameHold,vtInt},
