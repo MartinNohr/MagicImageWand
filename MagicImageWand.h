@@ -114,7 +114,8 @@ void SendHTML_Stop();
 void SelectInput();
 void ReportFileNotPresent();
 void ReportSDNotPresent();
-
+void IncreaseRepeatButton();
+void DecreaseRepeatButton();
 
 bool bPauseDisplay = false; // set this so DisplayLine and Progress won't update display
 CRotaryDialButton::Button ReadButton();
