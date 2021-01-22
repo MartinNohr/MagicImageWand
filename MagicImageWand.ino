@@ -2772,7 +2772,7 @@ bool GetFileNamesFromSD(String dir) {
 #if USE_STANDARD_SD
 			CurrentFilename = file.name();
 #else
-			char fname[40];
+			char fname[100];
 			file.getName(fname, sizeof(fname));
 			CurrentFilename = fname;
 #endif
