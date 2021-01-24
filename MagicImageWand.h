@@ -884,7 +884,7 @@ std::stack<MenuInfo*> MenuStack;
 
 bool bMenuChanged = true;
 
-char FileToShow[40];
+char FileToShow[100];
 // save and load variables from MIW files
 enum SETVARTYPE {
     vtInt,
