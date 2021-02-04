@@ -410,23 +410,15 @@ void ShowMenu(struct MenuItem* menu)
 					sprintf(line, menu->text, (char*)(menu->value));
 				}
 				else if (menu->op == eTextInt) {
-					if (menu->decimals == 0) {
-						sprintf(line, menu->text, val);
-					}
-					else {
-						sprintf(line, menu->text, val / 10, val % 10);
-					}
+					sprintf(line, menu->text, (int)(val / pow10(menu->decimals)), val % (int)(pow10(menu->decimals)));
 				}
-				//Serial.println("menu text1: " + String(line));
 			}
 			else {
 				if (menu->op == eTextCurrentFile) {
 					sprintf(line, menu->text, MakeMIWFilename(FileNames[CurrentFileIndex], false).c_str());
-					//Serial.println("menu text2: " + String(line));
 				}
 				else {
 					strcpy(line, menu->text);
-					//Serial.println("menu text3: " + String(line));
 				}
 			}
 			// next line
@@ -567,8 +559,11 @@ void GetIntegerValue(MenuItem* menu)
 	char line[50];
 	CRotaryDialButton::Button button = BTN_NONE;
 	bool done = false;
-	tft.fillScreen(TFT_BLACK);
-	DisplayLine(1, "Range: " + String(menu->min) + " to " + String(menu->max));
+	const char* fmt = menu->decimals ? "%ld.%ld" : "%ld";
+	char minstr[20], maxstr[20];
+	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
+	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
+	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr));
 	DisplayLine(3, "Long Press to Accept");
 	int oldVal = *(int*)menu->value;
 	if (menu->change != NULL) {
@@ -610,13 +605,8 @@ void GetIntegerValue(MenuItem* menu)
 		*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
 		// show slider bar
 		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
-		DrawProgressBar(0, 2 * charHeight + 5, tft.width() - 1, 6, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
-		if (menu->decimals == 0) {
-			sprintf(line, menu->text, *(int*)menu->value);
-		}
-		else {
-			sprintf(line, menu->text, *(int*)menu->value / 10, *(int*)menu->value % 10);
-		}
+		DrawProgressBar(0, 2 * charHeight + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
+		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
 		DisplayLine(0, line);
 		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)");
 		if (menu->change != NULL && oldVal != *(int*)menu->value) {
