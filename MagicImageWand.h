@@ -73,8 +73,6 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 #define BTN_LONG    CRotaryDialButton::BTN_LONGPRESS
 
 
-
-
 // functions
 void DisplayCurrentFile(bool path = true);
 void DisplayLine(int line, String text, int16_t color = TFT_WHITE);
@@ -135,6 +133,8 @@ bool bSdCardValid = false;              // set to true when card is found
 #define DATA_PIN2 17
 #define NUM_LEDS 144
 // Define the array of leds, up to 288
+enum STRIPS_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHANGED, STRIPS_OUTSIDE_WIRED };
+RTC_DATA_ATTR STRIPS_MODE stripsMode = STRIPS_MIDDLE_WIRED;
 CRGB leds[NUM_LEDS * 2];
 RTC_DATA_ATTR bool bSecondStrip = false;                // set true when two strips installed
 #define STRIPLENGTH (NUM_LEDS*(1+(bSecondStrip?1:0)))

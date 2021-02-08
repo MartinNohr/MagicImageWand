@@ -3125,11 +3125,22 @@ void ShowWhiteBalance(MenuItem* menu)
 // also check to make sure it isn't out of range
 int AdjustStripIndex(int ix)
 {
-	if (ix < NUM_LEDS) {
-		ix = (NUM_LEDS - 1 - ix);
+	switch (stripsMode) {
+	case 0:	// bottom reversed, top normal, both wired in the middle
+		if (ix < NUM_LEDS) {
+			ix = (NUM_LEDS - 1 - ix);
+		}
+		break;
+	case 1:	// bottom and top normal, chained, so nothing to do
+		break;
+	case 2:	// top reversed, bottom normal, not connection in the middle
+		if (ix >= NUM_LEDS) {
+			ix = (NUM_LEDS - 1 - ix);
+		}
+		break;
 	}
-	ix = max(0, ix);
-	ix = min(STRIPLENGTH - 1, ix);
+	// make sure it isn't too big or too small
+	ix = constrain(ix, 0, STRIPLENGTH - 1);
 	return ix;
 }
 
