@@ -559,6 +559,7 @@ void ToggleBool(MenuItem* menu)
 // get integer values
 void GetIntegerValue(MenuItem* menu)
 {
+	tft.fillScreen(TFT_BLACK);
 	// -1 means to reset to original
 	int stepSize = 1;
 	int originalValue = *(int*)menu->value;
