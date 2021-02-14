@@ -736,6 +736,7 @@ MenuItem StripMenu[] = {
     {eTextInt,false,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
     {eTextInt,false,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,false,"Show White Balance",ShowWhiteBalance},
+    {eTextInt,false,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
