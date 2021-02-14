@@ -8,9 +8,10 @@ String myVersion = "1.03";
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
-#define DIAL_A 12
-#define DIAL_B 13
 #define FRAMEBUTTON 22
+// reverse A and B for some PCB or wired versions, this is set for the new PCB
+#define DIAL_A 13
+#define DIAL_B 12
 
 #include <ArduinoJson.h>
 
@@ -735,6 +736,7 @@ MenuItem StripMenu[] = {
     {eTextInt,false,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
     {eTextInt,false,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,false,"Show White Balance",ShowWhiteBalance},
+    {eTextInt,false,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2},
     {eExit,false,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -803,17 +805,17 @@ MenuItem MacroMenu[] = {
     //{eTextInt,false,"Macro #: %d",GetIntegerValue,&nCurrentMacro,0,9},
     {eIfEqual,false,"",NULL,&bRecordingMacro,false},
         {eMenu,false,"Select Macro: #%d",{.menu = MacroSelectMenu},&nCurrentMacro},
-        {eText,false,"Run: #%d",RunMacro,&nCurrentMacro},
+        {eTextInt,false,"Run: #%d",RunMacro,&nCurrentMacro},
     {eElse},
-        {eText,false,"Recording Macro: #%d",NULL,&nCurrentMacro},
+        {eTextInt,false,"Recording Macro: #%d",NULL,&nCurrentMacro},
     {eEndif},
     {eBool,false,"Record: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
     {eIfEqual,false,"",NULL,&bRecordingMacro,false},
         {eTextInt,false,"Repeat Count: %d",GetIntegerValue,&nRepeatCountMacro,1,100},
         {eTextInt,false,"Repeat Delay (S): %d.%d",GetIntegerValue,&nRepeatWaitMacro,0,100,1},
-        {eText,false,"Load: #%d",LoadMacro,&nCurrentMacro},
-        {eText,false,"Save: #%d",SaveMacro,&nCurrentMacro},
-        {eText,false,"Delete: #%d",DeleteMacro,&nCurrentMacro},
+        {eTextInt,false,"Load: #%d",LoadMacro,&nCurrentMacro},
+        {eTextInt,false,"Save: #%d",SaveMacro,&nCurrentMacro},
+        {eTextInt,false,"Delete: #%d",DeleteMacro,&nCurrentMacro},
     {eEndif},
     {eExit,false,"Previous Menu"},
     // make sure this one is last

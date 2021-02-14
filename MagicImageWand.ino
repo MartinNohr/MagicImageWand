@@ -212,6 +212,12 @@ void setup()
 		delay(2000);
 		ToggleFilesBuiltin(NULL);
 	}
+	// init the onboard buttons
+	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
+	gpio_set_direction(GPIO_NUM_35, GPIO_MODE_INPUT);
+	//gpio_set_pull_mode(GPIO_NUM_35, GPIO_PULLUP_ONLY); // not needed since there are no pullups on 35, they are input only
+
 	DisplayCurrentFile();
 	/*
 		analogSetCycles(8);                   // Set number of cycles per sample, default is 8 and provides an optimal result, range is 1 - 255
@@ -246,6 +252,7 @@ void loop()
 		delay(1);
 	}
 	static bool bButton0 = false;
+	// check preview button
 	if (bButton0) {
 		if (digitalRead(0) == 1)
 			bButton0 = false;
@@ -908,11 +915,20 @@ bool HandleRunMode()
 // check buttons and return if one pressed
 enum CRotaryDialButton::Button ReadButton()
 {
+	// check for the on board button 35
+	static bool bButton35 = false;
+	// check enter button, like longpress
+	if (bButton35) {
+		if (digitalRead(35) == 1)
+			bButton35 = false;
+	}
+	if (!bButton35 && digitalRead(35) == 0) {
+		bButton35 = true;
+		CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
+	}
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE it none there
 	retValue = CRotaryDialButton::getInstance()->dequeue();
-	//if (retValue != BTN_NONE)
-	//	Serial.println("button:" + String(retValue));
 	return retValue;
 }
 
@@ -2400,6 +2416,7 @@ void ShowBmp(MenuItem*)
 	free(scrBuf);
 	readByte(true);
 	bGammaCorrection = bOldGamma;
+	tft.fillScreen(TFT_BLACK);
 }
 
 void DisplayLine(int line, String text, int16_t color)
