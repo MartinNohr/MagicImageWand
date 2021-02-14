@@ -291,6 +291,7 @@ void LightBar(MenuItem* menu);
 void Sleep(MenuItem* menu);
 void ReadBattery(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
+void ShowBmpInfo(MenuItem* menu);
 
 // SD details
 #define SDcsPin    33  // GPIO33
@@ -828,6 +829,7 @@ MenuItem MainMenu[] = {
     {eElse},
         {eBool,false,"Switch to Built-ins",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
         {eText,false,"Preview BMP",ShowBmp},
+        {eText,false,"BMP Info",ShowBmpInfo},
     {eEndif},
     {eMenu,false,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,false,"Repeat Settings",{.menu = RepeatMenu}},
