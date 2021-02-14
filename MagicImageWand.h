@@ -681,7 +681,7 @@ MenuItem RandomBarsMenu[] = {
 };
 MenuItem SystemMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Display Bright: %d",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eTextInt,false,"Display Bright: %d%%",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eText,false,"Set Menu Colors",SetMenuColors},
     {eBool,false,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,false,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
@@ -730,7 +730,7 @@ MenuItem ImageMenu[] = {
 };
 MenuItem StripMenu[] = {
     {eExit,false,"Previous Menu"},
-    {eTextInt,false,"Strip Brightness: %d",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+    {eTextInt,false,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
     {eBool,false,"LED strips: %s",ToggleBool,&bSecondStrip,0,0,0,"2","1"},
     {eBool,false,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,false,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},

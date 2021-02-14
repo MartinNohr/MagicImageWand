@@ -48,7 +48,7 @@ void setup()
 	tft.fillScreen(TFT_BLACK);
 	tft.setRotation(3);
 	//Serial.println("boot: " + String(nBootCount));
-	CRotaryDialButton::getInstance()->begin(DIAL_A, DIAL_B, DIAL_BTN);
+	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN);
 	setupSDcard();
 	//listDir(SD, "/", 2, "");
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
@@ -206,7 +206,7 @@ void setup()
 	while (!digitalRead(DIAL_BTN))
 		;
 	// clear the button buffer
-	CRotaryDialButton::getInstance()->clear();
+	CRotaryDialButton::clear();
 	if (!bSdCardValid) {
 		DisplayCurrentFile();
 		delay(2000);
@@ -253,20 +253,23 @@ void loop()
 	}
 	static bool bButton0 = false;
 	// check preview button
-	if (bButton0) {
-		if (digitalRead(0) == 1)
-			bButton0 = false;
+	if (bButton0 && digitalRead(0)) {
+		bButton0 = false;
 	}
 	if (!bButton0 && digitalRead(0) == 0) {
-		ShowBmp(NULL);
-		bButton0 = true;
-		// restore the screen to what it was doing before the bmp display
-		if (bSettingsMode) {
-			ShowMenu(MenuStack.top()->menu);
-		}
-		else {
-			tft.fillScreen(TFT_BLACK);
-			DisplayCurrentFile(bShowFolder);
+		// debounce
+		delay(30);
+		if (digitalRead(0) == 0) {
+			ShowBmp(NULL);
+			bButton0 = true;
+			// restore the screen to what it was doing before the bmp display
+			if (bSettingsMode) {
+				ShowMenu(MenuStack.top()->menu);
+			}
+			else {
+				tft.fillScreen(TFT_BLACK);
+				DisplayCurrentFile(bShowFolder);
+			}
 		}
 	}
 }
@@ -769,7 +772,7 @@ void SetMenuColors(MenuItem* menu)
 			DisplayLine(1, "Normal", menuLineColor);
 			change = false;
 		}
-		switch (CRotaryDialButton::getInstance()->dequeue()) {
+		switch (CRotaryDialButton::dequeue()) {
 		case CRotaryDialButton::BTN_CLICK:
 			if (mode == 0)
 				mode = 1;
@@ -919,17 +922,20 @@ enum CRotaryDialButton::Button ReadButton()
 	// check for the on board button 35
 	static bool bButton35 = false;
 	// check enter button, like longpress
-	if (bButton35) {
-		if (digitalRead(35) == 1)
-			bButton35 = false;
+	if (bButton35 && digitalRead(35)) {
+		bButton35 = false;
 	}
 	if (!bButton35 && digitalRead(35) == 0) {
-		bButton35 = true;
-		CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
+		// debounce
+		delay(30);
+		if (digitalRead(35) == 0) {
+			bButton35 = true;
+			CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
+		}
 	}
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE it none there
-	retValue = CRotaryDialButton::getInstance()->dequeue();
+	retValue = CRotaryDialButton::dequeue();
 	return retValue;
 }
 
@@ -1459,7 +1465,7 @@ void DisplayLedLightBar()
 			break;
 		case BTN_LONG:
 			// put it back, we don't want it
-			CRotaryDialButton::getInstance()->pushButton(btn);
+			CRotaryDialButton::pushButton(btn);
 			break;
 		}
 		if (CheckCancel())
@@ -2030,7 +2036,7 @@ void ProcessFileOrTest()
 		DisplayCurrentFile();
 	nProgress = 0;
 	// clear buttons
-	CRotaryDialButton::getInstance()->clear();
+	CRotaryDialButton::clear();
 }
 
 void SendFile(String Filename) {
@@ -2239,7 +2245,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 					if (btn == BTN_NONE)
 						continue;
 					else if (btn == BTN_LONG)
-						CRotaryDialButton::getInstance()->pushButton(BTN_LONG);
+						CRotaryDialButton::pushButton(BTN_LONG);
 					else if (btn == BTN_LEFT) {
 						// backup a line, use 2 because the for loop does one when we're done here
 						if (bReverseImage) {
@@ -2384,7 +2390,7 @@ void ShowBmp(MenuItem*)
 				;
 			bSawButton0 = false;
 		}
-		switch (CRotaryDialButton::getInstance()->dequeue()) {
+		switch (CRotaryDialButton::dequeue()) {
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
 				imgOffset -= 240;
@@ -2399,7 +2405,7 @@ void ShowBmp(MenuItem*)
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
-			CRotaryDialButton::getInstance()->pushButton(CRotaryDialButton::BTN_LONGPRESS);
+			CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
 			break;
 		case CRotaryDialButton::BTN_CLICK:
 			done = true;
