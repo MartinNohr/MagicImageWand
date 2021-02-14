@@ -8,7 +8,6 @@ public:
     static int m_nDialSpeed;
     static bool m_bReverseDial;
 private:
-    static CRotaryDialButton* instance;
     static std::queue<enum Button> btnBuf;
     static volatile int m_nLongPressTimer;
     static esp_timer_handle_t periodic_LONGPRESS_timer;
@@ -18,14 +17,6 @@ private:
     CRotaryDialButton() {
     }
 
-public:
-    static CRotaryDialButton* getInstance() {
-        if (!instance)
-            instance = new CRotaryDialButton();
-
-        return instance;
-    }
-private:
     // the timer callback for handling long presses
     static void periodic_LONGPRESS_timer_callback(void* arg)
     {
@@ -121,6 +112,8 @@ private:
         }
         interrupts();
     }
+
+    // public things
 public:
 	static void begin(int a, int b, int c) {
         // first time, set things up
@@ -194,8 +187,6 @@ public:
         btnBuf.push(btn);
     }
 };
-//Initialize pointer to zero so that it can be initialized in first call to getInstance
-CRotaryDialButton* CRotaryDialButton::instance = NULL;
 std::queue<enum CRotaryDialButton::Button> CRotaryDialButton::btnBuf;
 int CRotaryDialButton::m_nLongPressTimerValue;
 volatile int CRotaryDialButton::m_nLongPressTimer;
