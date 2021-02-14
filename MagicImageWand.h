@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.03";
-#define MY_EEPROM_VERSION "MIW103"
+String myVersion = "1.04";
+#define MY_EEPROM_VERSION "MIW104"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -389,6 +389,7 @@ const saveValues saveValueList[] = {
     {&repeatDelay, sizeof(repeatDelay)},
     {&bGammaCorrection, sizeof(bGammaCorrection)},
     {&bSecondStrip, sizeof(bSecondStrip)},
+    {&stripsMode, sizeof(stripsMode)},
     //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
     //{&nMaxBackLight, sizeof(nMaxBackLight)},
     {&CurrentFileIndex,sizeof(CurrentFileIndex)},
