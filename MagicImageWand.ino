@@ -2407,7 +2407,6 @@ void ShowBmp(MenuItem*)
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
-			CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
 			break;
 		case CRotaryDialButton::BTN_CLICK:
 			if (bShowingSize) {
