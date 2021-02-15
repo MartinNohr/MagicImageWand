@@ -2390,8 +2390,9 @@ void ShowBmp(MenuItem*)
 			while (digitalRead(0) == 0)
 				;
 			bSawButton0 = false;
+			delay(30);
 		}
-		switch (CRotaryDialButton::dequeue()) {
+		switch (ReadButton()) {
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
 				imgOffset -= 240;
@@ -2420,6 +2421,7 @@ void ShowBmp(MenuItem*)
 				DisplayLine(3, "Height: " + String(imgWidth));
 				DisplayLine(4, "Width:  " + String(imgHeight));
 				bShowingSize = true;
+				redraw = false;
 			}
 			break;
 		}
@@ -2432,78 +2434,13 @@ void ShowBmp(MenuItem*)
 			delay(30);
 			done = true;
 		}
+		delay(2);
 	}
 	// all done
 	free(scrBuf);
 	dataFile.close();
 	readByte(true);
 	bGammaCorrection = bOldGamma;
-	tft.fillScreen(TFT_BLACK);
-}
-
-// put info about the current file on the display
-// Note that menu is not used, it is called with NULL sometimes
-void ShowBmpInfo(MenuItem*)
-{
-	if (bShowBuiltInTests)
-		return;
-	String fn = currentFolder + FileNames[CurrentFileIndex];
-	// make sure this is a bmp file, if not just quietly go away
-	String tmp = fn.substring(fn.length() - 3);
-	tmp.toLowerCase();
-	if (tmp.compareTo("bmp")) {
-		return;
-	}
-	dataFile = SD.open(fn);
-	// if the file is available send it to the LED's
-	if (!dataFile.available()) {
-		WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
-	tft.fillScreen(TFT_BLACK);
-	// clear the file cache buffer
-	readByte(true);
-	uint16_t bmpType = readInt();
-	uint32_t bmpSize = readLong();
-	uint16_t bmpReserved1 = readInt();
-	uint16_t bmpReserved2 = readInt();
-	uint32_t bmpOffBits = readLong();
-
-	/* Check file header */
-	if (bmpType != MYBMP_BF_TYPE) {
-		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
-
-	/* Read info header */
-	uint32_t imgSize = readLong();
-	uint32_t imgWidth = readLong();
-	uint32_t imgHeight = readLong();
-	uint16_t imgPlanes = readInt();
-	uint16_t imgBitCount = readInt();
-	uint32_t imgCompression = readLong();
-	uint32_t imgSizeImage = readLong();
-	uint32_t imgXPelsPerMeter = readLong();
-	uint32_t imgYPelsPerMeter = readLong();
-	uint32_t imgClrUsed = readLong();
-	uint32_t imgClrImportant = readLong();
-
-	/* Check info header */
-	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
-	{
-		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
-	DisplayLine(0, currentFolder);
-	DisplayLine(1, FileNames[CurrentFileIndex]);
-	DisplayLine(3, "Height: " + String(imgWidth));
-	DisplayLine(4, "Width:  " + String(imgHeight));
-	// all done
-	dataFile.close();
-	while (ReadButton() == CRotaryDialButton::BTN_NONE)
-		delay(10);
-	readByte(true);
 	tft.fillScreen(TFT_BLACK);
 }
 
