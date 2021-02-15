@@ -2358,6 +2358,7 @@ void ShowBmp(MenuItem*)
 	// offset for showing the image
 	int imgOffset = 0;
 	int oldImgOffset;
+	bool bShowingSize = false;
 	while (!done) {
 		if (redraw) {
 			// loop through the image, y is the image width, and x is the image height
@@ -2408,7 +2409,18 @@ void ShowBmp(MenuItem*)
 			CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
 			break;
 		case CRotaryDialButton::BTN_CLICK:
-			done = true;
+			if (bShowingSize) {
+				bShowingSize = false;
+				redraw = true;
+			}
+			else {
+				tft.fillScreen(TFT_BLACK);
+				DisplayLine(0, currentFolder);
+				DisplayLine(1, FileNames[CurrentFileIndex]);
+				DisplayLine(3, "Height: " + String(imgWidth));
+				DisplayLine(4, "Width:  " + String(imgHeight));
+				bShowingSize = true;
+			}
 			break;
 		}
 		if (oldImgOffset != imgOffset) {
@@ -2416,6 +2428,8 @@ void ShowBmp(MenuItem*)
 		}
 		// check the 0 button
 		if (digitalRead(0) == 0) {
+			// debounce, don't want this seen again in the main loop
+			delay(30);
 			done = true;
 		}
 	}
