@@ -196,7 +196,7 @@ void setup()
 		//}
 	}
 	FastLED.clear(true);
-	delay(100);
+	delay(1000);
 	tft.fillScreen(TFT_BLACK);
 
 	// wait for button release
