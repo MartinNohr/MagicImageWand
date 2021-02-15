@@ -173,7 +173,7 @@ std::vector<String> FileNames;
 bool bSettingsMode = false;                             // set true when settings are displayed
 RTC_DATA_ATTR int nFrameHold = 10;                      // default for the frame delay
 RTC_DATA_ATTR bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
-RTC_DATA_ATTR int nFixedImageTime = 5;                  // time to display image when fixedtime is used
+RTC_DATA_ATTR int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
 RTC_DATA_ATTR int nFramePulseCount = 0;                 // advance frame when button pressed this many times, 0 means ignore
 RTC_DATA_ATTR bool bManualFrameAdvance = false;         // advance frame by clicking or rotating button
 RTC_DATA_ATTR bool bGammaCorrection = true;             // set to use the gamma table

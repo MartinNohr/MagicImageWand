@@ -2419,6 +2419,9 @@ void ShowBmp(MenuItem*)
 				DisplayLine(1, FileNames[CurrentFileIndex]);
 				DisplayLine(3, "Height: " + String(imgWidth));
 				DisplayLine(4, "Width:  " + String(imgHeight));
+				// calculate display time
+				float dspTime = bFixedTime ? nFixedImageTime : (imgHeight * nFrameHold / 1000.0 + imgHeight * .008);
+				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds");
 				bShowingSize = true;
 				redraw = false;
 			}
