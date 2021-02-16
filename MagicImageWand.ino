@@ -55,6 +55,12 @@ void setup()
 	//digitalWrite(LED, HIGH);
 	gpio_set_direction((gpio_num_t)FRAMEBUTTON, GPIO_MODE_INPUT);
 	gpio_set_pull_mode((gpio_num_t)FRAMEBUTTON, GPIO_PULLUP_ONLY);
+	// init the onboard buttons
+	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
+	gpio_set_direction(GPIO_NUM_35, GPIO_MODE_INPUT);
+	//gpio_set_pull_mode(GPIO_NUM_35, GPIO_PULLUP_ONLY); // not needed since there are no pullups on 35, they are input only
+
 	oneshot_LED_timer_args = {
 				oneshot_LED_timer_callback,
 				/* argument specified here will be passed to timer callback function */
@@ -64,22 +70,22 @@ void setup()
 	};
 	esp_timer_create(&oneshot_LED_timer_args, &oneshot_LED_timer);
 
-//WiFi
-  WiFi.softAP(ssid, password);
-  IPAddress myIP = WiFi.softAPIP();
-  // save for the menu system
-  strncpy(localIpAddress, myIP.toString().c_str(), sizeof(localIpAddress));
-  Serial.print("AP IP address: ");
-  Serial.println(myIP);
-  server.begin();
-  Serial.println("Server started");
-  server.on("/",         HomePage);
-  server.on("/download", File_Download);
-  server.on("/upload",   File_Upload);
-  server.on("/settings", ShowSettings);
-  server.on("/fupload",  HTTP_POST,[](){ server.send(200);}, handleFileUpload);
-  ///////////////////////////// End of Request commands
-  server.begin();
+	//WiFi
+	WiFi.softAP(ssid, password);
+	IPAddress myIP = WiFi.softAPIP();
+	// save for the menu system
+	strncpy(localIpAddress, myIP.toString().c_str(), sizeof(localIpAddress));
+	Serial.print("AP IP address: ");
+	Serial.println(myIP);
+	server.begin();
+	Serial.println("Server started");
+	server.on("/", HomePage);
+	server.on("/download", File_Download);
+	server.on("/upload", File_Upload);
+	server.on("/settings", ShowSettings);
+	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
+	///////////////////////////// End of Request commands
+	server.begin();
 
 	int width = tft.width();
 	int height = tft.height();
@@ -131,6 +137,24 @@ void setup()
 	if (nBootCount == 0) {
 		//bool oldSecond = bSecondStrip;
 		//bSecondStrip = true;
+		// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
+		SetPixel(0, CRGB::Red);
+		SetPixel(1, CRGB::Red);
+		SetPixel(2, CRGB::Red);
+		SetPixel(143, CRGB::Red);
+		SetPixel(142, CRGB::Red);
+		SetPixel(141, CRGB::Red);
+		FastLED.show();
+		delay(100);
+		SetPixel(0, CRGB::Green);
+		SetPixel(1, CRGB::Green);
+		SetPixel(2, CRGB::Green);
+		SetPixel(143, CRGB::Green);
+		SetPixel(142, CRGB::Green);
+		SetPixel(141, CRGB::Green);
+		FastLED.show();
+		delay(100);
+		FastLED.clear(true);
 		RainbowPulse();
 		//fill_noise8(leds, 144, 2, 0, 10, 2, 0, 0, 10);
 		//FastSPI_LED.show();
@@ -196,7 +220,6 @@ void setup()
 		//}
 	}
 	FastLED.clear(true);
-	delay(1000);
 	tft.fillScreen(TFT_BLACK);
 
 	// wait for button release
@@ -212,11 +235,6 @@ void setup()
 		delay(2000);
 		ToggleFilesBuiltin(NULL);
 	}
-	// init the onboard buttons
-	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
-	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
-	gpio_set_direction(GPIO_NUM_35, GPIO_MODE_INPUT);
-	//gpio_set_pull_mode(GPIO_NUM_35, GPIO_PULLUP_ONLY); // not needed since there are no pullups on 35, they are input only
 
 	DisplayCurrentFile();
 	/*
@@ -3177,7 +3195,7 @@ int AdjustStripIndex(int ix)
 		break;
 	case 1:	// bottom and top normal, chained, so nothing to do
 		break;
-	case 2:	// top reversed, bottom normal, not connection in the middle
+	case 2:	// top reversed, bottom normal, no connection in the middle
 		if (ix >= NUM_LEDS) {
 			ix = (NUM_LEDS - 1 - ix);
 		}
@@ -3342,8 +3360,8 @@ void RainbowPulse()
 	//Serial.println("Len: " + String(STRIPLENGTH));
 	for (int i = 0; i < TWO_HUNDRED_PI; i++) {
 		element = round((STRIPLENGTH - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
+		//Serial.println("elements: " + String(element) + " " + String(last_element));
 		if (element > last_element) {
-			//Serial.println("el: " + String(element));
 			SetPixel(element, CHSV(element * nRainbowPulseColorScale + nRainbowPulseStartColor, nRainbowPulseSaturation, 255));
 			FastLED.show();
 			highest_element = max(highest_element, element);
