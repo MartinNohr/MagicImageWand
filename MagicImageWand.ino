@@ -303,7 +303,7 @@ bool RunMenus(int button)
 	bool bExit = false;
 	for (int ix = 0; !gotmatch && MenuStack.top()->menu[ix].op != eTerminate; ++ix) {
 		// see if this is one is valid
-		if (!MenuStack.top()->menu[ix].valid) {
+		if (!bMenuValid[ix]) {
 			continue;
 		}
 		//Serial.println("menu button: " + String(button));
@@ -403,8 +403,12 @@ void ShowMenu(struct MenuItem* menu)
 	char line[100];
 	bool skip = false;
 	// loop through the menu
-	for (; menu->op != eTerminate; ++menu) {
-		menu->valid = false;
+	for (int menix = 0; menu->op != eTerminate; ++menu, ++menix) {
+		// make sure menu valid vector is big enough
+		if (bMenuValid.size() < menix + 1) {
+			bMenuValid.resize(menix + 1);
+		}
+		bMenuValid[menix] = false;
 		switch (menu->op) {
 		case eIfEqual:
 			// skip the next one if match, only booleans are handled so far
@@ -419,7 +423,7 @@ void ShowMenu(struct MenuItem* menu)
 			break;
 		}
 		if (skip) {
-			menu->valid = false;
+			bMenuValid[menix] = false;
 			continue;
 		}
 		char line[100], xtraline[100];
@@ -431,7 +435,7 @@ void ShowMenu(struct MenuItem* menu)
 		case eTextInt:
 		case eText:
 		case eTextCurrentFile:
-			menu->valid = true;
+			bMenuValid[menix] = true;
 			if (menu->value) {
 				val = *(int*)menu->value;
 				if (menu->op == eText) {
@@ -453,7 +457,7 @@ void ShowMenu(struct MenuItem* menu)
 			++y;
 			break;
 		case eList:
-			menu->valid = true;
+			bMenuValid[menix] = true;
 			// the list of macro files
 			// min holds the macro number
 			val = menu->min;
@@ -464,7 +468,7 @@ void ShowMenu(struct MenuItem* menu)
 			++y;
 			break;
 		case eBool:
-			menu->valid = true;
+			bMenuValid[menix] = true;
 			if (menu->value) {
 				// clean extra bits, just in case
 				bool* pb = (bool*)menu->value;
@@ -481,7 +485,7 @@ void ShowMenu(struct MenuItem* menu)
 		case eBuiltinOptions:
 			// for builtins only show if available
 			if (BuiltInFiles[CurrentFileIndex].menu != NULL) {
-				menu->valid = true;
+				bMenuValid[menix] = true;
 				sprintf(line, menu->text, BuiltInFiles[CurrentFileIndex].text);
 				++y;
 			}
@@ -489,7 +493,7 @@ void ShowMenu(struct MenuItem* menu)
 		case eMenu:
 		case eExit:
 		case eReboot:
-			menu->valid = true;
+			bMenuValid[menix] = true;
 			if (menu->value) {
 				sprintf(xtraline, menu->text, *(int*)menu->value);
 			}
