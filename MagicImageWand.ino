@@ -134,6 +134,7 @@ void setup()
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
 	FastLED.setBrightness(nStripBrightness);
+	FastLED.setMaxPowerInVoltsAndMilliamps(5, nStripMaxCurrent);
 	if (nBootCount == 0) {
 		//bool oldSecond = bSecondStrip;
 		//bSecondStrip = true;
@@ -1395,7 +1396,7 @@ void DisplayLedLightBar()
 		FastLED.showColor(CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
 	// show until cancelled, but check for rotations of the knob
 	CRotaryDialButton::Button btn;
-	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for increment
+	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for increment
 	int increment = 10;
 	bool bChange = true;
 	while (true) {
@@ -1421,6 +1422,9 @@ void DisplayLedLightBar()
 					line = "Brightness: " + String(nDisplayAllBrightness);
 				break;
 			case 3:
+				line = "Pixels: " + String(nDisplayAllPixelCount);
+				break;
+			case 4:
 				line = " (step: " + String(increment) + ")";
 				break;
 			}
@@ -1453,6 +1457,9 @@ void DisplayLedLightBar()
 					nDisplayAllBrightness += increment;
 				break;
 			case 3:
+				nDisplayAllPixelCount += increment;
+				break;
+			case 4:
 				increment *= 10;
 				break;
 			}
@@ -1478,12 +1485,16 @@ void DisplayLedLightBar()
 					nDisplayAllBrightness -= increment;
 				break;
 			case 3:
+				nDisplayAllPixelCount -= increment;
+				break;
+			case 4:
 				increment /= 10;
 				break;
 			}
 			break;
 		case BTN_SELECT:
-			what = ++what % 4;
+			// switch to the next selection, wrapping around if necessary
+			what = ++what % 5;
 			break;
 		case BTN_LONG:
 			// put it back, we don't want it
@@ -1493,6 +1504,7 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
+			nDisplayAllPixelCount = constrain(nDisplayAllPixelCount, 1, 144);
 			increment = constrain(increment, 1, 100);
 			if (bDisplayAllRGB) {
 				if (bAllowRollover) {

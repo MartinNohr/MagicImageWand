@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.04";
-#define MY_EEPROM_VERSION "MIW104"
+String myVersion = "1.05";
+#define MY_EEPROM_VERSION "MIW105"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -143,6 +143,7 @@ int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
 RTC_DATA_ATTR int nStripBrightness = 25;                // Variable and default for the Brightness of the strip, from 1 to 255
+RTC_DATA_ATTR int nStripMaxCurrent = 2000;              // maximum milliamps to allow
 RTC_DATA_ATTR int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
 RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
 //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
@@ -326,6 +327,7 @@ RTC_DATA_ATTR int nDisplayAllBlue = 255;
 RTC_DATA_ATTR int nDisplayAllHue = 0;
 RTC_DATA_ATTR int nDisplayAllSaturation = 255;
 RTC_DATA_ATTR int nDisplayAllBrightness = 255;
+RTC_DATA_ATTR int nDisplayAllPixelCount = 144;
 // rainbow
 RTC_DATA_ATTR int nRainbowHueDelta = 4;
 RTC_DATA_ATTR int nRainbowInitialHue = 0;
@@ -376,6 +378,7 @@ const saveValues saveValueList[] = {
     {signature,sizeof(signature)},                      // first
     {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be second
     {&nStripBrightness, sizeof(nStripBrightness)},
+	{&nStripMaxCurrent, sizeof(nStripMaxCurrent)},
     {&nFadeInOutFrames, sizeof(nFadeInOutFrames)},
     {&nFrameHold, sizeof(nFrameHold)},
     {&bFixedTime,sizeof(bFixedTime)},
@@ -425,6 +428,7 @@ const saveValues saveValueList[] = {
     {&nDisplayAllHue,sizeof(nDisplayAllHue)},
     {&nDisplayAllSaturation,sizeof(nDisplayAllSaturation)},
     {&nDisplayAllBrightness,sizeof(nDisplayAllBrightness)},
+    {&nDisplayAllPixelCount,sizeof(nDisplayAllPixelCount)},
     // bouncing balls
     {&nBouncingBallsCount,sizeof(nBouncingBallsCount)},
     {&nBouncingBallsDecay,sizeof(nBouncingBallsDecay)},
@@ -666,6 +670,7 @@ MenuItem LedLightBarMenu[] = {
         {eTextInt,"Saturation: %d",GetIntegerValue,&nDisplayAllSaturation,0,255},
         {eTextInt,"Brightness: %d",GetIntegerValue,&nDisplayAllBrightness,0,255},
     {eEndif},
+    {eTextInt,"Pixels: %d",GetIntegerValue,&nDisplayAllPixelCount,1,144},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -737,6 +742,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,"Show White Balance",ShowWhiteBalance},
     {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2},
+    {eTextInt,"Max mAmp: %d",GetIntegerValue,&nStripMaxCurrent,100,10000},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
