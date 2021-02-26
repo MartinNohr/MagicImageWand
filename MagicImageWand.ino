@@ -1390,6 +1390,7 @@ void LightBar(MenuItem* menu)
 void DisplayLedLightBar()
 {
 	DisplayLine(1, "");
+	fill_solid(leds, 144, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
 	if (bDisplayAllRGB)
 		FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
 	else
@@ -2449,8 +2450,10 @@ void ShowBmp(MenuItem*)
 			}
 			else {
 				tft.fillScreen(TFT_BLACK);
-				DisplayLine(0, currentFolder);
-				DisplayLine(1, FileNames[CurrentFileIndex]);
+				//DisplayLine(0, currentFolder);
+				DisplayLine(0, FileNames[CurrentFileIndex]);
+				float walk = (float)imgHeight / (float)imgWidth;
+				DisplayLine(2, "" + String(walk, 2) + " meters " + String(walk * 3.28084, 1) + " feet");
 				DisplayLine(3, "Height: " + String(imgWidth));
 				DisplayLine(4, "Width:  " + String(imgHeight));
 				// calculate display time
