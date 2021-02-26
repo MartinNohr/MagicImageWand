@@ -1390,6 +1390,8 @@ void LightBar(MenuItem* menu)
 void FillLightBar()
 {
 	int offset = bDisplayAllFromMiddle ? (144 - nDisplayAllPixelCount) / 2 : 0;
+	if (!bDisplayAllFromMiddle && bUpsideDown)
+		offset = 144 - nDisplayAllPixelCount;
 	FastLED.clear();
 	if (bDisplayAllRGB)
 		fill_solid(leds + offset, nDisplayAllPixelCount, CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
