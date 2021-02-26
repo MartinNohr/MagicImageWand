@@ -1386,15 +1386,22 @@ void LightBar(MenuItem* menu)
 	bCancelMacro = bCancelRun = false;
 }
 
+// utility for DisplayLedLightBar()
+void FillLightBar()
+{
+	FastLED.clear();
+	if (bDisplayAllRGB)
+		fill_solid(leds, nDisplayAllPixelCount, CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
+	else
+		fill_solid(leds, nDisplayAllPixelCount, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+	FastLED.show();
+}
+
 // Used LEDs as a light bar
 void DisplayLedLightBar()
 {
 	DisplayLine(1, "");
-	fill_solid(leds, 144, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
-	if (bDisplayAllRGB)
-		FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
-	else
-		FastLED.showColor(CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+	FillLightBar();
 	// show until cancelled, but check for rotations of the knob
 	CRotaryDialButton::Button btn;
 	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for increment
@@ -1527,7 +1534,7 @@ void DisplayLedLightBar()
 					nDisplayAllGreen = constrain(nDisplayAllGreen, 0, 255);
 					nDisplayAllBlue = constrain(nDisplayAllBlue, 0, 255);
 				}
-				FastLED.showColor(CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
+				FillLightBar();
 			}
 			else {
 				if (bAllowRollover) {
@@ -1545,7 +1552,7 @@ void DisplayLedLightBar()
 					nDisplayAllSaturation = constrain(nDisplayAllSaturation, 0, 255);
 				}
 				nDisplayAllBrightness = constrain(nDisplayAllBrightness, 0, 255);
-				FastLED.showColor(CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+				FillLightBar();
 			}
 		}
 		delay(10);
