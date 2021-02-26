@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.05";
-#define MY_EEPROM_VERSION "MIW105"
+String myVersion = "1.06";
+#define MY_EEPROM_VERSION "MIW106"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -328,6 +328,7 @@ RTC_DATA_ATTR int nDisplayAllHue = 0;
 RTC_DATA_ATTR int nDisplayAllSaturation = 255;
 RTC_DATA_ATTR int nDisplayAllBrightness = 255;
 RTC_DATA_ATTR int nDisplayAllPixelCount = 144;
+RTC_DATA_ATTR bool bDisplayAllFromMiddle = true;
 // rainbow
 RTC_DATA_ATTR int nRainbowHueDelta = 4;
 RTC_DATA_ATTR int nRainbowInitialHue = 0;
@@ -429,6 +430,7 @@ const saveValues saveValueList[] = {
     {&nDisplayAllSaturation,sizeof(nDisplayAllSaturation)},
     {&nDisplayAllBrightness,sizeof(nDisplayAllBrightness)},
     {&nDisplayAllPixelCount,sizeof(nDisplayAllPixelCount)},
+    {&bDisplayAllFromMiddle,sizeof(bDisplayAllFromMiddle)},
     // bouncing balls
     {&nBouncingBallsCount,sizeof(nBouncingBallsCount)},
     {&nBouncingBallsDecay,sizeof(nBouncingBallsDecay)},
@@ -671,6 +673,7 @@ MenuItem LedLightBarMenu[] = {
         {eTextInt,"Brightness: %d",GetIntegerValue,&nDisplayAllBrightness,0,255},
     {eEndif},
     {eTextInt,"Pixels: %d",GetIntegerValue,&nDisplayAllPixelCount,1,144},
+    {eBool,"From: %s",ToggleBool,&bDisplayAllFromMiddle,0,0,0,"Middle","End"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

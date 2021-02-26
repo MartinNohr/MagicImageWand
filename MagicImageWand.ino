@@ -1389,11 +1389,12 @@ void LightBar(MenuItem* menu)
 // utility for DisplayLedLightBar()
 void FillLightBar()
 {
+	int offset = bDisplayAllFromMiddle ? (144 - nDisplayAllPixelCount) / 2 : 0;
 	FastLED.clear();
 	if (bDisplayAllRGB)
-		fill_solid(leds, nDisplayAllPixelCount, CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
+		fill_solid(leds + offset, nDisplayAllPixelCount, CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
 	else
-		fill_solid(leds, nDisplayAllPixelCount, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+		fill_solid(leds + offset, nDisplayAllPixelCount, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
 	FastLED.show();
 }
 
@@ -1433,7 +1434,10 @@ void DisplayLedLightBar()
 				line = "Pixels: " + String(nDisplayAllPixelCount);
 				break;
 			case 4:
-				line = " (step: " + String(increment) + ")";
+				line = "From: " + String((bDisplayAllFromMiddle ? "Middle" : "End"));
+				break;
+			case 5:
+				line = " (step size: " + String(increment) + ")";
 				break;
 			}
 			DisplayLine(2, line);
@@ -1468,6 +1472,9 @@ void DisplayLedLightBar()
 				nDisplayAllPixelCount += increment;
 				break;
 			case 4:
+				bDisplayAllFromMiddle = true;
+				break;
+			case 5:
 				increment *= 10;
 				break;
 			}
@@ -1496,13 +1503,16 @@ void DisplayLedLightBar()
 				nDisplayAllPixelCount -= increment;
 				break;
 			case 4:
+				bDisplayAllFromMiddle = false;
+				break;
+			case 5:
 				increment /= 10;
 				break;
 			}
 			break;
 		case BTN_SELECT:
 			// switch to the next selection, wrapping around if necessary
-			what = ++what % 5;
+			what = ++what % 6;
 			break;
 		case BTN_LONG:
 			// put it back, we don't want it
