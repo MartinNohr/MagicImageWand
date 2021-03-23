@@ -104,6 +104,7 @@ void setup()
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 20, 110);
 	}
+	delay(1000);
 	tft.setFreeFont(&Dialog_bold_16);
 	charHeight = tft.fontHeight();
 	tft.setTextColor(menuLineActiveColor);
@@ -233,8 +234,9 @@ void setup()
 	CRotaryDialButton::clear();
 	if (!bSdCardValid) {
 		DisplayCurrentFile();
-		delay(2000);
+		delay(1000);
 		ToggleFilesBuiltin(NULL);
+		tft.fillScreen(TFT_BLACK);
 	}
 
 	DisplayCurrentFile();
@@ -2632,7 +2634,7 @@ void DisplayCurrentFile(bool path)
 			DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""));
 		}
 		else {
-			DisplayLine(0, "No SD Card or Files");
+			WriteMessage("No SD Card or Files", true);
 		}
 	}
 	if (!bIsRunning && bShowNextFiles) {
@@ -2669,12 +2671,15 @@ void ShowProgressBar(int percent)
 void WriteMessage(String txt, bool error, int wait)
 {
 	tft.fillScreen(TFT_BLACK);
-	if (error)
+	if (error) {
 		txt = "**" + txt + "**";
+		tft.setTextColor(TFT_RED);
+	}
 	tft.setCursor(0, tft.fontHeight());
 	tft.setTextWrap(true);
 	tft.print(txt);
 	delay(wait);
+	tft.setTextColor(TFT_WHITE);
 }
 
 // create the associated MIW name
@@ -3123,7 +3128,10 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 		// don't need to do this here since it is always set right before running
 		//FastLED.setBrightness(nStripBrightness);
 	}
-	WriteMessage(String(save ? (bAutoloadOnlyFlag ? "Autoload Saved" : "Settings Saved") : "Settings Loaded"));
+	// don't display if only loading the autoload flag
+	if (save || !bAutoloadOnlyFlag) {
+		WriteMessage(String(save ? (bAutoloadOnlyFlag ? "Autoload Saved" : "Settings Saved") : "Settings Loaded"), false, 1000);
+	}
 	return retvalue;
 }
 
@@ -3735,12 +3743,12 @@ void SD_file_download(String filename){
 }
 
 void IncreaseRepeatButton(){
-  // This can be for sure made into an universal fuction like IncreaseButton(Setting, Value)
+  // This can be for sure made into a universal function like IncreaseButton(Setting, Value)
   webpage += String("&nbsp;<a href='/settings/increpeat'><strong>&#8679;</strong></a>");
 }
 
 void DecreaseRepeatButton(){
-  // This can be for sure made into an universal fuction like DecreaseButton(Setting, Value)
+  // This can be for sure made into a universal function like DecreaseButton(Setting, Value)
   webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
 }
 

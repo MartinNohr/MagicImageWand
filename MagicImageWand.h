@@ -10,8 +10,8 @@ String myVersion = "1.06";
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB
-#define DIAL_A 13
-#define DIAL_B 12
+#define DIAL_A 12
+#define DIAL_B 13
 
 #include <ArduinoJson.h>
 
