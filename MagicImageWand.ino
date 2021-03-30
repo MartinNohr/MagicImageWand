@@ -602,8 +602,8 @@ void GetIntegerValue(MenuItem* menu)
 	char minstr[20], maxstr[20];
 	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
 	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
-	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr));
-	DisplayLine(3, "Long Press to Accept");
+	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), menuTextColor);
+	DisplayLine(3, "Long Press to Accept", menuTextColor);
 	int oldVal = *(int*)menu->value;
 	if (menu->change != NULL) {
 		(*menu->change)(menu, 1);
@@ -646,8 +646,8 @@ void GetIntegerValue(MenuItem* menu)
 		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
 		DrawProgressBar(0, 2 * charHeight + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
 		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
-		DisplayLine(0, line);
-		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)");
+		DisplayLine(0, line, menuTextColor);
+		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)", menuTextColor);
 		if (menu->change != NULL && oldVal != *(int*)menu->value) {
 			(*menu->change)(menu, 0);
 			oldVal = *(int*)menu->value;
@@ -1363,9 +1363,9 @@ void Sleep(MenuItem* menu)
 void LightBar(MenuItem* menu)
 {
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(0, "LED Light Bar");
-	DisplayLine(3, "Rotate Dial to Change");
-	DisplayLine(4, "Click to Set Operation");
+	DisplayLine(0, "LED Light Bar", menuTextColor);
+	DisplayLine(3, "Rotate Dial to Change", menuTextColor);
+	DisplayLine(4, "Click to Set Operation", menuTextColor);
 	DisplayLedLightBar();
 	FastLED.clear(true);
 	// these were set by CheckCancel() in DisplayAllColor() and need to be cleared
@@ -1428,7 +1428,7 @@ void DisplayLedLightBar()
 				line = " (step size: " + String(increment) + ")";
 				break;
 			}
-			DisplayLine(2, line);
+			DisplayLine(2, line, menuTextColor);
 		}
 		btn = ReadButton();
 		bChange = true;
