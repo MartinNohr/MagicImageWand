@@ -106,7 +106,6 @@ void setup()
 	}
 	delay(1000);
 	tft.setFreeFont(&Dialog_bold_16);
-	charHeight = tft.fontHeight();
 	tft.setTextColor(menuTextColor);
 
 	EEPROM.begin(1024);
@@ -644,7 +643,7 @@ void GetIntegerValue(MenuItem* menu)
 		*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
 		// show slider bar
 		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
-		DrawProgressBar(0, 2 * charHeight + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
+		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
 		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
 		DisplayLine(0, line, menuTextColor);
 		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)", menuTextColor);
@@ -787,8 +786,8 @@ void SetMenuColor(MenuItem* menu)
 	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
 	int colorIndex = FindMenuColor(menuTextColor);
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(4, "Rotate change value");
-	DisplayLine(5, "Long Press Exit");
+	DisplayLine(4, "Rotate change value", menuTextColor);
+	DisplayLine(5, "Long Press Exit", menuTextColor);
 	bool done = false;
 	bool change = true;
 	while (!done) {
@@ -1942,7 +1941,7 @@ void ProcessFileOrTest()
 	bIsRunning = true;
 	nProgress = 0;
 	// clear the rest of the lines
-	for (int ix = 1; ix < MENU_LINES - 1; ++ix)
+	for (int ix = 1; ix < MENU_LINES; ++ix)
 		DisplayLine(ix, "");
 	//DisplayCurrentFile();
 	if (startDelay) {
@@ -1950,11 +1949,11 @@ void ProcessFileOrTest()
 		nTimerSeconds = startDelay;
 		while (nTimerSeconds && !CheckCancel()) {
 			line = "Start Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-			DisplayLine(1, line);
+			DisplayLine(2, line, menuTextColor);
 			delay(100);
 			--nTimerSeconds;
 		}
-		DisplayLine(2, "");
+		DisplayLine(3, "");
 	}
 	int chainCount = bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
 	int chainRepeatCount = bChainFiles ? nChainRepeats : 1;
@@ -1973,7 +1972,7 @@ void ProcessFileOrTest()
 			DisplayCurrentFile();
 			if (bChainFiles && !bShowBuiltInTests) {
 				line = "Files: " + String(chainCount + 1);
-				DisplayLine(3, line);
+				DisplayLine(4, line, menuTextColor);
 				line = "";
 			}
 			// process the repeats and waits for each file in the list
@@ -1987,15 +1986,15 @@ void ProcessFileOrTest()
 				if (!bShowBuiltInTests && nChainRepeats > 1) {
 					line += "Chains: " + String(chainRepeatCount + 1);
 				}
-				DisplayLine(2, line);
+				DisplayLine(3, line, menuTextColor);
 				if (bShowBuiltInTests) {
-					DisplayLine(3, "Running (long cancel)");
+					DisplayLine(4, "Running (long cancel)", menuTextColor);
 					// run the test
 					(*BuiltInFiles[CurrentFileIndex].function)();
 				}
 				else {
 					if (nRepeatCountMacro > 1 && bRunningMacro) {
-						DisplayLine(3, String("Macro Repeats: ") + String(nMacroRepeatsLeft));
+						DisplayLine(4, String("Macro Repeats: ") + String(nMacroRepeatsLeft), menuTextColor);
 					}
 					// output the file
 					SendFile(FileNames[CurrentFileIndex]);
@@ -2012,12 +2011,12 @@ void ProcessFileOrTest()
 						nTimerSeconds = repeatDelay;
 						while (nTimerSeconds > 0 && !CheckCancel()) {
 							line = "Repeat Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-							DisplayLine(1, line);
+							DisplayLine(2, line, menuTextColor);
 							line = "";
 							delay(100);
 							--nTimerSeconds;
 						}
-						//DisplayLine(2, "");
+						//DisplayLine(3, "");
 					}
 				}
 			}
@@ -2037,7 +2036,7 @@ void ProcessFileOrTest()
 				// handle any chain delay
 				for (int dly = nChainDelay; dly > 0 && !CheckCancel(); --dly) {
 					line = "Chain Delay: " + String(dly / 10) + "." + String(dly % 10);
-					DisplayLine(1, line);
+					DisplayLine(2, line, menuTextColor);
 					delay(100);
 				}
 			}
@@ -2060,7 +2059,7 @@ void ProcessFileOrTest()
 			nTimerSeconds = repeatDelay;
 			while (nTimerSeconds > 0 && !CheckCancel()) {
 				line = "Repeat Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-				DisplayLine(1, line);
+				DisplayLine(2, line, menuTextColor);
 				line = "";
 				delay(100);
 				--nTimerSeconds;
@@ -2208,7 +2207,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		if (secondsLeft != lastSeconds) {
 			lastSeconds = secondsLeft;
 			sprintf(num, "File Seconds: %d", secondsLeft);
-			DisplayLine(1, num);
+			DisplayLine(2, num, menuTextColor);
 		}
 		percent = map(bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
 		if (bMirrorPlayImage) {
@@ -2455,15 +2454,15 @@ void ShowBmp(MenuItem*)
 			}
 			else {
 				tft.fillScreen(TFT_BLACK);
-				//DisplayLine(0, currentFolder);
-				DisplayLine(0, FileNames[CurrentFileIndex]);
+				//DisplayLine(0, currentFolder,menutextcolor);
+				DisplayLine(0, FileNames[CurrentFileIndex], menuTextColor);
 				float walk = (float)imgHeight / (float)imgWidth;
-				DisplayLine(2, "" + String(walk, 2) + " meters " + String(walk * 3.28084, 1) + " feet");
-				DisplayLine(3, "Height: " + String(imgWidth));
-				DisplayLine(4, "Width:  " + String(imgHeight));
+				DisplayLine(2, String(walk, 2) + "/" + String(walk * 3.28084, 1) + " meters/feet", menuTextColor);
+				DisplayLine(3, "Height: " + String(imgWidth), menuTextColor);
+				DisplayLine(4, "Width:  " + String(imgHeight), menuTextColor);
 				// calculate display time
 				float dspTime = bFixedTime ? nFixedImageTime : (imgHeight * nFrameHold / 1000.0 + imgHeight * .008);
-				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds");
+				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", menuTextColor);
 				bShowingSize = true;
 				redraw = false;
 			}
@@ -2492,8 +2491,8 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
 	if (bPauseDisplay)
 		return;
-	int y = line * charHeight + (bSettingsMode && !bRunningMacro ? 0 : 8);
-	tft.fillRect(0, y, tft.width(), charHeight, backColor);
+	int y = line * tft.fontHeight();
+	tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
 	tft.setTextColor(color, backColor);
 	tft.drawString(text, 0, y);
 }
@@ -2609,20 +2608,20 @@ void DisplayCurrentFile(bool path)
 	//upper.toUpperCase();
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
-	tft.setTextColor(menuTextColor);
+	//tft.setTextColor(TFT_BLACK, menuTextColor);
 	if (bShowBuiltInTests) {
-		DisplayLine(0, FileNames[CurrentFileIndex]);
+		DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, menuTextColor);
 	}
 	else {
 		if (bSdCardValid) {
-			DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""));
+			DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), TFT_BLACK, menuTextColor);
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
 		}
 	}
 	if (!bIsRunning && bShowNextFiles) {
-		for (int ix = 1; ix < MENU_LINES - 1; ++ix) {
+		for (int ix = 1; ix < MENU_LINES; ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
 				DisplayLine(ix, "", menuTextColor);
 			}
@@ -2645,9 +2644,9 @@ void ShowProgressBar(int percent)
 	if (lastpercent && (lastpercent == percent))
 		return;
 	if (percent == 0) {
-		tft.fillRect(0, 0, tft.width() - 1, 6, TFT_BLACK);
+		tft.fillRect(0, tft.fontHeight() + 4, tft.width() - 1, 8, TFT_BLACK);
 	}
-	DrawProgressBar(0, 0, tft.width() - 1, 6, percent);
+	DrawProgressBar(0, tft.fontHeight() + 4, tft.width() - 1, 8, percent);
 	lastpercent = percent;
 }
 
@@ -3157,7 +3156,7 @@ void RunMacro(MenuItem* menu)
 				nMacroRepeatsLeft = 0;
 				break;
 			}
-			DisplayLine(4, "#" + String(nCurrentMacro) + String(" Wait: ") + String(wait / 10) + "." + String(wait % 10) + " Repeat: " + String(nMacroRepeatsLeft - 1));
+			DisplayLine(5, "#" + String(nCurrentMacro) + String(" Wait: ") + String(wait / 10) + "." + String(wait % 10) + " Repeat: " + String(nMacroRepeatsLeft - 1), menuTextColor);
 			delay(100);
 		}
 	}
@@ -3535,7 +3534,7 @@ void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 	tft.drawRoundRect(x, y, dx, dy, 2, menuTextColor);
 	int fill = (dx - 2) * percent / 100;
 	// fill the filled part
-	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_GREEN);
+	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_DARKGREEN);
 	// blank the empty part
 	tft.fillRect(x + 1 + fill, y + 1, dx - 2 - fill, dy - 2, TFT_BLACK);
 }

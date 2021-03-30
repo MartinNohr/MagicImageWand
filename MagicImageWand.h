@@ -161,7 +161,6 @@ struct {
     int b;
 } whiteBalance = { 255,255,255 };
 // settings
-int charHeight = 19;
 RTC_DATA_ATTR uint16_t menuTextColor = TFT_BLUE;
 #define NEXT_FOLDER_CHAR '>'
 #define PREVIOUS_FOLDER_CHAR '<'
