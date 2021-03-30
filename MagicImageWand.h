@@ -76,7 +76,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
 // functions
 void DisplayCurrentFile(bool path = true);
-void DisplayLine(int line, String text, int16_t color = TFT_WHITE);
+void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
 void WriteMessage(String txt, bool error = false, int wait = 2000);
@@ -127,7 +127,7 @@ RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load s
 bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
 
 // settings
-RTC_DATA_ATTR int nDisplayBrightness = 100;           // this is in %
+RTC_DATA_ATTR int nDisplayBrightness = 50;           // this is in %
 bool bSdCardValid = false;              // set to true when card is found
 // strip leds
 #define DATA_PIN1 2
@@ -162,8 +162,7 @@ struct {
 } whiteBalance = { 255,255,255 };
 // settings
 int charHeight = 19;
-RTC_DATA_ATTR uint16_t menuLineColor = TFT_CYAN;
-RTC_DATA_ATTR uint16_t menuLineActiveColor = TFT_WHITE;
+RTC_DATA_ATTR uint16_t menuTextColor = TFT_BLUE;
 #define NEXT_FOLDER_CHAR '>'
 #define PREVIOUS_FOLDER_CHAR '<'
 String currentFolder = "/";
@@ -277,7 +276,7 @@ void GetIntegerValue(MenuItem*);
 void ToggleBool(MenuItem*);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
-void SetMenuColors(MenuItem* menu);
+void SetMenuColor(MenuItem* menu);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -416,8 +415,7 @@ const saveValues saveValueList[] = {
     {&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
     {&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
     {&nDisplayBrightness,sizeof(nDisplayBrightness)},
-    {&menuLineColor,sizeof(menuLineColor)},
-    {&menuLineActiveColor,sizeof(menuLineActiveColor)},
+    {&menuTextColor,sizeof(menuTextColor)},
 
     // the built-in values
     // display all color
@@ -689,7 +687,7 @@ MenuItem RandomBarsMenu[] = {
 MenuItem SystemMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Display Bright: %d%%",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
-    {eText,"Set Menu Colors",SetMenuColors},
+    {eText,"Set Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
@@ -929,8 +927,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"CHAIN DELAY",&nChainDelay,vtInt},
     {"WHITE BALANCE",&whiteBalance,vtRGB},
     {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
-    {"DISPLAY MENULINE COLOR",&menuLineColor,vtInt},
-    {"DISPLAY MENULINE ACTIVE COLOR",&menuLineActiveColor,vtInt},
+    {"DISPLAY MENULINE COLOR",&menuTextColor,vtInt},
     {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},

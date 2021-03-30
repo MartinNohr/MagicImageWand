@@ -90,14 +90,14 @@ void setup()
 	int width = tft.width();
 	int height = tft.height();
 	tft.fillScreen(TFT_BLACK);
-	tft.setTextColor(menuLineActiveColor);
+	tft.setTextColor(menuTextColor);
 	rainbow_fill();
 	tft.setFreeFont(&Dialog_bold_16);
 	if (nBootCount == 0)
 	{
 		tft.setTextColor(TFT_BLACK);
 		tft.setFreeFont(&Irish_Grover_Regular_24);
-		tft.drawRect(0, 0, width - 1, height - 1, menuLineActiveColor);
+		tft.drawRect(0, 0, width - 1, height - 1, menuTextColor);
 		tft.drawString("Magic Image Wand", 5, 10);
 		tft.setFreeFont(&Dialog_bold_16);
 		tft.drawString("Version " + myVersion, 20, 90);
@@ -107,7 +107,7 @@ void setup()
 	delay(1000);
 	tft.setFreeFont(&Dialog_bold_16);
 	charHeight = tft.fontHeight();
-	tft.setTextColor(menuLineActiveColor);
+	tft.setTextColor(menuTextColor);
 
 	EEPROM.begin(1024);
 	// this will fix the signature if necessary
@@ -522,12 +522,15 @@ void ShowMenu(struct MenuItem* menu)
 	}
 	// show line if menu has been scrolled
 	if (MenuStack.top()->offset > 0)
-		tft.drawLine(0, 0, 5, 0, menuLineActiveColor);
+		tft.fillTriangle(0, 0, 5, 0, 0, tft.fontHeight() * 3 / 4, TFT_DARKGREY);
+		//tft.drawLine(0, 0, 5, 0, menuLineActiveColor);TFT_DARKGREY
 	// show bottom line if last line is showing
 	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
-		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, menuLineActiveColor);
-	else
-		tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_BLACK);
+		tft.fillTriangle(0, tft.height() - 6, 5, tft.height() - 6, 0, tft.height() - 5 - tft.fontHeight() * 3 / 4, TFT_DARKGREY);
+	//if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
+	//	tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, menuLineActiveColor);
+	//else
+	//	tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_BLACK);
 	// see if we need to clean up the end, like when the menu shrank due to a choice
 	int extra = MenuStack.top()->menucount - MenuStack.top()->offset - MENU_LINES;
 	while (extra < 0) {
@@ -779,12 +782,10 @@ int FindMenuColor(uint16_t col)
 	return constrain(ix, 0, colors - 1);
 }
 
-void SetMenuColors(MenuItem* menu)
+void SetMenuColor(MenuItem* menu)
 {
 	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
-	int mode = 0;	// 0 for active menu line, 1 for menu line
-	int colorIndex = FindMenuColor(menuLineColor);
-	int colorActiveIndex = FindMenuColor(menuLineActiveColor);
+	int colorIndex = FindMenuColor(menuTextColor);
 	tft.fillScreen(TFT_BLACK);
 	DisplayLine(4, "Rotate change value");
 	DisplayLine(5, "Long Press Exit");
@@ -792,41 +793,24 @@ void SetMenuColors(MenuItem* menu)
 	bool change = true;
 	while (!done) {
 		if (change) {
-			DisplayLine(3, String("Click: ") + (mode ? "Normal" : "Active") + " Color");
-			DisplayLine(0, "Active", menuLineActiveColor);
-			DisplayLine(1, "Normal", menuLineColor);
+			DisplayLine(0, "Text Color", menuTextColor);
 			change = false;
 		}
 		switch (CRotaryDialButton::dequeue()) {
-		case CRotaryDialButton::BTN_CLICK:
-			if (mode == 0)
-				mode = 1;
-			else
-				mode = 0;
-			change = true;
-			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
 			break;
 		case CRotaryDialButton::BTN_RIGHT:
 			change = true;
-			if(mode)
-				colorIndex = ++colorIndex;
-			else
-				colorActiveIndex = ++colorActiveIndex;
+			colorIndex = ++colorIndex;
 			break;
 		case CRotaryDialButton::BTN_LEFT:
 			change = true;
-			if (mode)
-				colorIndex = --colorIndex;
-			else
-				colorActiveIndex = --colorActiveIndex;
+			colorIndex = --colorIndex;
 			break;
 		}
 		colorIndex = constrain(colorIndex, 0, maxIndex);
-		menuLineColor = ColorList[colorIndex];
-		colorActiveIndex = constrain(colorActiveIndex, 0, maxIndex);
-		menuLineActiveColor = ColorList[colorActiveIndex];
+		menuTextColor = ColorList[colorIndex];
 	}
 }
 
@@ -2504,13 +2488,13 @@ void ShowBmp(MenuItem*)
 	tft.fillScreen(TFT_BLACK);
 }
 
-void DisplayLine(int line, String text, int16_t color)
+void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
 	if (bPauseDisplay)
 		return;
 	int y = line * charHeight + (bSettingsMode && !bRunningMacro ? 0 : 8);
-	tft.fillRect(0, y, tft.width(), charHeight, TFT_BLACK);
-	tft.setTextColor(color);
+	tft.fillRect(0, y, tft.width(), charHeight, backColor);
+	tft.setTextColor(color, backColor);
 	tft.drawString(text, 0, y);
 }
 
@@ -2518,9 +2502,9 @@ void DisplayLine(int line, String text, int16_t color)
 void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
-	String mline = (hilite ? "*" : " ") + text;
+	String mline = " " + text;
 	if (displine < MENU_LINES)
-		DisplayLine(displine, mline, hilite ? menuLineActiveColor : menuLineColor);
+		DisplayLine(displine, mline, hilite ? TFT_BLACK : menuTextColor, hilite ? menuTextColor : TFT_BLACK);
 }
 
 uint32_t IRAM_ATTR readLong() {
@@ -2625,7 +2609,7 @@ void DisplayCurrentFile(bool path)
 	//upper.toUpperCase();
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
-	tft.setTextColor(menuLineActiveColor);
+	tft.setTextColor(menuTextColor);
 	if (bShowBuiltInTests) {
 		DisplayLine(0, FileNames[CurrentFileIndex]);
 	}
@@ -2640,14 +2624,14 @@ void DisplayCurrentFile(bool path)
 	if (!bIsRunning && bShowNextFiles) {
 		for (int ix = 1; ix < MENU_LINES - 1; ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
-				DisplayLine(ix, "", menuLineColor);
+				DisplayLine(ix, "", menuTextColor);
 			}
 			else {
-				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], menuLineColor);
+				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], menuTextColor);
 			}
 		}
 	}
-	tft.setTextColor(menuLineActiveColor);
+	tft.setTextColor(menuTextColor);
 	// for debugging keypresses
 	//DisplayLine(3, String(nButtonDowns) + " " + nButtonUps);
 }
@@ -2674,6 +2658,9 @@ void WriteMessage(String txt, bool error, int wait)
 	if (error) {
 		txt = "**" + txt + "**";
 		tft.setTextColor(TFT_RED);
+	}
+	else {
+		tft.setTextColor(menuTextColor);
 	}
 	tft.setCursor(0, tft.fontHeight());
 	tft.setTextWrap(true);
@@ -3545,7 +3532,7 @@ void rainbow_fill()
 // draw a progress bar
 void DrawProgressBar(int x, int y, int dx, int dy, int percent)
 {
-	tft.drawRoundRect(x, y, dx, dy, 2, menuLineActiveColor);
+	tft.drawRoundRect(x, y, dx, dy, 2, menuTextColor);
 	int fill = (dx - 2) * percent / 100;
 	// fill the filled part
 	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_GREEN);
