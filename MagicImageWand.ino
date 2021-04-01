@@ -2460,7 +2460,7 @@ void ShowBmp(MenuItem*)
 				DisplayLine(1, FileNames[CurrentFileIndex], menuTextColor);
 				float walk = (float)imgHeight / (float)imgWidth;
 				DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", menuTextColor);
-				DisplayLine(4, String(walk, 2) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", menuTextColor);
+				DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", menuTextColor);
 				// calculate display time
 				float dspTime = bFixedTime ? nFixedImageTime : (imgHeight * nFrameHold / 1000.0 + imgHeight * .008);
 				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", menuTextColor);
