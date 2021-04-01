@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.06";
-#define MY_EEPROM_VERSION "MIW106"
+String myVersion = "1.07";
+#define MY_EEPROM_VERSION "MIW107"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -10,8 +10,8 @@ String myVersion = "1.06";
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB
-#define DIAL_A 12
-#define DIAL_B 13
+#define DIAL_A 13
+#define DIAL_B 12
 
 #include <ArduinoJson.h>
 
@@ -162,6 +162,8 @@ struct {
 } whiteBalance = { 255,255,255 };
 // settings
 RTC_DATA_ATTR uint16_t menuTextColor = TFT_BLUE;
+RTC_DATA_ATTR bool bMenuStar = false;
+RTC_DATA_ATTR bool bHiLiteCurrentFile = true;
 #define NEXT_FOLDER_CHAR '>'
 #define PREVIOUS_FOLDER_CHAR '<'
 String currentFolder = "/";
@@ -415,6 +417,8 @@ const saveValues saveValueList[] = {
     {&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
     {&nDisplayBrightness,sizeof(nDisplayBrightness)},
     {&menuTextColor,sizeof(menuTextColor)},
+    {&bMenuStar,sizeof(bMenuStar)},
+    {&bHiLiteCurrentFile,sizeof(bHiLiteCurrentFile)},
 
     // the built-in values
     // display all color
@@ -688,6 +692,8 @@ MenuItem SystemMenu[] = {
     {eTextInt,"Display Bright: %d%%",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eText,"Set Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
+    {eBool,"Menu Select: %s",ToggleBool,&bMenuStar,0,0,0,"*","Color"},
+    {eBool,"Current File: %s",ToggleBool,&bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&bShowProgress,0,0,0,"Yes","No"},
@@ -927,6 +933,8 @@ struct SETTINGVAR SettingsVarList[] = {
     {"WHITE BALANCE",&whiteBalance,vtRGB},
     {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
     {"DISPLAY MENULINE COLOR",&menuTextColor,vtInt},
+    {"MENU STAR",&bMenuStar,vtBool},
+    {"HILITE FILE",&bHiLiteCurrentFile,vtBool},
     {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},

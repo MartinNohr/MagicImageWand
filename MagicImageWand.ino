@@ -521,11 +521,13 @@ void ShowMenu(struct MenuItem* menu)
 	}
 	// show line if menu has been scrolled
 	if (MenuStack.top()->offset > 0)
-		tft.fillTriangle(0, 0, 5, 0, 0, tft.fontHeight() * 3 / 4, TFT_DARKGREY);
+		tft.fillTriangle(0, 0, 2, 0, 0, tft.fontHeight() / 3, TFT_DARKGREY);
 		//tft.drawLine(0, 0, 5, 0, menuLineActiveColor);TFT_DARKGREY
 	// show bottom line if last line is showing
-	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
-		tft.fillTriangle(0, tft.height() - 6, 5, tft.height() - 6, 0, tft.height() - 5 - tft.fontHeight() * 3 / 4, TFT_DARKGREY);
+	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1) {
+		int ypos = tft.height() - 2 - tft.fontHeight() / 3;
+		tft.fillTriangle(0, ypos, 2, ypos, 0, ypos - tft.fontHeight() / 3, TFT_DARKGREY);
+	}
 	//if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1)
 	//	tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, menuLineActiveColor);
 	//else
@@ -2454,12 +2456,11 @@ void ShowBmp(MenuItem*)
 			}
 			else {
 				tft.fillScreen(TFT_BLACK);
-				//DisplayLine(0, currentFolder,menutextcolor);
-				DisplayLine(0, FileNames[CurrentFileIndex], menuTextColor);
+				DisplayLine(0, currentFolder, menuTextColor);
+				DisplayLine(1, FileNames[CurrentFileIndex], menuTextColor);
 				float walk = (float)imgHeight / (float)imgWidth;
-				DisplayLine(2, String(walk, 2) + "/" + String(walk * 3.28084, 1) + " meters/feet", menuTextColor);
-				DisplayLine(3, "Height: " + String(imgWidth), menuTextColor);
-				DisplayLine(4, "Width:  " + String(imgHeight), menuTextColor);
+				DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", menuTextColor);
+				DisplayLine(4, String(walk, 2) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", menuTextColor);
 				// calculate display time
 				float dspTime = bFixedTime ? nFixedImageTime : (imgHeight * nFrameHold / 1000.0 + imgHeight * .008);
 				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", menuTextColor);
@@ -2497,13 +2498,19 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 	tft.drawString(text, 0, y);
 }
 
-// the star is used to indicate active menu line
+// active menu line is in reverse video or * at front depending on bMenuStar
 void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
-	String mline = " " + text;
-	if (displine < MENU_LINES)
-		DisplayLine(displine, mline, hilite ? TFT_BLACK : menuTextColor, hilite ? menuTextColor : TFT_BLACK);
+	String mline = (hilite && bMenuStar ? "*" : " ") + text;
+	if (displine < MENU_LINES) {
+		if (bMenuStar) {
+			DisplayLine(displine, mline, menuTextColor, TFT_BLACK);
+		}
+		else {
+			DisplayLine(displine, mline, hilite ? TFT_BLACK : menuTextColor, hilite ? menuTextColor : TFT_BLACK);
+		}
+	}
 }
 
 uint32_t IRAM_ATTR readLong() {
@@ -2610,11 +2617,21 @@ void DisplayCurrentFile(bool path)
  //       name = name.substring(0, name.length() - 4);
 	//tft.setTextColor(TFT_BLACK, menuTextColor);
 	if (bShowBuiltInTests) {
-		DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, menuTextColor);
+		if (bHiLiteCurrentFile) {
+			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, menuTextColor);
+		}
+		else {
+			DisplayLine(0, FileNames[CurrentFileIndex], menuTextColor, TFT_BLACK);
+		}
 	}
 	else {
 		if (bSdCardValid) {
-			DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), TFT_BLACK, menuTextColor);
+			if (bHiLiteCurrentFile) {
+				DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), TFT_BLACK, menuTextColor);
+			}
+			else {
+				DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), menuTextColor, TFT_BLACK);
+			}
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
