@@ -891,6 +891,7 @@ bool HandleMenus()
 bool HandleRunMode()
 {
 	bool didsomething = true;
+	int oldFileIndex = CurrentFileIndex;
 	switch (ReadButton()) {
 	case BTN_SELECT:
 		bCancelRun = bCancelMacro = false;
@@ -901,14 +902,16 @@ bool HandleRunMode()
 			++CurrentFileIndex;
 		if (CurrentFileIndex >= FileNames.size())
 			CurrentFileIndex = 0;
-		DisplayCurrentFile();
+		if (oldFileIndex != CurrentFileIndex)
+			DisplayCurrentFile();
 		break;
 	case BTN_LEFT:
 		if (bAllowMenuWrap || (CurrentFileIndex > 0))
 			--CurrentFileIndex;
 		if (CurrentFileIndex < 0)
 			CurrentFileIndex = FileNames.size() - 1;
-		DisplayCurrentFile();
+		if (oldFileIndex != CurrentFileIndex)
+			DisplayCurrentFile();
 		break;
 		//case btnShowFiles:
 		//	bShowBuiltInTests = !bShowBuiltInTests;
