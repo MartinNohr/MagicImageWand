@@ -13,7 +13,7 @@ String myVersion = "1.07";
 #define DIAL_A 13
 #define DIAL_B 12
 
-#include <ArduinoJson.h>
+//#include <ArduinoJson.h>
 
 //#include <BLEDevice.h>
 //#include <BLEUtils.h>
