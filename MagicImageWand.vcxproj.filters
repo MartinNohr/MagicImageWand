@@ -19,6 +19,8 @@
     <None Include="Debug\MagicImageWand.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="TTGO Magic Image Wand Remote.pdf" />
+    <None Include="TTGO Magic Image Wand Schematic.pdf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.MagicImageWand.vsarduino.h">
