@@ -946,6 +946,4 @@ struct SETTINGVAR SettingsVarList[] = {
     {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},
-    {"REVERSE DIAL",&CRotaryDialButton::m_bReverseDial,vtBool},
-    {"PREVIEW SCROLL",&nPreviewScrollCols,vtInt},
 };
