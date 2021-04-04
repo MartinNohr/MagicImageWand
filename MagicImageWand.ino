@@ -2448,16 +2448,14 @@ void ShowBmp(MenuItem*)
 		switch (ReadButton()) {
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
-				imgOffset -= 240;
+				imgOffset -= bHalfSize ? 480 : 240;
 				imgOffset = max(0, imgOffset);
 			}
 			break;
 		case CRotaryDialButton::BTN_RIGHT:
 			if (allowScroll) {
-				imgOffset += 240;
-				Serial.println("offset: " + String(imgOffset));
-				imgOffset = min((int32_t)imgHeight - 240, imgOffset);
-				Serial.println("offset: " + String(imgOffset));
+				imgOffset += bHalfSize ? 480 : 240;
+				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
 			}
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
