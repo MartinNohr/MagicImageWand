@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.08";
-#define MY_EEPROM_VERSION "MIW108"
+String myVersion = "1.09";
+#define MY_EEPROM_VERSION "MIW109"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -178,6 +178,7 @@ int lastFileIndex = 0;                                  // save between switchin
 String lastFolder = "/";
 std::vector<String> FileNames;
 bool bSettingsMode = false;                             // set true when settings are displayed
+RTC_DATA_ATTR int nPreviewScrollCols = 120;             // now many columns to scroll with dial during preview
 RTC_DATA_ATTR int nFrameHold = 10;                      // default for the frame delay
 RTC_DATA_ATTR bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
 RTC_DATA_ATTR int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
@@ -425,7 +426,7 @@ const saveValues saveValueList[] = {
     {&menuTextColor,sizeof(menuTextColor)},
     {&bMenuStar,sizeof(bMenuStar)},
     {&bHiLiteCurrentFile,sizeof(bHiLiteCurrentFile)},
-
+    {&nPreviewScrollCols,sizeof(nPreviewScrollCols)},
     // the built-in values
     // display all color
     {&bAllowRollover,sizeof(bAllowRollover)},
@@ -704,10 +705,11 @@ MenuItem SystemMenu[] = {
     {eBool,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&bShowProgress,0,0,0,"Yes","No"},
     {eMenu,"Light Bar Settings",{.menu = LedLightBarMenu}},
+    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
-    {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200,0,NULL,NULL},
+    {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -945,4 +947,5 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},
     {"REVERSE DIAL",&CRotaryDialButton::m_bReverseDial,vtBool},
+    {"PREVIEW SCROLL",&nPreviewScrollCols,vtInt},
 };
