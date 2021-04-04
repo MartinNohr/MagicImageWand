@@ -2385,10 +2385,14 @@ void ShowBmp(MenuItem*)
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
-
+	bool bHalfSize = false;
 	int displayWidth = imgWidth;
 	if (imgWidth > STRIPLENGTH) {
 		displayWidth = STRIPLENGTH;           //only display the number of led's we have
+	}
+	// see if this is too big for the TFT
+	if (imgWidth > 144) {
+		bHalfSize = true;
 	}
 
 	/* compute the line length */
@@ -2406,17 +2410,18 @@ void ShowBmp(MenuItem*)
 	while (!done) {
 		if (redraw) {
 			// loop through the image, y is the image width, and x is the image height
-			for (int y = imgOffset; y < (imgHeight > 240 ? 240 : imgHeight) + imgOffset; ++y) {
+			for (int col = 0; col < (imgHeight > 240 ? 240 : imgHeight); ++col) {
 				int bufpos = 0;
 				CRGB pixel;
 				// get to start of pixel data for this column
-				FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
+				FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgOffset) * lineLength));
 				for (int x = displayWidth - 1; x >= 0; --x) {
 					// this reads three bytes
 					pixel = getRGBwithGamma();
+					if (bHalfSize)
+						pixel = getRGBwithGamma();
 					// add to the display memory
 					int row = x - 5;
-					int col = y - imgOffset;
 					if (row >= 0 && row < 135) {
 						uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 						uint16_t sbcolor;
@@ -2429,6 +2434,10 @@ void ShowBmp(MenuItem*)
 			oldImgOffset = imgOffset;
 			// got it all, go show it
 			tft.pushRect(0, 0, 240, 135, scrBuf);
+			// don't draw it again until something changes
+			redraw = false;
+			while (ReadButton() != BTN_NONE)
+				;
 		}
 		if (bSawButton0) {
 			while (digitalRead(0) == 0)
@@ -2446,7 +2455,9 @@ void ShowBmp(MenuItem*)
 		case CRotaryDialButton::BTN_RIGHT:
 			if (allowScroll) {
 				imgOffset += 240;
+				Serial.println("offset: " + String(imgOffset));
 				imgOffset = min((int32_t)imgHeight - 240, imgOffset);
+				Serial.println("offset: " + String(imgOffset));
 			}
 			break;
 		case CRotaryDialButton::BTN_LONGPRESS:
