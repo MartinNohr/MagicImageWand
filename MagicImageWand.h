@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.10";
-#define MY_EEPROM_VERSION "MIW110"
+String myVersion = "1.11";
+#define MY_EEPROM_VERSION "MIW111"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -138,13 +138,12 @@ bool bSdCardValid = false;              // set to true when card is found
 // strip leds
 #define DATA_PIN1 2
 #define DATA_PIN2 17
-#define NUM_LEDS 144
-// Define the array of leds, up to 288
+// Define the array of leds, up to 512
 enum STRIPS_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
 RTC_DATA_ATTR STRIPS_MODE stripsMode = STRIPS_MIDDLE_WIRED;
-CRGB leds[NUM_LEDS * 2];
-RTC_DATA_ATTR bool bSecondStrip = false;                // set true when two strips installed
-#define STRIPLENGTH (NUM_LEDS*(1+(bSecondStrip?1:0)))
+RTC_DATA_ATTR int TotalLeds = 144;
+CRGB* leds = NULL;
+RTC_DATA_ATTR bool bSecondController = false;                // set true when two LED controllers are enabled
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
@@ -285,6 +284,7 @@ void ToggleBool(MenuItem*);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
+void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -398,7 +398,8 @@ const saveValues saveValueList[] = {
     {&repeatCount, sizeof(repeatCount)},
     {&repeatDelay, sizeof(repeatDelay)},
     {&bGammaCorrection, sizeof(bGammaCorrection)},
-    {&bSecondStrip, sizeof(bSecondStrip)},
+    {&bSecondController, sizeof(bSecondController)},
+    {&TotalLeds, sizeof(TotalLeds)},
     {&stripsMode, sizeof(stripsMode)},
     //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
     //{&nMaxBackLight, sizeof(nMaxBackLight)},
@@ -641,8 +642,8 @@ MenuItem BpmMenu[] = {
 };
 MenuItem LinesMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"White Pixels: %d",GetIntegerValue,&nLinesWhite,0,NUM_LEDS},
-    {eTextInt,"Black Pixels: %d",GetIntegerValue,&nLinesBlack,0,NUM_LEDS},
+    {eTextInt,"White Pixels: %d",GetIntegerValue,&nLinesWhite,0,TotalLeds},
+    {eTextInt,"Black Pixels: %d",GetIntegerValue,&nLinesBlack,0,TotalLeds},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -733,9 +734,7 @@ MenuItem ImageMenu[] = {
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&bScaleHeight,0,0,0,"On","Off"},
     {eEndif},
-    {eIfEqual,"",NULL,&bSecondStrip,true},
-        {eBool,"144 to 288 Pixels: %s",ToggleBool,&bDoublePixels,0,0,0,"Yes","No"},
-    {eEndif},
+    {eBool,"144 to 288 Pixels: %s",ToggleBool,&bDoublePixels,0,0,0,"Yes","No"},
     {eIfEqual,"",NULL,&bShowBuiltInTests,false},
         {eBool,"Frame Advance: %s",ToggleBool,&bManualFrameAdvance,0,0,0,"Step","Auto"},
         {eIfEqual,"",NULL,&bManualFrameAdvance,true},
@@ -749,7 +748,8 @@ MenuItem ImageMenu[] = {
 MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-    {eBool,"LED strips: %s",ToggleBool,&bSecondStrip,0,0,0,"2","1"},
+    {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1"},
+    {eTextInt,"Total LEDs: %s",GetIntegerValue,&TotalLeds,0,512,0,NULL,NULL,UpdateTotalLeds},
     {eBool,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
@@ -922,7 +922,8 @@ struct SETTINGVAR {
     int min, max;
 };
 struct SETTINGVAR SettingsVarList[] = {
-    {"SECOND STRIP",&bSecondStrip,vtBool},
+    {"SECOND CONTROLLER",&bSecondController,vtBool},
+    {"TOTAL LEDS",&TotalLeds,vtInt,1,512},
     {"STRIP BRIGHTNESS",&nStripBrightness,vtInt,1,255},
     {"FADE IN/OUT FRAMES",&nFadeInOutFrames,vtInt,0,255},
     {"REPEAT COUNT",&repeatCount,vtInt},

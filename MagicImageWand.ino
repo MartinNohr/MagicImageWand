@@ -126,11 +126,14 @@ void setup()
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
 
-	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, NUM_LEDS);
+	leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
+	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, bSecondController ? TotalLeds / 2 : TotalLeds);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
 	//if (bSecondStrip)
 	// create the second led controller
-	FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, NUM_LEDS, NUM_LEDS);
+	if (bSecondController) {
+		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+	}
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
 	FastLED.setBrightness(nStripBrightness);
@@ -263,7 +266,7 @@ void setup()
 void loop()
 {
 	static bool didsomething = false;
-	bool lastStrip = bSecondStrip;
+	bool lastStrip = bSecondController;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	server.handleClient();
 	// wait for no keys
@@ -700,6 +703,20 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 	}
 }
 
+void UpdateTotalLeds(MenuItem* menu, int flag)
+{
+	switch (flag) {
+	case 1:		// first time
+		break;
+	case 0:		// every change
+		break;
+	case -1:	// last time
+		free(leds);
+		leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
+		break;
+	}
+}
+
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag)
 {
 	switch (flag) {
@@ -1117,7 +1134,7 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 					ImpactVelocity[i] = ImpactVelocityStart;
 				}
 			}
-			Position[i] = round(Height[i] * (STRIPLENGTH - 1) / StartHeight);
+			Position[i] = round(Height[i] * (TotalLeds - 1) / StartHeight);
 		}
 
 		for (int i = 0; i < balls; i++) {
@@ -1166,7 +1183,7 @@ CRGB:CRGB red, white, blue;
 			done = true;
 			break;
 		}
-		for (int ledIx = 0; ledIx < STRIPLENGTH; ++ledIx) {
+		for (int ledIx = 0; ledIx < TotalLeds; ++ledIx) {
 			if (CheckCancel()) {
 				done = true;
 				break;
@@ -1199,7 +1216,7 @@ void CheckerBoard()
 	int addPixels = 0;
 	bool done = false;
 	while (!done) {
-		for (int y = 0; y < STRIPLENGTH; ++y) {
+		for (int y = 0; y < TotalLeds; ++y) {
 			SetPixel(y, ((y + addPixels) % width) < nCheckboardBlackWidth ? color1 : color2);
 		}
 		FastLED.show();
@@ -1293,7 +1310,7 @@ void RunningDot()
 		}
 		fixRGBwithGamma(&r, &g, &b);
 		char line[10];
-		for (int ix = 0; ix < STRIPLENGTH; ++ix) {
+		for (int ix = 0; ix < TotalLeds; ++ix) {
 			if (CheckCancel()) {
 				break;
 			}
@@ -1305,7 +1322,7 @@ void RunningDot()
 			delay(nFrameHold);
 		}
 		// remember the last one, turn it off
-		SetPixel(STRIPLENGTH - 1, CRGB::Black);
+		SetPixel(TotalLeds - 1, CRGB::Black);
 		FastLED.show();
 	}
 	FastLED.clear(true);
@@ -1341,14 +1358,14 @@ void OppositeRunningDots()
 			break;
 		}
 		fixRGBwithGamma(&r, &g, &b);
-		for (int ix = 0; ix < STRIPLENGTH; ++ix) {
+		for (int ix = 0; ix < TotalLeds; ++ix) {
 			if (CheckCancel())
 				return;
 			if (ix > 0) {
 				SetPixel(ix - 1, CRGB::Black);
-				SetPixel(STRIPLENGTH - ix + 1, CRGB::Black);
+				SetPixel(TotalLeds - ix + 1, CRGB::Black);
 			}
-			SetPixel(STRIPLENGTH - ix, CRGB(r, g, b));
+			SetPixel(TotalLeds - ix, CRGB(r, g, b));
 			SetPixel(ix, CRGB(r, g, b));
 			FastLED.show();
 			delay(nFrameHold);
@@ -1579,7 +1596,7 @@ void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	time_t start = time(NULL);
 	bool done = false;
 	while (!done) {
-		SetPixel(random(STRIPLENGTH), CRGB(random(0, 255), random(0, 255), random(0, 255)));
+		SetPixel(random(TotalLeds), CRGB(random(0, 255), random(0, 255), random(0, 255)));
 		FastLED.show();
 		delay(SpeedDelay);
 		if (OnlyOne) {
@@ -1598,7 +1615,7 @@ void TestCylon()
 }
 void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay)
 {
-	for (int i = 0; i < STRIPLENGTH - EyeSize - 2; i++) {
+	for (int i = 0; i < TotalLeds - EyeSize - 2; i++) {
 		if (CheckCancel()) {
 			break;
 		}
@@ -1612,7 +1629,7 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 		delay(SpeedDelay);
 	}
 	delay(ReturnDelay);
-	for (int i = STRIPLENGTH - EyeSize - 2; i > 0; i--) {
+	for (int i = TotalLeds - EyeSize - 2; i > 0; i--) {
 		if (CheckCancel()) {
 			break;
 		}
@@ -1636,11 +1653,11 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 {
 	FastLED.clear(true);
 
-	for (int i = 0; i < STRIPLENGTH + STRIPLENGTH; i++) {
+	for (int i = 0; i < TotalLeds + TotalLeds; i++) {
 		if (CheckCancel())
 			break;;
 		// fade brightness all LEDs one step
-		for (int j = 0; j < STRIPLENGTH; j++) {
+		for (int j = 0; j < TotalLeds; j++) {
 			if (CheckCancel())
 				break;
 			if ((!meteorRandomDecay) || (random(10) > 5)) {
@@ -1651,7 +1668,7 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 		for (int j = 0; j < meteorSize; j++) {
 			if (CheckCancel())
 				break;
-			if ((i - j < STRIPLENGTH) && (i - j >= 0)) {
+			if ((i - j < TotalLeds) && (i - j >= 0)) {
 				SetPixel(i - j, CRGB(red, green, blue));
 			}
 		}
@@ -1684,8 +1701,8 @@ void TestConfetti()
 void confetti()
 {
 	// random colored speckles that blink in and fade smoothly
-	fadeToBlackBy(leds, STRIPLENGTH, 10);
-	int pos = random16(STRIPLENGTH);
+	fadeToBlackBy(leds, TotalLeds, 10);
+	int pos = random16(TotalLeds);
 	leds[pos] += CHSV(gHue + random8(64), 200, 255);
 }
 
@@ -1707,11 +1724,11 @@ void TestJuggle()
 void juggle()
 {
 	// eight colored dots, weaving in and out of sync with each other
-	fadeToBlackBy(leds, STRIPLENGTH, 20);
+	fadeToBlackBy(leds, TotalLeds, 20);
 	byte dothue = 0;
 	uint16_t index;
 	for (int i = 0; i < 8; i++) {
-		index = beatsin16(i + 7, 0, STRIPLENGTH);
+		index = beatsin16(i + 7, 0, TotalLeds);
 		// use AdjustStripIndex to get the right one
 		SetPixel(index, leds[AdjustStripIndex(index)] | CHSV(dothue, 255, 255));
 		//leds[beatsin16(i + 7, 0, STRIPLENGTH)] |= CHSV(dothue, 255, 255);
@@ -1737,8 +1754,8 @@ void TestSine()
 void sinelon()
 {
 	// a colored dot sweeping back and forth, with fading trails
-	fadeToBlackBy(leds, STRIPLENGTH, 20);
-	int pos = beatsin16(nSineSpeed, 0, STRIPLENGTH);
+	fadeToBlackBy(leds, TotalLeds, 20);
+	int pos = beatsin16(nSineSpeed, 0, TotalLeds);
 	leds[AdjustStripIndex(pos)] += CHSV(gHue, 255, 192);
 	if (bSineCycleHue)
 		++gHue;
@@ -1765,7 +1782,7 @@ void bpm()
 	// colored stripes pulsing at a defined Beats-Per-Minute (BPM)
 	CRGBPalette16 palette = PartyColors_p;
 	uint8_t beat = beatsin8(nBpmBeatsPerMinute, 64, 255);
-	for (int i = 0; i < STRIPLENGTH; i++) { //9948
+	for (int i = 0; i < TotalLeds; i++) { //9948
 		SetPixel(i, ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10)));
 	}
 	if (bBpmCycleHue)
@@ -1789,14 +1806,14 @@ void FillRainbow(struct CRGB* pFirstLED, int numToFill,
 void TestRainbow()
 {
 	gHue = nRainbowInitialHue;
-	FillRainbow(leds, STRIPLENGTH, gHue, nRainbowHueDelta);
+	FillRainbow(leds, TotalLeds, gHue, nRainbowHueDelta);
 	FadeInOut(nRainbowFadeTime * 100, true);
 	bool done = false;
 	while (!done) {
 		EVERY_N_MILLISECONDS(nFrameHold) {
 			if (bRainbowCycleHue)
 				++gHue;
-			FillRainbow(leds, STRIPLENGTH, gHue, nRainbowHueDelta);
+			FillRainbow(leds, TotalLeds, gHue, nRainbowHueDelta);
 			if (bRainbowAddGlitter)
 				addGlitter(80);
 			FastLED.show();
@@ -1856,7 +1873,7 @@ void TestLines()
 	FastLED.setBrightness(nStripBrightness);
 	FastLED.clear(true);
 	bool bWhite = true;
-	for (int pix = 0; pix < STRIPLENGTH; ++pix) {
+	for (int pix = 0; pix < TotalLeds; ++pix) {
 		// fill in each block of pixels
 		for (int len = 0; len < (bWhite ? nLinesWhite : nLinesBlack); ++len) {
 			SetPixel(pix++, bWhite ? CRGB::White : CRGB::Black);
@@ -1902,7 +1919,7 @@ void FadeInOut(int time, bool in)
 void addGlitter(fract8 chanceOfGlitter)
 {
 	if (random8() < chanceOfGlitter) {
-		leds[random16(STRIPLENGTH)] += CRGB::White;
+		leds[random16(TotalLeds)] += CRGB::White;
 	}
 }
 
@@ -2166,10 +2183,9 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
-
 	int displayWidth = imgWidth;
-	if (imgWidth > STRIPLENGTH) {
-		displayWidth = STRIPLENGTH;           //only display the number of led's we have
+	if (imgWidth > TotalLeds) {
+		displayWidth = TotalLeds;           //only display the number of led's we have
 	}
 
 	/* compute the line length */
@@ -2385,8 +2401,8 @@ void ShowBmp(MenuItem*)
 	}
 	bool bHalfSize = false;
 	int displayWidth = imgWidth;
-	if (imgWidth > STRIPLENGTH) {
-		displayWidth = STRIPLENGTH;           //only display the number of led's we have
+	if (imgWidth > TotalLeds) {
+		displayWidth = TotalLeds;           //only display the number of led's we have
 	}
 	// see if this is too big for the TFT
 	if (imgWidth > 144) {
@@ -3143,7 +3159,7 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 	}
 	// don't display if only loading the autoload flag
 	if (save || !bAutoloadOnlyFlag) {
-		WriteMessage(String(save ? (bAutoloadOnlyFlag ? "Autoload Saved" : "Settings Saved") : "Settings Loaded"), false, 1000);
+		WriteMessage(String(save ? (bAutoloadOnlyFlag ? "Autoload Saved" : "Settings Saved") : "Settings Loaded"), false, 500);
 	}
 	return retvalue;
 }
@@ -3246,22 +3262,23 @@ void ShowWhiteBalance(MenuItem* menu)
 // also check to make sure it isn't out of range
 int AdjustStripIndex(int ix)
 {
+	int ledCount = bSecondController ? TotalLeds / 2 : TotalLeds;
 	switch (stripsMode) {
 	case STRIPS_MIDDLE_WIRED:	// bottom reversed, top normal, both wired in the middle
-		if (ix < NUM_LEDS) {
-			ix = (NUM_LEDS - 1 - ix);
+		if (ix < ledCount) {
+			ix = (ledCount - 1 - ix);
 		}
 		break;
 	case STRIPS_CHAINED:	// bottom and top normal, chained, so nothing to do
 		break;
 	case STRIPS_OUTSIDE_WIRED:	// top reversed, bottom normal, no connection in the middle
-		if (ix >= NUM_LEDS) {
-			ix = (NUM_LEDS - 1 - ix);
+		if (ix >= ledCount) {
+			ix = (ledCount - 1 - ix);
 		}
 		break;
 	}
 	// make sure it isn't too big or too small
-	ix = constrain(ix, 0, STRIPLENGTH - 1);
+	ix = constrain(ix, 0, ledCount - 1);
 	return ix;
 }
 
@@ -3317,11 +3334,11 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 	int ix1, ix2;
 	if (bUpsideDown) {
 		if (bDoublePixels) {
-			ix1 = AdjustStripIndex(STRIPLENGTH - 1 - 2 * ix);
-			ix2 = AdjustStripIndex(STRIPLENGTH - 2 - 2 * ix);
+			ix1 = AdjustStripIndex(TotalLeds - 1 - 2 * ix);
+			ix2 = AdjustStripIndex(TotalLeds - 2 - 2 * ix);
 		}
 		else {
-			ix1 = AdjustStripIndex(STRIPLENGTH - 1 - ix);
+			ix1 = AdjustStripIndex(TotalLeds - 1 - ix);
 		}
 	}
 	else {
@@ -3418,7 +3435,7 @@ void RainbowPulse()
 	//Serial.println("second: " + String(bSecondStrip));
 	//Serial.println("Len: " + String(STRIPLENGTH));
 	for (int i = 0; i < TWO_HUNDRED_PI; i++) {
-		element = round((STRIPLENGTH - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
+		element = round((TotalLeds - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
 		//Serial.println("elements: " + String(element) + " " + String(last_element));
 		if (element > last_element) {
 			SetPixel(element, CHSV(element * nRainbowPulseColorScale + nRainbowPulseStartColor, nRainbowPulseSaturation, 255));
@@ -3444,8 +3461,8 @@ void RainbowPulse()
 */
 void TestWedge()
 {
-	int midPoint = STRIPLENGTH / 2 - 1;
-	for (int ix = 0; ix < STRIPLENGTH / 2; ++ix) {
+	int midPoint = TotalLeds / 2 - 1;
+	for (int ix = 0; ix < TotalLeds / 2; ++ix) {
 		SetPixel(midPoint + ix, CRGB(nWedgeRed, nWedgeGreen, nWedgeBlue));
 		SetPixel(midPoint - ix, CRGB(nWedgeRed, nWedgeGreen, nWedgeBlue));
 		if (!bWedgeFill) {
