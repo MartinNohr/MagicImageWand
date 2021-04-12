@@ -749,7 +749,7 @@ MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
     {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1"},
-    {eTextInt,"Total LEDs: %s",GetIntegerValue,&TotalLeds,0,512,0,NULL,NULL,UpdateTotalLeds},
+    {eTextInt,"Total LEDs: %d",GetIntegerValue,&TotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
     {eBool,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
