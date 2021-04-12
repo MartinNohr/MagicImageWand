@@ -3247,14 +3247,14 @@ void ShowWhiteBalance(MenuItem* menu)
 int AdjustStripIndex(int ix)
 {
 	switch (stripsMode) {
-	case 0:	// bottom reversed, top normal, both wired in the middle
+	case STRIPS_MIDDLE_WIRED:	// bottom reversed, top normal, both wired in the middle
 		if (ix < NUM_LEDS) {
 			ix = (NUM_LEDS - 1 - ix);
 		}
 		break;
-	case 1:	// bottom and top normal, chained, so nothing to do
+	case STRIPS_CHAINED:	// bottom and top normal, chained, so nothing to do
 		break;
-	case 2:	// top reversed, bottom normal, no connection in the middle
+	case STRIPS_OUTSIDE_WIRED:	// top reversed, bottom normal, no connection in the middle
 		if (ix >= NUM_LEDS) {
 			ix = (NUM_LEDS - 1 - ix);
 		}
