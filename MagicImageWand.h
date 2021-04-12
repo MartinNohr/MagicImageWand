@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.09";
-#define MY_EEPROM_VERSION "MIW109"
+String myVersion = "1.10";
+#define MY_EEPROM_VERSION "MIW110"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -10,7 +10,7 @@ String myVersion = "1.09";
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB, 0 for older PCB
-#define LATEST_PCB 1
+#define LATEST_PCB 0
 #if LATEST_PCB
     #define DIAL_A 12
     #define DIAL_B 13

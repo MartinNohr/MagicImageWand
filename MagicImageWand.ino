@@ -1927,10 +1927,8 @@ void ProcessFileOrTest()
 		return;
 	}
 	else if (tmp[0] == PREVIOUS_FOLDER_CHAR) {
-		tmp = tmp.substring(1);
-		tmp = tmp.substring(0, tmp.length() - 1);
-		if (tmp.length() == 0)
-			tmp = "/";
+		tmp = currentFolder.substring(0, currentFolder.length() - 1);
+		tmp = tmp.substring(0, tmp.lastIndexOf("/") + 1);
 		// change folder, reload files
 		currentFolder = tmp;
 		GetFileNamesFromSD(currentFolder);
