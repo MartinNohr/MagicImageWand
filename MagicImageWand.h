@@ -334,7 +334,7 @@ RTC_DATA_ATTR int nDisplayAllBlue = 255;
 RTC_DATA_ATTR int nDisplayAllHue = 0;
 RTC_DATA_ATTR int nDisplayAllSaturation = 255;
 RTC_DATA_ATTR int nDisplayAllBrightness = 255;
-RTC_DATA_ATTR int nDisplayAllPixelCount = 144;
+RTC_DATA_ATTR int nDisplayAllPixelCount = 288;
 RTC_DATA_ATTR bool bDisplayAllFromMiddle = true;
 // rainbow
 RTC_DATA_ATTR int nRainbowHueDelta = 4;
@@ -681,7 +681,7 @@ MenuItem LedLightBarMenu[] = {
         {eTextInt,"Saturation: %d",GetIntegerValue,&nDisplayAllSaturation,0,255},
         {eTextInt,"Brightness: %d",GetIntegerValue,&nDisplayAllBrightness,0,255},
     {eEndif},
-    {eTextInt,"Pixels: %d",GetIntegerValue,&nDisplayAllPixelCount,1,144},
+    {eTextInt,"Pixels: %d",GetIntegerValue,&nDisplayAllPixelCount,1,288},
     {eBool,"From: %s",ToggleBool,&bDisplayAllFromMiddle,0,0,0,"Middle","End"},
     {eExit,"Previous Menu"},
     // make sure this one is last

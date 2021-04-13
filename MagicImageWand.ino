@@ -1407,14 +1407,13 @@ void LightBar(MenuItem* menu)
 // utility for DisplayLedLightBar()
 void FillLightBar()
 {
-	int offset = bDisplayAllFromMiddle ? (144 - nDisplayAllPixelCount) / 2 : 0;
+	int offset = bDisplayAllFromMiddle ? (TotalLeds - nDisplayAllPixelCount) / 2 : 0;
 	if (!bDisplayAllFromMiddle && bUpsideDown)
-		offset = 144 - nDisplayAllPixelCount;
+		offset = TotalLeds - nDisplayAllPixelCount;
 	FastLED.clear();
-	if (bDisplayAllRGB)
-		fill_solid(leds + offset, nDisplayAllPixelCount, CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue));
-	else
-		fill_solid(leds + offset, nDisplayAllPixelCount, CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+	for (int ix = 0; ix < nDisplayAllPixelCount; ++ix) {
+		SetPixel(ix + offset, bDisplayAllRGB ? CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue) : CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+	}
 	FastLED.show();
 }
 
@@ -1542,7 +1541,7 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
-			nDisplayAllPixelCount = constrain(nDisplayAllPixelCount, 1, 144);
+			nDisplayAllPixelCount = constrain(nDisplayAllPixelCount, 1, TotalLeds);
 			increment = constrain(increment, 1, 100);
 			if (bDisplayAllRGB) {
 				if (bAllowRollover) {
@@ -3344,7 +3343,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 	}
 	int ix1, ix2;
 	if (bUpsideDown) {
-		if (bDoublePixels) {
+		if (bDoublePixels && !bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(TotalLeds - 1 - 2 * ix);
 			ix2 = AdjustStripIndex(TotalLeds - 2 - 2 * ix);
 		}
@@ -3353,7 +3352,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		}
 	}
 	else {
-		if (bDoublePixels) {
+		if (bDoublePixels && !bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(2 * ix);
 			ix2 = AdjustStripIndex(2 * ix + 1);
 		}
@@ -3366,7 +3365,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		//Serial.println("col: " + String(column) + " fade: " + String(fade));
 	}
 	leds[ix1] = pixel;
-	if (bDoublePixels)
+	if (bDoublePixels && !bShowBuiltInTests)
 		leds[ix2] = pixel;
 }
 
