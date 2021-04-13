@@ -132,8 +132,8 @@ void setup()
 	//if (bSecondStrip)
 	// create the second led controller
 	if (bSecondController) {
-		//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
-		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds + TotalLeds / 2, 0, TotalLeds / 2);
+		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+		//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds + TotalLeds / 2, 0, TotalLeds / 2);
 		SetPixel(144, CRGB::Red);
 		SetPixel(145, CRGB::Red);
 		SetPixel(146, CRGB::Red);
@@ -3284,7 +3284,7 @@ int AdjustStripIndex(int ix)
 		break;
 	case STRIPS_OUTSIDE_WIRED:	// top reversed, bottom normal, no connection in the middle
 		if (ix >= ledCount) {
-			ix = (ledCount - 1 - ix);
+			ix = (TotalLeds - 1 - ix) + ledCount;
 		}
 		break;
 	}
