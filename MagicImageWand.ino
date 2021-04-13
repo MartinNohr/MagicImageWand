@@ -133,7 +133,6 @@ void setup()
 	// create the second led controller
 	if (bSecondController) {
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
-		bSecondControllerEnabled = true;
 		SetPixel(144, CRGB::Red);
 		SetPixel(145, CRGB::Red);
 		SetPixel(146, CRGB::Red);
@@ -277,8 +276,12 @@ void setup()
 void loop()
 {
 	static bool didsomething = false;
-	bool lastStrip = bSecondController;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
+	if (!bSettingsMode && bControllerReboot) {
+		WriteMessage("Rebooting due to\nLED controller change", false, 2000);
+		SaveSettings(true, false, false, true);
+		ESP.restart();
+	}
 	server.handleClient();
 	// wait for no keys
 	if (didsomething) {
@@ -403,7 +406,7 @@ bool RunMenus(int button)
 	// see if the autoload flag changed
 	if (bAutoLoadSettings != lastAutoLoadFlag) {
 		// the flag is now true, so we should save the current settings
-		SaveSettings(true, false, true);
+		SaveSettings(true, false, true, false);
 	}
 }
 
@@ -716,19 +719,8 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 
 void UpdateControllers(MenuItem* menu, int flag)
 {
-	switch (flag) {
-	case 1:		// first time
-		break;
-	case 0:		// every change
-		break;
-	case -1:	// last time
-		WriteMessage("Save Settings\nset autoload\nand reboot\nto take effect", false, 5000);
-		//if (bSecondController && !bSecondControllerEnabled) {
-		//	FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
-		//	bSecondControllerEnabled = true;
-		//}
-		break;
-	}
+	WriteMessage("Reboot needed\nto take effect", false, 2000);
+	bControllerReboot = true;
 }
 
 void UpdateTotalLeds(MenuItem* menu, int flag)
@@ -741,11 +733,10 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 	case 0:		// every change
 		break;
 	case -1:	// last time, expand but don't shrink
-		WriteMessage("Save Settings\nset autoload\nand reboot\nto take effect", false, 5000);
-		//if (TotalLeds < lastcount) {
-		//	free(leds);
-		//	leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
-		//}
+		if (TotalLeds != lastcount) {
+			WriteMessage("Reboot needed\nto take effect", false, 2000);
+			bControllerReboot = true;
+		}
 		break;
 	}
 }
@@ -3135,7 +3126,8 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 
 // save some settings in the eeprom
 // return true if valid, false if failed
-bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
+// the LED total count and controllers must always be saved and loaded
+bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag, bool bLEDControllersOnly)
 {
 	bool retvalue = true;
 	int blockpointer = 0;
@@ -3145,7 +3137,10 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 			if (ix == 0 && bOnlySignature) {
 				break;
 			}
-			if (ix == 1 && bAutoloadOnlyFlag) {
+			if (ix == 2 && bLEDControllersOnly) {
+				break;
+			}
+			if (ix == 3 && bAutoloadOnlyFlag) {
 				break;
 			}
 		}
@@ -3166,7 +3161,10 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag)
 			else {
 				EEPROM.readBytes(blockpointer, saveValueList[ix].val, saveValueList[ix].size);
 			}
-			if (ix == 1 && bAutoloadOnlyFlag) {
+			if (ix == 2 && bLEDControllersOnly) {
+				return true;
+			}
+			if (ix == 3 && bAutoloadOnlyFlag) {
 				return true;
 			}
 		}

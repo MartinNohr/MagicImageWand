@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.11";
-#define MY_EEPROM_VERSION "MIW111"
+String myVersion = "1.12";
+#define MY_EEPROM_VERSION "MIW112"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -130,7 +130,7 @@ bool CheckCancel();
 // the signature is saved first in eeprom, followed by the autoload flag, all other values follow
 char signature[] = { MY_EEPROM_VERSION };   // set to make sure saved values are valid, change when savevalues is changed, nice to keep in sync with version from .ino file
 RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
-bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false);
+bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false, bool bLEDControllersOnly = false);
 
 // settings
 RTC_DATA_ATTR int nDisplayBrightness = 50;           // this is in %
@@ -144,7 +144,7 @@ RTC_DATA_ATTR STRIPS_MODE stripsMode = STRIPS_MIDDLE_WIRED;
 RTC_DATA_ATTR int TotalLeds = 144;
 CRGB* leds = NULL;
 RTC_DATA_ATTR bool bSecondController = false;                // set true when two LED controllers are enabled
-bool bSecondControllerEnabled = false;                  // set when the second controller is started
+bool bControllerReboot = false;                         // set this when controllers or led count changed
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
@@ -255,7 +255,7 @@ struct MenuItem {
     int decimals;                       // 0 for int, 1 for 0.1
     char* on;                           // text for boolean true
     char* off;                          // text for boolean false
-    // flag is 1 for first time, 0 for changes, and -1 for last call
+    // flag is 1 for first time, 0 for changes, and -1 for last call, bools only call this with -1
     void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect
 };
 typedef MenuItem MenuItem;
@@ -385,9 +385,11 @@ struct saveValues {
 };
 // these values are saved in eeprom, the signature is first
 const saveValues saveValueList[] = {
-    {signature,sizeof(signature)},                      // first
-    {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be second
-    {&nStripBrightness, sizeof(nStripBrightness)},
+    {signature,sizeof(signature)},                      // this must be first
+    {&bSecondController, sizeof(bSecondController)},    // this must be second
+    {&TotalLeds, sizeof(TotalLeds)},                    // this must be third
+    {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be fourth
+    {&nStripBrightness, sizeof(nStripBrightness)},      // all the rest can be in any order
 	{&nStripMaxCurrent, sizeof(nStripMaxCurrent)},
     {&nFadeInOutFrames, sizeof(nFadeInOutFrames)},
     {&nFrameHold, sizeof(nFrameHold)},
@@ -400,8 +402,6 @@ const saveValues saveValueList[] = {
     {&repeatCount, sizeof(repeatCount)},
     {&repeatDelay, sizeof(repeatDelay)},
     {&bGammaCorrection, sizeof(bGammaCorrection)},
-    {&bSecondController, sizeof(bSecondController)},
-    {&TotalLeds, sizeof(TotalLeds)},
     {&stripsMode, sizeof(stripsMode)},
     //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
     //{&nMaxBackLight, sizeof(nMaxBackLight)},
@@ -924,8 +924,6 @@ struct SETTINGVAR {
     int min, max;
 };
 struct SETTINGVAR SettingsVarList[] = {
-    {"SECOND CONTROLLER",&bSecondController,vtBool},
-    {"TOTAL LEDS",&TotalLeds,vtInt,1,512},
     {"STRIP BRIGHTNESS",&nStripBrightness,vtInt,1,255},
     {"FADE IN/OUT FRAMES",&nFadeInOutFrames,vtInt,0,255},
     {"REPEAT COUNT",&repeatCount,vtInt},
