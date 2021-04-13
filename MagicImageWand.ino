@@ -132,7 +132,18 @@ void setup()
 	//if (bSecondStrip)
 	// create the second led controller
 	if (bSecondController) {
-		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+		//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds + TotalLeds / 2, 0, TotalLeds / 2);
+		SetPixel(144, CRGB::Red);
+		SetPixel(145, CRGB::Red);
+		SetPixel(146, CRGB::Red);
+		SetPixel(287, CRGB::Red);
+		SetPixel(286, CRGB::Red);
+		SetPixel(285, CRGB::Red);
+		leds[144] = CRGB::Red;
+		leds[145] = CRGB::Green;
+		leds[146] = CRGB::Blue;
+		FastLED.show();
 	}
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
@@ -3278,7 +3289,7 @@ int AdjustStripIndex(int ix)
 		break;
 	}
 	// make sure it isn't too big or too small
-	ix = constrain(ix, 0, ledCount - 1);
+	ix = constrain(ix, 0, TotalLeds - 1);
 	return ix;
 }
 
