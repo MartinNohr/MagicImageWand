@@ -144,6 +144,7 @@ RTC_DATA_ATTR STRIPS_MODE stripsMode = STRIPS_MIDDLE_WIRED;
 RTC_DATA_ATTR int TotalLeds = 144;
 CRGB* leds = NULL;
 RTC_DATA_ATTR bool bSecondController = false;                // set true when two LED controllers are enabled
+bool bSecondControllerEnabled = false;                  // set when the second controller is started
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
@@ -285,6 +286,7 @@ void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
+void UpdateControllers(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -748,7 +750,7 @@ MenuItem ImageMenu[] = {
 MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-    {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1"},
+    {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&TotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
     {eBool,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},

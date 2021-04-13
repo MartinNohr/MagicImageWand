@@ -133,7 +133,7 @@ void setup()
 	// create the second led controller
 	if (bSecondController) {
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
-		//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds + TotalLeds / 2, 0, TotalLeds / 2);
+		bSecondControllerEnabled = true;
 		SetPixel(144, CRGB::Red);
 		SetPixel(145, CRGB::Red);
 		SetPixel(146, CRGB::Red);
@@ -714,7 +714,7 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 	}
 }
 
-void UpdateTotalLeds(MenuItem* menu, int flag)
+void UpdateControllers(MenuItem* menu, int flag)
 {
 	switch (flag) {
 	case 1:		// first time
@@ -722,8 +722,30 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 	case 0:		// every change
 		break;
 	case -1:	// last time
-		free(leds);
-		leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
+		WriteMessage("Save Settings\nset autoload\nand reboot\nto take effect", false, 5000);
+		//if (bSecondController && !bSecondControllerEnabled) {
+		//	FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+		//	bSecondControllerEnabled = true;
+		//}
+		break;
+	}
+}
+
+void UpdateTotalLeds(MenuItem* menu, int flag)
+{
+	static int lastcount;
+	switch (flag) {
+	case 1:		// first time
+		lastcount = TotalLeds;
+		break;
+	case 0:		// every change
+		break;
+	case -1:	// last time, expand but don't shrink
+		WriteMessage("Save Settings\nset autoload\nand reboot\nto take effect", false, 5000);
+		//if (TotalLeds < lastcount) {
+		//	free(leds);
+		//	leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
+		//}
 		break;
 	}
 }
