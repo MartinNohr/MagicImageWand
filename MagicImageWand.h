@@ -751,15 +751,15 @@ MenuItem ImageMenu[] = {
 MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+    {eTextInt,"Max mAmp: %d",GetIntegerValue,&nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&TotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
+    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
     {eBool,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
     {eTextInt,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,"Show White Balance",ShowWhiteBalance},
-    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
-    {eTextInt,"Max mAmp: %d",GetIntegerValue,&nStripMaxCurrent,100,10000},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

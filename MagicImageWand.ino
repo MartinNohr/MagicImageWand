@@ -719,7 +719,7 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 
 void UpdateControllers(MenuItem* menu, int flag)
 {
-	WriteMessage("Reboot needed\nto take effect", false, 2000);
+	WriteMessage("Reboot needed\nto take effect", false, 1000);
 	bControllerReboot = true;
 }
 
@@ -734,7 +734,7 @@ void UpdateStripsMode(MenuItem* menu, int flag)
 		break;
 	case -1:	// last time, expand but don't shrink
 		if (lastmode != stripsMode) {
-			WriteMessage("Reboot needed\nto take effect", false, 2000);
+			WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
 		break;
@@ -752,7 +752,7 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 		break;
 	case -1:	// last time, expand but don't shrink
 		if (TotalLeds != lastcount) {
-			WriteMessage("Reboot needed\nto take effect", false, 2000);
+			WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
 		break;
