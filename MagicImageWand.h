@@ -287,6 +287,7 @@ void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
+void UpdateStripsMode(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -388,7 +389,8 @@ const saveValues saveValueList[] = {
     {signature,sizeof(signature)},                      // this must be first
     {&bSecondController, sizeof(bSecondController)},    // this must be second
     {&TotalLeds, sizeof(TotalLeds)},                    // this must be third
-    {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be fourth
+    {&stripsMode, sizeof(stripsMode)},                  // this must be fourth
+    {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be fifth
     {&nStripBrightness, sizeof(nStripBrightness)},      // all the rest can be in any order
 	{&nStripMaxCurrent, sizeof(nStripMaxCurrent)},
     {&nFadeInOutFrames, sizeof(nFadeInOutFrames)},
@@ -402,7 +404,6 @@ const saveValues saveValueList[] = {
     {&repeatCount, sizeof(repeatCount)},
     {&repeatDelay, sizeof(repeatDelay)},
     {&bGammaCorrection, sizeof(bGammaCorrection)},
-    {&stripsMode, sizeof(stripsMode)},
     //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
     //{&nMaxBackLight, sizeof(nMaxBackLight)},
     {&CurrentFileIndex,sizeof(CurrentFileIndex)},
@@ -757,7 +758,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
     {eTextInt,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,"Show White Balance",ShowWhiteBalance},
-    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2},
+    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
     {eTextInt,"Max mAmp: %d",GetIntegerValue,&nStripMaxCurrent,100,10000},
     {eExit,"Previous Menu"},
     // make sure this one is last

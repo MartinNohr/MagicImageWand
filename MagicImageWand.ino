@@ -723,6 +723,24 @@ void UpdateControllers(MenuItem* menu, int flag)
 	bControllerReboot = true;
 }
 
+void UpdateStripsMode(MenuItem* menu, int flag)
+{
+	static int lastmode;
+	switch (flag) {
+	case 1:		// first time
+		lastmode = stripsMode;
+		break;
+	case 0:		// every change
+		break;
+	case -1:	// last time, expand but don't shrink
+		if (lastmode != stripsMode) {
+			WriteMessage("Reboot needed\nto take effect", false, 2000);
+			bControllerReboot = true;
+		}
+		break;
+	}
+}
+
 void UpdateTotalLeds(MenuItem* menu, int flag)
 {
 	static int lastcount;
@@ -3137,10 +3155,10 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag, bool b
 			if (ix == 0 && bOnlySignature) {
 				break;
 			}
-			if (ix == 2 && bLEDControllersOnly) {
+			if (ix == 3 && bLEDControllersOnly) {
 				break;
 			}
-			if (ix == 3 && bAutoloadOnlyFlag) {
+			if (ix == 4 && bAutoloadOnlyFlag) {
 				break;
 			}
 		}
@@ -3161,10 +3179,10 @@ bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag, bool b
 			else {
 				EEPROM.readBytes(blockpointer, saveValueList[ix].val, saveValueList[ix].size);
 			}
-			if (ix == 2 && bLEDControllersOnly) {
+			if (ix == 3 && bLEDControllersOnly) {
 				return true;
 			}
-			if (ix == 3 && bAutoloadOnlyFlag) {
+			if (ix == 4 && bAutoloadOnlyFlag) {
 				return true;
 			}
 		}
