@@ -2113,6 +2113,9 @@ void ProcessFileOrTest()
 						if (wbtn == BTN_LONG) {
 							CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
 						}
+						else {
+							waitNext = false;
+						}
 						if (CheckCancel()) {
 							waitNext = false;
 						}
