@@ -194,6 +194,7 @@ RTC_DATA_ATTR int nMirrorDelay = 0;                     // pause between the two
 RTC_DATA_ATTR bool bChainFiles = false;                 // set to run all the files from current to the last one in the current folder
 RTC_DATA_ATTR int nChainRepeats = 1;                    // how many times to repeat the chain
 RTC_DATA_ATTR int nChainDelay = 0;                      // number of 1/10 seconds to delay between chained files
+RTC_DATA_ATTR bool bChainWaitKey = false;               // wait for keypress to advance to next chained file
 RTC_DATA_ATTR bool bShowProgress = true;                // show the progress bar
 RTC_DATA_ATTR bool bShowFolder = true;                  // show the path in front of the file
 RTC_DATA_ATTR bool bScaleHeight = false;                // scale the Y values to fit the number of pixels
@@ -417,6 +418,7 @@ const saveValues saveValueList[] = {
     {&bDoublePixels,sizeof(bDoublePixels)},
     {&nChainRepeats,sizeof(nChainRepeats)},
     {&nChainDelay,sizeof(nChainDelay)},
+    {&bChainWaitKey,sizeof(bChainWaitKey)},
     {&whiteBalance,sizeof(whiteBalance)},
     {&bShowProgress,sizeof(bShowProgress)},
     {&bShowFolder,sizeof(bShowFolder)},
@@ -791,6 +793,7 @@ MenuItem RepeatMenu[] = {
         {eIfEqual,"",NULL,&bChainFiles,true},
             {eTextInt,"Chain Repeats: %d",GetIntegerValue,&nChainRepeats,1,100},
             {eTextInt,"Chain Delay (S): %d.%d",GetIntegerValue,&nChainDelay,0,100,1},
+            {eBool,"Chain Wait Key: %s",ToggleBool,&bChainWaitKey,0,0,0,"Yes","No"},
         {eEndif},
     {eEndif},
     {eExit,"Previous Menu"},
@@ -851,7 +854,7 @@ MenuItem MainMenu[] = {
         {eText,"Preview BMP",ShowBmp},
     {eEndif},
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
-    {eMenu,"Repeat Settings",{.menu = RepeatMenu}},
+    {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},
     {eIfEqual,"",NULL,&bShowBuiltInTests,true},
         {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
@@ -940,6 +943,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"CHAIN FILES",&bChainFiles,vtBool},
     {"CHAIN REPEATS",&nChainRepeats,vtInt},
     {"CHAIN DELAY",&nChainDelay,vtInt},
+    {"CHAIN WAIT FOR KEY",&bChainWaitKey,vtBool},
     {"WHITE BALANCE",&whiteBalance,vtRGB},
     {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
     {"DISPLAY MENULINE COLOR",&menuTextColor,vtInt},

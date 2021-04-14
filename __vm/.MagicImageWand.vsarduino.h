@@ -21,7 +21,7 @@
 #define GCC_NOT_5_2_0 0
 #define WITH_POSIX
 #define F_CPU 240000000L
-#define ARDUINO 108012
+#define ARDUINO 108013
 #define ARDUINO_TTGO_T1
 #define ARDUINO_ARCH_ESP32
 #define ESP32

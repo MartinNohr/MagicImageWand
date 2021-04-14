@@ -2100,6 +2100,24 @@ void ProcessFileOrTest()
 					DisplayLine(2, line, menuTextColor);
 					delay(100);
 				}
+				// check for chain wait for keypress
+				if (bChainWaitKey) {
+					DisplayLine(2, "Click for Next File", menuTextColor);
+					bool waitNext = true;
+					int wbtn;
+					while (waitNext) {
+						delay(10);
+						wbtn = ReadButton();
+						if (wbtn == BTN_NONE)
+							continue;
+						if (wbtn == BTN_LONG) {
+							CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
+						}
+						if (CheckCancel()) {
+							waitNext = false;
+						}
+					}
+				}
 			}
 			line = "";
 			// clear
