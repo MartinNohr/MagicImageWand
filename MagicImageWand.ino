@@ -2101,8 +2101,8 @@ void ProcessFileOrTest()
 					delay(100);
 				}
 				// check for chain wait for keypress
-				if (bChainWaitKey) {
-					DisplayLine(2, "Click for Next File", menuTextColor);
+				if (chainCount && bChainWaitKey) {
+					DisplayLine(2, "Click: " + FileNames[CurrentFileIndex], menuTextColor);
 					bool waitNext = true;
 					int wbtn;
 					while (waitNext) {
