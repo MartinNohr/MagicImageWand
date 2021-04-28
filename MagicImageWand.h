@@ -228,7 +228,7 @@ enum eDisplayOperation {
     eBool,              // handle bool using %s and on/off values
     eMenu,              // load another menu
     eExit,              // closes this menu
-    eIfTestEqual,       // start skipping menu entries if match with data value
+    eIfEqual,           // start skipping menu entries if match with data value
     eElse,              // toggles the skipping
     eEndif,             // ends an if block
     eBuiltinOptions,    // use an internal settings menu if available, see the internal name,function list below (BuiltInFiles[])
@@ -675,7 +675,7 @@ MenuItem LedLightBarMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Allow rollover: %s",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
     {eBool,"Color Mode: %s",ToggleBool,&bDisplayAllRGB,0,0,0,"RGB","HSL"},
-    {eIfTestEqual,"",NULL,&bDisplayAllRGB,true},
+    {eIfEqual,"",NULL,&bDisplayAllRGB,true},
         {eTextInt,"Red: %d",GetIntegerValue,&nDisplayAllRed,0,255},
         {eTextInt,"Green: %d",GetIntegerValue,&nDisplayAllGreen,0,255},
         {eTextInt,"Blue: %d",GetIntegerValue,&nDisplayAllBlue,0,255},
@@ -720,7 +720,7 @@ MenuItem SystemMenu[] = {
 MenuItem ImageMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Timing Type: %s",ToggleBool,&bFixedTime,0,0,0,"Image","Column"},
-    {eIfTestEqual,"",NULL,&bFixedTime,false},
+    {eIfEqual,"",NULL,&bFixedTime,false},
         {eTextInt,"Column Time (mS): %d",GetIntegerValue,&nFrameHold,0,500},
     {eElse},
         {eTextInt,"Image Time (S): %d",GetIntegerValue,&nFixedImageTime,1,120},
@@ -728,18 +728,18 @@ MenuItem ImageMenu[] = {
     {eTextInt,"Start Delay (S): %d.%d",GetIntegerValue,&startDelay,0,100,1},
     {eTextInt,"Fade I/O Columns : %d",GetIntegerValue,&nFadeInOutFrames,0,255},
     {eBool,"Upside Down: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
-    {eIfTestEqual,"",NULL,&bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
         {eBool,"Walk: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,"Play Mirror Image: %s",ToggleBool,&bMirrorPlayImage,0,0,0,"Yes","No"},
-        {eIfTestEqual,"",NULL,&bMirrorPlayImage,true},
+        {eIfEqual,"",NULL,&bMirrorPlayImage,true},
             {eTextInt,"Mirror Delay (S): %d.%d",GetIntegerValue,&nMirrorDelay,0,10,1},
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&bScaleHeight,0,0,0,"On","Off"},
     {eEndif},
     {eBool,"144 to 288 Pixels: %s",ToggleBool,&bDoublePixels,0,0,0,"Yes","No"},
-    {eIfTestEqual,"",NULL,&bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
         {eBool,"Frame Advance: %s",ToggleBool,&bManualFrameAdvance,0,0,0,"Step","Auto"},
-        {eIfTestEqual,"",NULL,&bManualFrameAdvance,true},
+        {eIfEqual,"",NULL,&bManualFrameAdvance,true},
             {eTextInt,"Frame Counter: %d",GetIntegerValue,&nFramePulseCount,0,32},
         {eEndif},
     {eEndif},
@@ -786,9 +786,9 @@ MenuItem RepeatMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Repeat Count: %d",GetIntegerValue,&repeatCount,1,100},
     {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&repeatDelay,0,100,1},
-    {eIfTestEqual,"",NULL,&bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
         {eBool,"Chain Files: %s",ToggleBool,&bChainFiles,0,0,0,"On","Off"},
-        {eIfTestEqual,"",NULL,&bChainFiles,true},
+        {eIfEqual,"",NULL,&bChainFiles,true},
             {eTextInt,"Chain Repeats: %d",GetIntegerValue,&nChainRepeats,1,100},
             {eTextInt,"Chain Delay (S): %d.%d",GetIntegerValue,&nChainDelay,0,100,1},
             {eBool,"Chain Wait Key: %s",ToggleBool,&bChainWaitKey,0,0,0,"Yes","No"},
@@ -826,14 +826,14 @@ MenuItem MacroSelectMenu[] = {
 MenuItem MacroMenu[] = {
     {eExit,"Previous Menu"},
     //{eTextInt,"Macro #: %d",GetIntegerValue,&nCurrentMacro,0,9},
-    {eIfTestEqual,"",NULL,&bRecordingMacro,false},
+    {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&nCurrentMacro},
         {eTextInt,"Run: #%d",RunMacro,&nCurrentMacro},
     {eElse},
         {eTextInt,"Recording Macro: #%d",NULL,&nCurrentMacro},
     {eEndif},
     {eBool,"Record: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
-    {eIfTestEqual,"",NULL,&bRecordingMacro,false},
+    {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eTextInt,"Repeat Count: %d",GetIntegerValue,&nRepeatCountMacro,1,100},
         {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&nRepeatWaitMacro,0,100,1},
         {eTextInt,"Load: #%d",LoadMacro,&nCurrentMacro},
@@ -845,7 +845,7 @@ MenuItem MacroMenu[] = {
     {eTerminate}
 };
 MenuItem MainMenu[] = {
-    {eIfTestEqual,"",NULL,&bShowBuiltInTests,true},
+    {eIfEqual,"",NULL,&bShowBuiltInTests,true},
         {eBool,"Switch to SD Card",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
         {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
@@ -854,7 +854,7 @@ MenuItem MainMenu[] = {
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},
-    {eIfTestEqual,"",NULL,&bShowBuiltInTests,true},
+    {eIfEqual,"",NULL,&bShowBuiltInTests,true},
         {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
     {eElse},
         {eMenu,"MIW File Operations",{.menu = StartFileMenu}},
