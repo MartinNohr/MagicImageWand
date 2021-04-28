@@ -429,7 +429,7 @@ void ShowMenu(struct MenuItem* menu)
 		}
 		bMenuValid[menix] = false;
 		switch (menu->op) {
-		case eIfEqual:
+		case eIfTestEqual:
 			// skip the next one if match, only booleans are handled so far
 			skip = *(bool*)menu->value != (menu->min ? true : false);
 			//Serial.println("ifequal test: skip: " + String(skip));
@@ -2000,7 +2000,6 @@ void ProcessFileOrTest()
 		WriteOrDeleteConfigFile(String(nCurrentMacro), false, false);
 	}
 	bIsRunning = true;
-	nProgress = 0;
 	// clear the rest of the lines
 	for (int ix = 1; ix < MENU_LINES; ++ix)
 		DisplayLine(ix, "");
@@ -2027,6 +2026,7 @@ void ProcessFileOrTest()
 	// set the basic LED info
 	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
 	FastLED.setBrightness(nStripBrightness);
+	FastLED.setMaxPowerInVoltsAndMilliamps(5, nStripMaxCurrent);
 	line = "";
 	while (chainRepeatCount-- > 0) {
 		while (chainCount-- > 0) {
@@ -2155,7 +2155,6 @@ void ProcessFileOrTest()
 	bIsRunning = false;
 	if (!bRunningMacro)
 		DisplayCurrentFile();
-	nProgress = 0;
 	// clear buttons
 	CRotaryDialButton::clear();
 }
@@ -2742,7 +2741,6 @@ void DisplayCurrentFile(bool path)
 
 void ShowProgressBar(int percent)
 {
-	nProgress = percent;
 	if (!bShowProgress || bPauseDisplay)
 		return;
 	static int lastpercent;
