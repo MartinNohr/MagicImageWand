@@ -528,6 +528,8 @@ void ShowMenu(struct MenuItem* menu)
 			++y;
 			//Serial.println("menu text4: " + String(line));
 			break;
+		default:
+			break;
 		}
 		if (strlen(line) && y >= MenuStack.top()->offset) {
 			DisplayMenuLine(y - 1, y - 1 - MenuStack.top()->offset, line);
