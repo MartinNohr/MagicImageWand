@@ -428,17 +428,19 @@ void ShowMenu(struct MenuItem* menu)
 			bMenuValid.resize(menix + 1);
 		}
 		bMenuValid[menix] = false;
-		switch ((int)(menu->op)) {
-		case (int)eIfEqual:
+		switch ((menu->op)) {
+		case eIfEqual:
 			// skip the next one if match, only booleans are handled so far
 			skip = *(bool*)menu->value != (menu->min ? true : false);
 			//Serial.println("ifequal test: skip: " + String(skip));
 			break;
-		case (int)eElse:
+		case eElse:
 			skip = !skip;
 			break;
-		case (int)eEndif:
+		case eEndif:
 			skip = false;
+			break;
+		default:
 			break;
 		}
 		if (skip) {
