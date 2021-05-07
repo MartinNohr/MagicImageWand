@@ -2525,13 +2525,13 @@ void ShowBmp(MenuItem*)
 			delay(30);
 		}
 		switch (ReadButton()) {
-		case CRotaryDialButton::BTN_LEFT:
+		case CRotaryDialButton::BTN_RIGHT:
 			if (allowScroll) {
 				imgOffset -= bHalfSize ? (nPreviewScrollCols * 2) : nPreviewScrollCols;
 				imgOffset = max(0, imgOffset);
 			}
 			break;
-		case CRotaryDialButton::BTN_RIGHT:
+		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
 				imgOffset += bHalfSize ? (nPreviewScrollCols * 2) : nPreviewScrollCols;
 				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);

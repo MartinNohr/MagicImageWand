@@ -10,7 +10,7 @@ String myVersion = "1.12";
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB, 0 for older PCB
-#define LATEST_PCB 0
+#define LATEST_PCB 1
 #if LATEST_PCB
     #define DIAL_A 12
     #define DIAL_B 13
