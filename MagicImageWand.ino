@@ -3023,15 +3023,21 @@ bool SettingsSaveRestore(bool save, int set)
 		// get some memory and save the values
 		if (memptr[set])
 			free(memptr[set]);
-		memptr[set] = malloc(sizeof saveValueList);
-		if (!memptr[set])
+		// calculate how many bytes we need
+		size_t neededBytes = 0;
+		for (int ix = 0; ix < (sizeof(saveValueList) / sizeof(*saveValueList)); ++ix) {
+			neededBytes += saveValueList[ix].size;
+		}
+		memptr[set] = malloc(neededBytes);
+		if (!memptr[set]) {
 			return false;
+		}
 	}
 	void* blockptr = memptr[set];
 	if (memptr[set] == NULL) {
 		return false;
 	}
-	for (int ix = 0; ix < (sizeof saveValueList / sizeof * saveValueList); ++ix) {
+	for (int ix = 0; ix < (sizeof(saveValueList) / sizeof(*saveValueList)); ++ix) {
 		if (save) {
 			memcpy(blockptr, saveValueList[ix].val, saveValueList[ix].size);
 		}

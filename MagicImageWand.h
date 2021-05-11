@@ -1,7 +1,7 @@
 #pragma once
 
-String myVersion = "1.12";
-#define MY_EEPROM_VERSION "MIW112"
+String myVersion = "1.13";
+#define MY_EEPROM_VERSION "MIW113"
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
