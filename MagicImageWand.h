@@ -1,7 +1,6 @@
 #pragma once
 
-String myVersion = "1.13";
-#define MY_EEPROM_VERSION "MIW113"
+char* myVersion = "1.14";
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -56,12 +55,27 @@ String file_size(int bytes){
 }
 
 #include <FastLED.h>
-#include <EEPROM.h>
+#include <Preferences.h>
 #include "RotaryDialButton.h"
 #include <TFT_eSPI.h>
 #include <vector>
 #include <stack>
 //#include <fonts/GFXFF/FreeMono18pt7b.h>
+
+// definitions for preferences
+char* prefsName = "MIW";
+char* prefsVars = "vars";
+char* prefsVersion = "version";
+char* prefsBuiltInInfo = "builtininfo";
+char* prefsImgInfo = "imginfo";
+char* prefsLedInfo = "ledinfo";
+char* prefsSystemInfo = "systeminfo";
+char* prefsAutoload = "autoload";
+// rotary dial values
+char* prefsLongPressTimer = "longpress";
+char* prefsDialSensitivity = "dialsense";
+char* prefsDialSpeed = "dialspeed";
+char* prefsDialReverse = "dialreverse";
 
 #if USE_STANDARD_SD
   SPIClass spiSDCard;
@@ -81,6 +95,8 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
 
 // functions
+void ShowLeds(int mode = 0);
+void SetDisplayBrightness(int val);
 void DisplayCurrentFile(bool path = true);
 void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);
 void DisplayMenuLine(int line, int displine, String text);
@@ -121,92 +137,184 @@ void ReportFileNotPresent();
 void ReportSDNotPresent();
 void IncreaseRepeatButton();
 void DecreaseRepeatButton();
-
-bool bPauseDisplay = false; // set this so DisplayLine and Progress won't update display
+bool SaveLoadSettings(bool save = false, bool autoloadonly = false, bool ledonly = false, bool nodisplay = false);
 CRotaryDialButton::Button ReadButton();
 bool CheckCancel();
 
-// eeprom values
-// the signature is saved first in eeprom, followed by the autoload flag, all other values follow
-char signature[] = { MY_EEPROM_VERSION };   // set to make sure saved values are valid, change when savevalues is changed, nice to keep in sync with version from .ino file
-RTC_DATA_ATTR bool bAutoLoadSettings = false;     // set to automatically load saved settings from eeprom
-bool SaveSettings(bool save, bool bOnlySignature = false, bool bAutoloadFlag = false, bool bLEDControllersOnly = false);
+bool bAutoLoadSettings = false;
 
-// settings
-RTC_DATA_ATTR int nDisplayBrightness = 50;           // this is in %
-bool bSdCardValid = false;              // set to true when card is found
-// strip leds
+// LED controller pins
 #define DATA_PIN1 2
 #define DATA_PIN2 17
-// Define the array of leds, up to 512
-enum STRIPS_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
-RTC_DATA_ATTR STRIPS_MODE stripsMode = STRIPS_MIDDLE_WIRED;
-RTC_DATA_ATTR int TotalLeds = 144;
-CRGB* leds = NULL;
-RTC_DATA_ATTR bool bSecondController = false;                // set true when two LED controllers are enabled
+// The array of leds, up to 512
+CRGB* leds;
+// 0 feed from center, 1 serial from end, 2 from outsides
+enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
+struct LED_INFO {
+    bool bSecondController = false;
+    int nLEDBrightness = 25;
+    int nTotalLeds = 144;
+    bool bGammaCorrection = true;
+    int stripsMode = STRIPS_MIDDLE_WIRED;
+    // white balance values, really only 8 bits, but menus need ints
+    struct {
+        int r;
+        int g;
+        int b;
+    } whiteBalance = { 255,255,255 };
+    int nStripMaxCurrent = 2000;              // maximum milliamps to allow
+};
+typedef LED_INFO LED_INFO;
+RTC_DATA_ATTR LED_INFO LedInfo;
+
+// image settings
+struct IMG_INFO {
+    int nFrameHold = 10;                      // default for the frame delay
+    bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
+    int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
+    int nFramePulseCount = 0;                 // advance frame when button pressed this many times, 0 means ignore
+    bool bManualFrameAdvance = false;         // advance frame by clicking or rotating button
+    bool bReverseImage = false;               // read the file lines in reverse
+    bool bUpsideDown = false;                 // play the image upside down
+    bool bDoublePixels = false;               // double the image line, to go from 144 to 288
+    bool bMirrorPlayImage = false;            // play the file twice, 2nd time reversed
+    int nMirrorDelay = 0;                     // pause between the two halves of the image
+    bool bChainFiles = false;                 // set to run all the files from current to the last one in the current folder
+    int nChainRepeats = 1;                    // how many times to repeat the chain
+    int nChainDelay = 0;                      // number of 1/10 seconds to delay between chained files
+    bool bChainWaitKey = false;               // wait for keypress to advance to next chained file
+    bool bScaleHeight = false;                // scale the Y values to fit the number of pixels
+    int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
+    int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
+    //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
+    int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
+    int repeatCount = 1;                      // Variable to keep track of number of repeats
+    int nCurrentMacro = 0;                    // the number of the macro to select or run
+    int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
+    int nRepeatCountMacro = 1;                // repeat count for macros
+};
+typedef IMG_INFO IMG_INFO;
+RTC_DATA_ATTR IMG_INFO ImgInfo;
+
+RTC_DATA_ATTR int CurrentFileIndex = 0;
+
+struct SYSTEM_INFO {
+    bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
+    uint16_t menuTextColor = TFT_BLUE;
+    bool bMenuStar = false;
+    bool bHiLiteCurrentFile = true;
+    int nPreviewScrollCols = 120;             // now many columns to scroll with dial during preview
+    bool bShowProgress = true;                // show the progress bar
+    bool bShowFolder = true;                  // show the path in front of the file
+    int nDisplayBrightness = 50;              // this is in %
+    bool bAllowMenuWrap = false;              // allows menus to wrap around from end and start instead of pinning
+    bool bShowNextFiles = true;               // show the next files in the main display
+    bool bShowDuringBmpFile = false;          // set this to display the bmp on the LCD and the LED during BMP display
+};
+typedef SYSTEM_INFO SYSTEM_INFO;
+RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
+
+struct BUILTIN_INFO {
+    // adjustment values for builtins
+    uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+    // bouncing balls
+    int nBouncingBallsCount = 4;
+    int nBouncingBallsDecay = 1000;
+    int nBouncingBallsFirstColor = 0;   // first color, wraps to get all 32
+    int nBouncingBallsChangeColors = 0; // how many 100 count cycles to wait for change
+    // cylon eye
+    int nCylonEyeSize = 10;
+    int nCylonEyeRed = 255;
+    int nCylonEyeGreen = 0;
+    int nCylonEyeBlue = 0;
+    // random bars
+    bool bRandomBarsBlacks = true;
+    int nRandomBarsHoldframes = 10;
+    // meteor
+    int nMeteorSize = 10;
+    int nMeteorRed = 255;
+    int nMeteorGreen = 255;
+    int nMeteorBlue = 255;
+    // display all color
+    bool bAllowRollover = true;       // lets 255->0 and 0->255
+    bool bDisplayAllRGB = false;    // true for RGB, else HSV
+    int nDisplayAllRed = 255;
+    int nDisplayAllGreen = 255;
+    int nDisplayAllBlue = 255;
+    int nDisplayAllHue = 0;
+    int nDisplayAllSaturation = 255;
+    int nDisplayAllBrightness = 255;
+    int nDisplayAllPixelCount = 288;
+    bool bDisplayAllFromMiddle = true;
+    // rainbow
+    int nRainbowHueDelta = 4;
+    int nRainbowInitialHue = 0;
+    int nRainbowFadeTime = 10;       // fade in out 0.1 Sec
+    bool bRainbowAddGlitter = false;
+    bool bRainbowCycleHue = false;
+    // twinkle
+    bool bTwinkleOnlyOne = false;
+    // confetti
+    bool bConfettiCycleHue = false;
+    // juggle
+
+    // sine
+    int nSineStartingHue = 0;
+    bool bSineCycleHue = false;
+    int nSineSpeed = 13;
+    // bpm
+    int nBpmBeatsPerMinute = 62;
+    bool bBpmCycleHue = false;
+    // checkerboard/bars
+    int nCheckerboardHoldframes = 10;
+    int nCheckboardBlackWidth = 12;
+    int nCheckboardWhiteWidth = 12;
+    bool bCheckerBoardAlternate = true;
+    int nCheckerboardAddPixels = 0;
+    // stripes
+
+    // black and white lines
+    int nLinesWhite = 5;
+    int nLinesBlack = 5;
+    // rainbow pulse settings
+    int nRainbowPulseColorScale = 10;
+    int nRainbowPulsePause = 5;
+    int nRainbowPulseSaturation = 255;
+    int nRainbowPulseStartColor = 0;
+    // wedge data
+    bool bWedgeFill = false;
+    int nWedgeRed = 255;
+    int nWedgeGreen = 255;
+    int nWedgeBlue = 255;
+};
+typedef BUILTIN_INFO BUILTIN_INFO;
+RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
+
+// settings
+bool bSdCardValid = false;              // set to true when card is found
 bool bControllerReboot = false;                         // set this when controllers or led count changed
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
-RTC_DATA_ATTR int nStripBrightness = 25;                // Variable and default for the Brightness of the strip, from 1 to 255
-RTC_DATA_ATTR int nStripMaxCurrent = 2000;              // maximum milliamps to allow
-RTC_DATA_ATTR int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
-RTC_DATA_ATTR int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
-//bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
-RTC_DATA_ATTR int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
-RTC_DATA_ATTR int repeatCount = 1;                      // Variable to keep track of number of repeats
 int nRepeatsLeft;                         // countdown while repeating, used for BLE also
 int g = 0;                                // Variable for the Green Value
 int b = 0;                                // Variable for the Blue Value
 int r = 0;                                // Variable for the Red Value
-//CRGB whiteBalance = CRGB::White;
-// white balance values, really only 8 bits, but menus need ints
-struct {
-    int r;
-    int g;
-    int b;
-} whiteBalance = { 255,255,255 };
 // settings
-RTC_DATA_ATTR uint16_t menuTextColor = TFT_BLUE;
-RTC_DATA_ATTR bool bMenuStar = false;
-RTC_DATA_ATTR bool bHiLiteCurrentFile = true;
-#define NEXT_FOLDER_CHAR '>'
-#define PREVIOUS_FOLDER_CHAR '<'
+constexpr auto NEXT_FOLDER_CHAR = '>';
+constexpr auto PREVIOUS_FOLDER_CHAR = '<';
 String currentFolder = "/";
-RTC_DATA_ATTR int CurrentFileIndex = 0;
 int lastFileIndex = 0;                                  // save between switching of internal and SD
 String lastFolder = "/";
 std::vector<String> FileNames;
 bool bSettingsMode = false;                             // set true when settings are displayed
-RTC_DATA_ATTR int nPreviewScrollCols = 120;             // now many columns to scroll with dial during preview
-RTC_DATA_ATTR int nFrameHold = 10;                      // default for the frame delay
-RTC_DATA_ATTR bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
-RTC_DATA_ATTR int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
-RTC_DATA_ATTR int nFramePulseCount = 0;                 // advance frame when button pressed this many times, 0 means ignore
-RTC_DATA_ATTR bool bManualFrameAdvance = false;         // advance frame by clicking or rotating button
-RTC_DATA_ATTR bool bGammaCorrection = true;             // set to use the gamma table
-RTC_DATA_ATTR bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
-RTC_DATA_ATTR bool bReverseImage = false;               // read the file lines in reverse
-RTC_DATA_ATTR bool bUpsideDown = false;                 // play the image upside down
-RTC_DATA_ATTR bool bDoublePixels = false;               // double the image line, to go from 144 to 288
-RTC_DATA_ATTR bool bMirrorPlayImage = false;            // play the file twice, 2nd time reversed
-RTC_DATA_ATTR int nMirrorDelay = 0;                     // pause between the two halves of the image
-RTC_DATA_ATTR bool bChainFiles = false;                 // set to run all the files from current to the last one in the current folder
-RTC_DATA_ATTR int nChainRepeats = 1;                    // how many times to repeat the chain
-RTC_DATA_ATTR int nChainDelay = 0;                      // number of 1/10 seconds to delay between chained files
-RTC_DATA_ATTR bool bChainWaitKey = false;               // wait for keypress to advance to next chained file
-RTC_DATA_ATTR bool bShowProgress = true;                // show the progress bar
-RTC_DATA_ATTR bool bShowFolder = true;                  // show the path in front of the file
-RTC_DATA_ATTR bool bScaleHeight = false;                // scale the Y values to fit the number of pixels
 bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
-RTC_DATA_ATTR bool bAllowMenuWrap = false;              // allows menus to wrap around from end and start instead of pinning
-RTC_DATA_ATTR bool bShowNextFiles = true;               // show the next files in the main display
-RTC_DATA_ATTR int nCurrentMacro = 0;                    // the number of the macro to select or run
 bool bRecordingMacro = false;             // set while recording
+char FileToShow[100];
+double recordingTotalTime;                // incremented as each part is added
+time_t recordingTimeStart;                // holds the start time for the current recording part
 bool bRunningMacro = false;               // set while running
-RTC_DATA_ATTR int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
-RTC_DATA_ATTR int nRepeatCountMacro = 1;                // repeat count for macros
 int nMacroRepeatsLeft = 1;                // set during macro running
 volatile int nTimerSeconds;
 // set this to the delay time while we get the next frame, also used for delay timers
@@ -222,6 +330,7 @@ FsFile dataFile;
 bool bIsRunning = false;
 
 enum eDisplayOperation {
+	eTerminate = 0,     // must be last in a menu, (or use {})
     eText,              // handle text with optional %s value
     eTextInt,           // handle text with optional %d value
     eTextCurrentFile,   // adds current basefilename for %s in string
@@ -234,7 +343,6 @@ enum eDisplayOperation {
     eBuiltinOptions,    // use an internal settings menu if available, see the internal name,function list below (BuiltInFiles[])
     eReboot,            // reboot the system
     eList,              // used to make a selection from multiple choices
-    eTerminate,         // must be last in a menu
 };
 
 // we need to have a pointer reference to this in the MenuItem, the full declaration follows later
@@ -270,6 +378,8 @@ typedef BuiltInItem BuiltInItem;
 extern BuiltInItem BuiltInFiles[];
 
 // some menu functions using menus
+void FactorySettings(MenuItem* menu);
+void EraseFlash(MenuItem* menu);
 void EraseStartFile(MenuItem* menu);
 void SaveStartFile(MenuItem* menu);
 void EraseAssociatedFile(MenuItem* menu);
@@ -307,201 +417,26 @@ void ShowBmp(MenuItem* menu);
 #define SDMisoPin  27  // GPIO27
 #define SDMosiPin  26  // GPIO26
 
-// adjustment values for builtins
-RTC_DATA_ATTR uint8_t gHue = 0; // rotating "base color" used by many of the patterns
-// bouncing balls
-RTC_DATA_ATTR int nBouncingBallsCount = 4;
-RTC_DATA_ATTR int nBouncingBallsDecay = 1000;
-RTC_DATA_ATTR int nBouncingBallsFirstColor = 0;   // first color, wraps to get all 32
-RTC_DATA_ATTR int nBouncingBallsChangeColors = 0; // how many 100 count cycles to wait for change
-// cylon eye
-RTC_DATA_ATTR int nCylonEyeSize = 10;
-RTC_DATA_ATTR int nCylonEyeRed = 255;
-RTC_DATA_ATTR int nCylonEyeGreen = 0;
-RTC_DATA_ATTR int nCylonEyeBlue = 0;
-// random bars
-RTC_DATA_ATTR bool bRandomBarsBlacks = true;
-RTC_DATA_ATTR int nRandomBarsHoldframes = 10;
-// meteor
-RTC_DATA_ATTR int nMeteorSize = 10;
-RTC_DATA_ATTR int nMeteorRed = 255;
-RTC_DATA_ATTR int nMeteorGreen = 255;
-RTC_DATA_ATTR int nMeteorBlue = 255;
-// display all color
-RTC_DATA_ATTR bool bAllowRollover = true;       // lets 255->0 and 0->255
-RTC_DATA_ATTR bool bDisplayAllRGB = false;    // true for RGB, else HSV
-RTC_DATA_ATTR int nDisplayAllRed = 255;
-RTC_DATA_ATTR int nDisplayAllGreen = 255;
-RTC_DATA_ATTR int nDisplayAllBlue = 255;
-RTC_DATA_ATTR int nDisplayAllHue = 0;
-RTC_DATA_ATTR int nDisplayAllSaturation = 255;
-RTC_DATA_ATTR int nDisplayAllBrightness = 255;
-RTC_DATA_ATTR int nDisplayAllPixelCount = 288;
-RTC_DATA_ATTR bool bDisplayAllFromMiddle = true;
-// rainbow
-RTC_DATA_ATTR int nRainbowHueDelta = 4;
-RTC_DATA_ATTR int nRainbowInitialHue = 0;
-RTC_DATA_ATTR int nRainbowFadeTime = 10;       // fade in out 0.1 Sec
-RTC_DATA_ATTR bool bRainbowAddGlitter = false;
-RTC_DATA_ATTR bool bRainbowCycleHue = false;
-// twinkle
-RTC_DATA_ATTR bool bTwinkleOnlyOne = false;
-// confetti
-RTC_DATA_ATTR bool bConfettiCycleHue = false;
-// juggle
-
-// sine
-RTC_DATA_ATTR int nSineStartingHue = 0;
-RTC_DATA_ATTR bool bSineCycleHue = false;
-RTC_DATA_ATTR int nSineSpeed = 13;
-// bpm
-RTC_DATA_ATTR int nBpmBeatsPerMinute = 62;
-RTC_DATA_ATTR bool bBpmCycleHue = false;
-// checkerboard/bars
-RTC_DATA_ATTR int nCheckerboardHoldframes = 10;
-RTC_DATA_ATTR int nCheckboardBlackWidth = 12;
-RTC_DATA_ATTR int nCheckboardWhiteWidth = 12;
-RTC_DATA_ATTR bool bCheckerBoardAlternate = true;
-RTC_DATA_ATTR int nCheckerboardAddPixels = 0;
-// stripes
-
-// black and white lines
-RTC_DATA_ATTR int nLinesWhite = 5;
-RTC_DATA_ATTR int nLinesBlack = 5;
-// rainbow pulse settings
-RTC_DATA_ATTR int nRainbowPulseColorScale = 10;
-RTC_DATA_ATTR int nRainbowPulsePause = 5;
-RTC_DATA_ATTR int nRainbowPulseSaturation = 255;
-RTC_DATA_ATTR int nRainbowPulseStartColor = 0;
-// wedge data
-RTC_DATA_ATTR bool bWedgeFill = false;
-RTC_DATA_ATTR int nWedgeRed = 255;
-RTC_DATA_ATTR int nWedgeGreen = 255;
-RTC_DATA_ATTR int nWedgeBlue = 255;
-
 struct saveValues {
     void* val;
     int size;
 };
-// these values are saved in eeprom, the signature is first
+// these values are saved during macro runs
 const saveValues saveValueList[] = {
-    {signature,sizeof(signature)},                      // this must be first
-    {&bSecondController, sizeof(bSecondController)},    // this must be second
-    {&TotalLeds, sizeof(TotalLeds)},                    // this must be third
-    {&stripsMode, sizeof(stripsMode)},                  // this must be fourth
-    {&bAutoLoadSettings, sizeof(bAutoLoadSettings)},    // this must be fifth
-    {&nStripBrightness, sizeof(nStripBrightness)},      // all the rest can be in any order
-	{&nStripMaxCurrent, sizeof(nStripMaxCurrent)},
-    {&nFadeInOutFrames, sizeof(nFadeInOutFrames)},
-    {&nFrameHold, sizeof(nFrameHold)},
-    {&bFixedTime,sizeof(bFixedTime)},
-    {&nFixedImageTime,sizeof(nFixedImageTime)},
-    {&nFramePulseCount, sizeof(nFramePulseCount)},
-    {&bManualFrameAdvance, sizeof(bManualFrameAdvance)},
-    {&startDelay, sizeof(startDelay)},
+    {&LedInfo,sizeof(LedInfo)},
+    {&ImgInfo,sizeof(ImgInfo)},
+    {&BuiltinInfo,sizeof(BuiltinInfo)},
+    {&SystemInfo,sizeof(SystemInfo)},
+    //{&bAutoLoadSettings, sizeof(bAutoLoadSettings)},
+
     //{&bRepeatForever, sizeof(bRepeatForever)},
-    {&repeatCount, sizeof(repeatCount)},
-    {&repeatDelay, sizeof(repeatDelay)},
-    {&bGammaCorrection, sizeof(bGammaCorrection)},
     //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
     //{&nMaxBackLight, sizeof(nMaxBackLight)},
     {&CurrentFileIndex,sizeof(CurrentFileIndex)},
-    {&bShowBuiltInTests,sizeof(bShowBuiltInTests)},
-    {&bScaleHeight,sizeof(bScaleHeight)},
-    {&bChainFiles,sizeof(bChainFiles)},
-    {&bReverseImage,sizeof(bReverseImage)},
-    {&bMirrorPlayImage,sizeof(bMirrorPlayImage)},
-    {&nMirrorDelay,sizeof(nMirrorDelay)},
-    {&bUpsideDown,sizeof(bUpsideDown)},
-    {&bDoublePixels,sizeof(bDoublePixels)},
-    {&nChainRepeats,sizeof(nChainRepeats)},
-    {&nChainDelay,sizeof(nChainDelay)},
-    {&bChainWaitKey,sizeof(bChainWaitKey)},
-    {&whiteBalance,sizeof(whiteBalance)},
-    {&bShowProgress,sizeof(bShowProgress)},
-    {&bShowFolder,sizeof(bShowFolder)},
-    {&bAllowMenuWrap,sizeof(bAllowMenuWrap)},
-    {&bShowNextFiles,sizeof(bShowNextFiles)},
-    {&CRotaryDialButton::m_bReverseDial,sizeof(CRotaryDialButton::m_bReverseDial)},
-    {&CRotaryDialButton::m_nDialSensitivity,sizeof(CRotaryDialButton::m_nDialSensitivity)},
-    {&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
-    {&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
-    {&nDisplayBrightness,sizeof(nDisplayBrightness)},
-    {&menuTextColor,sizeof(menuTextColor)},
-    {&bMenuStar,sizeof(bMenuStar)},
-    {&bHiLiteCurrentFile,sizeof(bHiLiteCurrentFile)},
-    {&nPreviewScrollCols,sizeof(nPreviewScrollCols)},
-    // the built-in values
-    // display all color
-    {&bAllowRollover,sizeof(bAllowRollover)},
-    {&bDisplayAllRGB,sizeof(bDisplayAllRGB)},
-    {&nDisplayAllRed,sizeof(nDisplayAllRed)},
-    {&nDisplayAllGreen,sizeof(nDisplayAllGreen)},
-    {&nDisplayAllBlue,sizeof(nDisplayAllBlue)},
-    {&nDisplayAllHue,sizeof(nDisplayAllHue)},
-    {&nDisplayAllSaturation,sizeof(nDisplayAllSaturation)},
-    {&nDisplayAllBrightness,sizeof(nDisplayAllBrightness)},
-    {&nDisplayAllPixelCount,sizeof(nDisplayAllPixelCount)},
-    {&bDisplayAllFromMiddle,sizeof(bDisplayAllFromMiddle)},
-    // bouncing balls
-    {&nBouncingBallsCount,sizeof(nBouncingBallsCount)},
-    {&nBouncingBallsDecay,sizeof(nBouncingBallsDecay)},
-    {&nBouncingBallsFirstColor,sizeof(nBouncingBallsFirstColor)},
-    {&nBouncingBallsChangeColors,sizeof(nBouncingBallsChangeColors)},
-    // cylon eye
-    {&nCylonEyeSize,sizeof(nCylonEyeSize)},
-    {&nCylonEyeRed,sizeof(nCylonEyeRed)},
-    {&nCylonEyeGreen,sizeof(nCylonEyeGreen)},
-    {&nCylonEyeBlue,sizeof(nCylonEyeBlue)},
-    // random bars
-    {&bRandomBarsBlacks,sizeof(bRandomBarsBlacks)},
-    {&nRandomBarsHoldframes,sizeof(nRandomBarsHoldframes)},
-    // meteor
-    {&nMeteorSize,sizeof(nMeteorSize)},
-    {&nMeteorRed,sizeof(nMeteorRed)},
-    {&nMeteorGreen,sizeof(nMeteorGreen)},
-    {&nMeteorBlue,sizeof(nMeteorBlue)},
-    // rainbow
-    {&nRainbowHueDelta,sizeof(nRainbowHueDelta)},
-    {&nRainbowInitialHue,sizeof(nRainbowInitialHue)},
-    {&nRainbowFadeTime,sizeof(nRainbowFadeTime)},
-    {&bRainbowAddGlitter,sizeof(bRainbowAddGlitter)},
-    {&bRainbowCycleHue,sizeof(bRainbowCycleHue)},
-    // twinkle
-    {&bTwinkleOnlyOne,sizeof(bTwinkleOnlyOne)},
-    // confetti
-    {&bConfettiCycleHue,sizeof(bConfettiCycleHue)},
-    // juggle
-
-    // sine
-    {&nSineStartingHue,sizeof(nSineStartingHue)},
-    {&bSineCycleHue,sizeof(bSineCycleHue)},
-    {&nSineSpeed,sizeof(nSineSpeed)},
-    // bpm
-    {&nBpmBeatsPerMinute,sizeof(nBpmBeatsPerMinute)},
-    {&bBpmCycleHue,sizeof(bBpmCycleHue)},
-    // checkerboard/bars
-    {&nCheckerboardHoldframes,sizeof(nCheckerboardHoldframes)},
-    {&nCheckboardBlackWidth,sizeof(nCheckboardBlackWidth)},
-    {&nCheckboardWhiteWidth,sizeof(nCheckboardWhiteWidth)},
-    {&bCheckerBoardAlternate,sizeof(bCheckerBoardAlternate)},
-    {&nCheckerboardAddPixels,sizeof(nCheckerboardAddPixels)},
-    {&nCurrentMacro,sizeof(nCurrentMacro)},
-    {&nRepeatCountMacro,sizeof(nRepeatCountMacro)},
-    {&nRepeatWaitMacro,sizeof(nRepeatWaitMacro)},
-    // lines values
-    {&nLinesWhite,sizeof(nLinesWhite)},
-    {&nLinesBlack,sizeof(nLinesBlack)},
-    // rainbow pulse
-    {&nRainbowPulseColorScale,sizeof(nRainbowPulseColorScale)},
-    {&nRainbowPulsePause,sizeof(nRainbowPulsePause)},
-    {&nRainbowPulseSaturation,sizeof(nRainbowPulseSaturation)},
-    {&nRainbowPulseStartColor,sizeof(nRainbowPulseStartColor)},
-    // wedge
-    {&bWedgeFill,sizeof(bWedgeFill)},
-    {&nWedgeBlue,sizeof(nWedgeBlue)},
-    {&nWedgeRed,sizeof(nWedgeRed)},
-    {&nWedgeGreen,sizeof(nWedgeGreen)},
+    //{&CRotaryDialButton::m_bReverseDial,sizeof(CRotaryDialButton::m_bReverseDial)},
+    //{&CRotaryDialButton::m_nDialSensitivity,sizeof(CRotaryDialButton::m_nDialSensitivity)},
+    //{&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
+    //{&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
 };
 
 // Gramma Correction (Defalt Gamma = 2.8)
@@ -562,153 +497,154 @@ const uint8_t gammaB[] = {
 
 MenuItem BouncingBallsMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Ball Count: %d",GetIntegerValue,&nBouncingBallsCount,1,32},
-    {eTextInt,"Decay (500-10000): %d",GetIntegerValue,&nBouncingBallsDecay,500,10000},
-    {eTextInt,"First Color: %d",GetIntegerValue,&nBouncingBallsFirstColor,0,31},
-    {eTextInt,"Change Color Rate: %d",GetIntegerValue,&nBouncingBallsChangeColors,0,10,0},
+    {eTextInt,"Ball Count: %d",GetIntegerValue,&BuiltinInfo.nBouncingBallsCount,1,32},
+    {eTextInt,"Decay: %d",GetIntegerValue,&BuiltinInfo.nBouncingBallsDecay,100,10000},
+    {eTextInt,"First Color: %d",GetIntegerValue,&BuiltinInfo.nBouncingBallsFirstColor,0,31},
+    {eTextInt,"Change Color Rate: %d",GetIntegerValue,&BuiltinInfo.nBouncingBallsChangeColors,0,10,0},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem CheckerBoardMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Hold Frames: %d",GetIntegerValue,&nCheckerboardHoldframes,1,100},
-    {eTextInt,"Black Width (pixels): %d",GetIntegerValue,&nCheckboardBlackWidth,1,288},
-    {eTextInt,"White Width (pixels): %d",GetIntegerValue,&nCheckboardWhiteWidth,1,288},
-    {eTextInt,"Add Pixels per Cycle: %d",GetIntegerValue,&nCheckerboardAddPixels,0,144},
-    {eBool,"Alternate per Cycle: %s",ToggleBool,&bCheckerBoardAlternate,0,0,0,"Yes","No"},
+    {eTextInt,"Hold Frames: %d",GetIntegerValue,&BuiltinInfo.nCheckerboardHoldframes,1,100},
+    {eTextInt,"Black Width (pixels): %d",GetIntegerValue,&BuiltinInfo.nCheckboardBlackWidth,1,288},
+    {eTextInt,"White Width (pixels): %d",GetIntegerValue,&BuiltinInfo.nCheckboardWhiteWidth,1,288},
+    {eTextInt,"Add Pixels per Cycle: %d",GetIntegerValue,&BuiltinInfo.nCheckerboardAddPixels,0,144},
+    {eBool,"Alternate per Cycle: %s",ToggleBool,&BuiltinInfo.bCheckerBoardAlternate,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem RainbowMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Fade Time (S): %d.%d",GetIntegerValue,&nRainbowFadeTime,0,100,1},
-    {eTextInt,"Starting Hue: %d",GetIntegerValue,&nRainbowInitialHue,0,255},
-    {eBool,"Cycle Hue: %s",ToggleBool,&bRainbowCycleHue,0,0,0,"Yes","No"},
-    {eTextInt,"Hue Delta Size: %d",GetIntegerValue,&nRainbowHueDelta,1,255},
-    {eBool,"Add Glitter: %s",ToggleBool,&bRainbowAddGlitter,0,0,0,"Yes","No"},
+    {eTextInt,"Fade Time (S): %d.%d",GetIntegerValue,&BuiltinInfo.nRainbowFadeTime,0,100,1},
+    {eTextInt,"Starting Hue: %d",GetIntegerValue,&BuiltinInfo.nRainbowInitialHue,0,255},
+    {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bRainbowCycleHue,0,0,0,"Yes","No"},
+    {eTextInt,"Hue Delta Size: %d",GetIntegerValue,&BuiltinInfo.nRainbowHueDelta,1,255},
+    {eBool,"Add Glitter: %s",ToggleBool,&BuiltinInfo.bRainbowAddGlitter,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem RainbowPulseMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Step Pause: %d",GetIntegerValue,&nRainbowPulsePause,0,1000},
-    {eTextInt,"Color Rate Scale: %d",GetIntegerValue,&nRainbowPulseColorScale,0,256},
-    {eTextInt,"Start Color: %d",GetIntegerValue,&nRainbowPulseStartColor,0,255},
-    {eTextInt,"Color Saturation: %d",GetIntegerValue,&nRainbowPulseSaturation,0,255},
+    {eTextInt,"Step Pause: %d",GetIntegerValue,&BuiltinInfo.nRainbowPulsePause,0,1000},
+    {eTextInt,"Color Rate Scale: %d",GetIntegerValue,&BuiltinInfo.nRainbowPulseColorScale,0,256},
+    {eTextInt,"Start Color: %d",GetIntegerValue,&BuiltinInfo.nRainbowPulseStartColor,0,255},
+    {eTextInt,"Color Saturation: %d",GetIntegerValue,&BuiltinInfo.nRainbowPulseSaturation,0,255},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem ConfettiMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Cycle Hue: %s",ToggleBool,&bConfettiCycleHue,0,0,0,"Yes","No"},
+    {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bConfettiCycleHue,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem TwinkleMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"One or Many: %s",ToggleBool,&bTwinkleOnlyOne,0,0,0,"One","Many"},
+    {eBool,"One or Many: %s",ToggleBool,&BuiltinInfo.bTwinkleOnlyOne,0,0,0,"One","Many"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem WedgeMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Fill Wedge: %s",ToggleBool,&bWedgeFill,0,0,0,"Solid","<"},
-    {eTextInt,"Red: %d",GetIntegerValue,&nWedgeRed,0,255},
-    {eTextInt,"Green: %d",GetIntegerValue,&nWedgeGreen,0,255},
-    {eTextInt,"Blue: %d",GetIntegerValue,&nWedgeBlue,0,255},
+    {eBool,"Fill Wedge: %s",ToggleBool,&BuiltinInfo.bWedgeFill,0,0,0,"Solid","<"},
+    {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nWedgeRed,0,255},
+    {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nWedgeGreen,0,255},
+    {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nWedgeBlue,0,255},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem SineMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Starting Hue: %d",GetIntegerValue,&nSineStartingHue,0,255},
-    {eBool,"Cycle Hue: %s",ToggleBool,&bSineCycleHue,0,0,0,"Yes","No"},
-    {eTextInt,"Speed: %d",GetIntegerValue,&nSineSpeed,1,500},
+    {eTextInt,"Starting Hue: %d",GetIntegerValue,&BuiltinInfo.nSineStartingHue,0,255},
+    {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bSineCycleHue,0,0,0,"Yes","No"},
+    {eTextInt,"Speed: %d",GetIntegerValue,&BuiltinInfo.nSineSpeed,1,500},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem BpmMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Beats per minute: %d",GetIntegerValue,&nBpmBeatsPerMinute,1,300},
-    {eBool,"Cycle Hue: %s",ToggleBool,&bBpmCycleHue,0,0,0,"Yes","No"},
+    {eTextInt,"Beats per minute: %d",GetIntegerValue,&BuiltinInfo.nBpmBeatsPerMinute,1,300},
+    {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bBpmCycleHue,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem LinesMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"White Pixels: %d",GetIntegerValue,&nLinesWhite,0,TotalLeds},
-    {eTextInt,"Black Pixels: %d",GetIntegerValue,&nLinesBlack,0,TotalLeds},
+    {eTextInt,"White Pixels: %d",GetIntegerValue,&BuiltinInfo.nLinesWhite,0,LedInfo.nTotalLeds},
+    {eTextInt,"Black Pixels: %d",GetIntegerValue,&BuiltinInfo.nLinesBlack,0,LedInfo.nTotalLeds},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem CylonEyeMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Eye Size:  %d",GetIntegerValue,&nCylonEyeSize,1,100},
-    {eTextInt,"Eye Red:   %d",GetIntegerValue,&nCylonEyeRed,0,255},
-    {eTextInt,"Eye Green: %d",GetIntegerValue,&nCylonEyeGreen,0,255},
-    {eTextInt,"Eye Blue:  %d",GetIntegerValue,&nCylonEyeBlue,0,255},
+    {eTextInt,"Eye Size:  %d",GetIntegerValue,&BuiltinInfo.nCylonEyeSize,1,100},
+    {eTextInt,"Eye Red:   %d",GetIntegerValue,&BuiltinInfo.nCylonEyeRed,0,255},
+    {eTextInt,"Eye Green: %d",GetIntegerValue,&BuiltinInfo.nCylonEyeGreen,0,255},
+    {eTextInt,"Eye Blue:  %d",GetIntegerValue,&BuiltinInfo.nCylonEyeBlue,0,255},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem MeteorMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Meteor Size:  %d",GetIntegerValue,&nMeteorSize,1,100},
-    {eTextInt,"Meteor Red:   %d",GetIntegerValue,&nMeteorRed,0,255},
-    {eTextInt,"Meteor Green: %d",GetIntegerValue,&nMeteorGreen,0,255},
-    {eTextInt,"Meteor Blue:  %d",GetIntegerValue,&nMeteorBlue,0,255},
+    {eTextInt,"Meteor Size:  %d",GetIntegerValue,&BuiltinInfo.nMeteorSize,1,100},
+    {eTextInt,"Meteor Red:   %d",GetIntegerValue,&BuiltinInfo.nMeteorRed,0,255},
+    {eTextInt,"Meteor Green: %d",GetIntegerValue,&BuiltinInfo.nMeteorGreen,0,255},
+    {eTextInt,"Meteor Blue:  %d",GetIntegerValue,&BuiltinInfo.nMeteorBlue,0,255},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem LedLightBarMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Allow rollover: %s",ToggleBool,&bAllowRollover,0,0,0,"Yes","No"},
-    {eBool,"Color Mode: %s",ToggleBool,&bDisplayAllRGB,0,0,0,"RGB","HSL"},
-    {eIfEqual,"",NULL,&bDisplayAllRGB,true},
-        {eTextInt,"Red: %d",GetIntegerValue,&nDisplayAllRed,0,255},
-        {eTextInt,"Green: %d",GetIntegerValue,&nDisplayAllGreen,0,255},
-        {eTextInt,"Blue: %d",GetIntegerValue,&nDisplayAllBlue,0,255},
+    {eBool,"Allow rollover: %s",ToggleBool,&BuiltinInfo.bAllowRollover,0,0,0,"Yes","No"},
+    {eBool,"Color Mode: %s",ToggleBool,&BuiltinInfo.bDisplayAllRGB,0,0,0,"RGB","HSL"},
+    {eIfEqual,"",NULL,&BuiltinInfo.bDisplayAllRGB,true},
+        {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllRed,0,255},
+        {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllGreen,0,255},
+        {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
     {eElse},
-        {eTextInt,"Hue: %d",GetIntegerValue,&nDisplayAllHue,0,255},
-        {eTextInt,"Saturation: %d",GetIntegerValue,&nDisplayAllSaturation,0,255},
-        {eTextInt,"Brightness: %d",GetIntegerValue,&nDisplayAllBrightness,0,255},
+        {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllHue,0,255},
+        {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllSaturation,0,255},
+        {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255},
     {eEndif},
-    {eTextInt,"Pixels: %d",GetIntegerValue,&nDisplayAllPixelCount,1,288},
-    {eBool,"From: %s",ToggleBool,&bDisplayAllFromMiddle,0,0,0,"Middle","End"},
+    {eTextInt,"Pixels: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllPixelCount,1,288},
+    {eBool,"From: %s",ToggleBool,&BuiltinInfo.bDisplayAllFromMiddle,0,0,0,"Middle","End"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem RandomBarsMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Hold Frames: %d",GetIntegerValue,&nRandomBarsHoldframes,1,100},
-    {eBool,"Alternating Black: %s",ToggleBool,&bRandomBarsBlacks,0,0,0,"Yes","No"},
+    {eTextInt,"Hold Frames: %d",GetIntegerValue,&BuiltinInfo.nRandomBarsHoldframes,1,100},
+    {eBool,"Alternating Black: %s",ToggleBool,&BuiltinInfo.bRandomBarsBlacks,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem SystemMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Display Bright: %d%%",GetIntegerValue,&nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
+    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"Yes","No"},
+    {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
+    {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
+    {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
     {eText,"Set Text Color",SetMenuColor},
-    {eBool,"Menu Wrap: %s",ToggleBool,&bAllowMenuWrap,0,0,0,"Yes","No"},
-    {eBool,"Menu Select: %s",ToggleBool,&bMenuStar,0,0,0,"*","Color"},
-    {eBool,"Current File: %s",ToggleBool,&bHiLiteCurrentFile,0,0,0,"Color","Normal"},
-    {eBool,"Show More Files: %s",ToggleBool,&bShowNextFiles,0,0,0,"Yes","No"},
-    {eBool,"Show Folder: %s",ToggleBool,&bShowFolder,0,0,0,"Yes","No"},
-    {eBool,"Progress Bar: %s",ToggleBool,&bShowProgress,0,0,0,"Yes","No"},
-    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&nPreviewScrollCols,1,240},
+    {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
+    {eBool,"Menu Select: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
+    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
@@ -719,28 +655,28 @@ MenuItem SystemMenu[] = {
 };
 MenuItem ImageMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Timing Type: %s",ToggleBool,&bFixedTime,0,0,0,"Image","Column"},
-    {eIfEqual,"",NULL,&bFixedTime,false},
-        {eTextInt,"Column Time (mS): %d",GetIntegerValue,&nFrameHold,0,500},
+    {eBool,"Timing Type: %s",ToggleBool,&ImgInfo.bFixedTime,0,0,0,"Image","Column"},
+    {eIfEqual,"",NULL,&ImgInfo.bFixedTime,false},
+        {eTextInt,"Column Time (mS): %d",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
     {eElse},
-        {eTextInt,"Image Time (S): %d",GetIntegerValue,&nFixedImageTime,1,120},
+        {eTextInt,"Image Time (S): %d",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120},
     {eEndif},
-    {eTextInt,"Start Delay (S): %d.%d",GetIntegerValue,&startDelay,0,100,1},
-    {eTextInt,"Fade I/O Columns : %d",GetIntegerValue,&nFadeInOutFrames,0,255},
-    {eBool,"Upside Down: %s",ToggleBool,&bUpsideDown,0,0,0,"Yes","No"},
-    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
-        {eBool,"Walk: %s",ToggleBool,&bReverseImage,0,0,0,"Left-Right","Right-Left"},
-        {eBool,"Play Mirror Image: %s",ToggleBool,&bMirrorPlayImage,0,0,0,"Yes","No"},
-        {eIfEqual,"",NULL,&bMirrorPlayImage,true},
-            {eTextInt,"Mirror Delay (S): %d.%d",GetIntegerValue,&nMirrorDelay,0,10,1},
+    {eTextInt,"Start Delay (S): %d.%d",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
+    {eTextInt,"Fade I/O Columns : %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
+    {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
+    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+        {eBool,"Walk: %s",ToggleBool,&ImgInfo.bReverseImage,0,0,0,"Left-Right","Right-Left"},
+        {eBool,"Play Mirror Image: %s",ToggleBool,&ImgInfo.bMirrorPlayImage,0,0,0,"Yes","No"},
+        {eIfEqual,"",NULL,&ImgInfo.bMirrorPlayImage,true},
+            {eTextInt,"Mirror Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
         {eEndif},
-        {eBool,"Scale Height to Fit: %s",ToggleBool,&bScaleHeight,0,0,0,"On","Off"},
+        {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
     {eEndif},
-    {eBool,"144 to 288 Pixels: %s",ToggleBool,&bDoublePixels,0,0,0,"Yes","No"},
-    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
-        {eBool,"Frame Advance: %s",ToggleBool,&bManualFrameAdvance,0,0,0,"Step","Auto"},
-        {eIfEqual,"",NULL,&bManualFrameAdvance,true},
-            {eTextInt,"Frame Counter: %d",GetIntegerValue,&nFramePulseCount,0,32},
+    {eBool,"144 to 288 Pixels: %s",ToggleBool,&ImgInfo.bDoublePixels,0,0,0,"Yes","No"},
+    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+        {eBool,"Frame Advance: %s",ToggleBool,&ImgInfo.bManualFrameAdvance,0,0,0,"Step","Auto"},
+        {eIfEqual,"",NULL,&ImgInfo.bManualFrameAdvance,true},
+            {eTextInt,"Frame Counter: %d",GetIntegerValue,&ImgInfo.nFramePulseCount,0,32},
         {eEndif},
     {eEndif},
     {eExit,"Previous Menu"},
@@ -749,15 +685,15 @@ MenuItem ImageMenu[] = {
 };
 MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&nStripBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-    {eTextInt,"Max mAmp: %d",GetIntegerValue,&nStripMaxCurrent,100,10000},
-    {eBool,"LED Controllers: %s",ToggleBool,&bSecondController,0,0,0,"2","1",UpdateControllers},
-    {eTextInt,"Total LEDs: %d",GetIntegerValue,&TotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
-    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
-    {eBool,"Gamma Correction: %s",ToggleBool,&bGammaCorrection,0,0,0,"On","Off"},
-    {eTextInt,"White Balance R: %3d",GetIntegerValue,&whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
-    {eTextInt,"White Balance G: %3d",GetIntegerValue,&whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
-    {eTextInt,"White Balance B: %3d",GetIntegerValue,&whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
+    {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+    {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
+    {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
+    {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
+    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&LedInfo.stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
+    {eBool,"Gamma Correction: %s",ToggleBool,&LedInfo.bGammaCorrection,0,0,0,"On","Off"},
+    {eTextInt,"White Balance R: %3d",GetIntegerValue,&LedInfo.whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
+    {eTextInt,"White Balance G: %3d",GetIntegerValue,&LedInfo.whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
+    {eTextInt,"White Balance B: %3d",GetIntegerValue,&LedInfo.whiteBalance.b,0,255,0,NULL,NULL,UpdateStripWhiteBalanceB},
     {eText,"Show White Balance",ShowWhiteBalance},
     {eExit,"Previous Menu"},
     // make sure this one is last
@@ -784,14 +720,14 @@ MenuItem StartFileMenu[] = {
 };
 MenuItem RepeatMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Repeat Count: %d",GetIntegerValue,&repeatCount,1,100},
-    {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&repeatDelay,0,100,1},
-    {eIfEqual,"",NULL,&bShowBuiltInTests,false},
-        {eBool,"Chain Files: %s",ToggleBool,&bChainFiles,0,0,0,"On","Off"},
-        {eIfEqual,"",NULL,&bChainFiles,true},
-            {eTextInt,"Chain Repeats: %d",GetIntegerValue,&nChainRepeats,1,100},
-            {eTextInt,"Chain Delay (S): %d.%d",GetIntegerValue,&nChainDelay,0,100,1},
-            {eBool,"Chain Wait Key: %s",ToggleBool,&bChainWaitKey,0,0,0,"Yes","No"},
+    {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.repeatCount,1,100},
+    {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
+    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+        {eBool,"Chain Files: %s",ToggleBool,&ImgInfo.bChainFiles,0,0,0,"On","Off"},
+        {eIfEqual,"",NULL,&ImgInfo.bChainFiles,true},
+            {eTextInt,"Chain Repeats: %d",GetIntegerValue,&ImgInfo.nChainRepeats,1,100},
+            {eTextInt,"Chain Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nChainDelay,0,100,1},
+            {eBool,"Chain Wait Key: %s",ToggleBool,&ImgInfo.bChainWaitKey,0,0,0,"Yes","No"},
         {eEndif},
     {eEndif},
     {eExit,"Previous Menu"},
@@ -800,25 +736,27 @@ MenuItem RepeatMenu[] = {
 };
 MenuItem EepromMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Autoload Saved: %s",ToggleBool,&bAutoLoadSettings,0,0,0,"On","Off"},
+    {eBool,"Autoload Settings: %s",ToggleBool,&bAutoLoadSettings,0,0,0,"On","Off"},
     {eText,"Save Current Settings",SaveEepromSettings},
     {eText,"Load Saved Settings",LoadEepromSettings},
+    {eText,"Factory Settings",FactorySettings},
+    {eText,"Format EEPROM",EraseFlash},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem MacroSelectMenu[] = {
     //{eExit,"Previous Menu"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,0,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,1,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,2,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,3,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,4,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,5,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,6,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,7,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,8,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&nCurrentMacro,9,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
+    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
     //{eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -827,39 +765,39 @@ MenuItem MacroMenu[] = {
     {eExit,"Previous Menu"},
     //{eTextInt,"Macro #: %d",GetIntegerValue,&nCurrentMacro,0,9},
     {eIfEqual,"",NULL,&bRecordingMacro,false},
-        {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&nCurrentMacro},
-        {eTextInt,"Run: #%d",RunMacro,&nCurrentMacro},
+        {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
+        {eTextInt,"Run: #%d",RunMacro,&ImgInfo.nCurrentMacro},
     {eElse},
-        {eTextInt,"Recording Macro: #%d",NULL,&nCurrentMacro},
+        {eTextInt,"Recording Macro: #%d",NULL,&ImgInfo.nCurrentMacro},
     {eEndif},
     {eBool,"Record: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
     {eIfEqual,"",NULL,&bRecordingMacro,false},
-        {eTextInt,"Repeat Count: %d",GetIntegerValue,&nRepeatCountMacro,1,100},
-        {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&nRepeatWaitMacro,0,100,1},
-        {eTextInt,"Load: #%d",LoadMacro,&nCurrentMacro},
-        {eTextInt,"Save: #%d",SaveMacro,&nCurrentMacro},
-        {eTextInt,"Delete: #%d",DeleteMacro,&nCurrentMacro},
+        {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.nRepeatCountMacro,1,100},
+        {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
+        {eTextInt,"Load: #%d",LoadMacro,&ImgInfo.nCurrentMacro},
+        {eTextInt,"Save: #%d",SaveMacro,&ImgInfo.nCurrentMacro},
+        {eTextInt,"Delete: #%d",DeleteMacro,&ImgInfo.nCurrentMacro},
     {eEndif},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem MainMenu[] = {
-    {eIfEqual,"",NULL,&bShowBuiltInTests,true},
-        {eBool,"Switch to SD Card",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
+    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
+        {eBool,"Switch to SD Card",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
-        {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&bShowBuiltInTests,0,0,0,"On","Off"},
+        {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
         {eText,"Preview BMP",ShowBmp},
     {eEndif},
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},
-    {eIfEqual,"",NULL,&bShowBuiltInTests,true},
+    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
         {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
     {eElse},
         {eMenu,"MIW File Operations",{.menu = StartFileMenu}},
     {eEndif},
-    {eMenu,"Macros: #%d",{.menu = MacroMenu},&nCurrentMacro},
+    {eMenu,"Macros: #%d",{.menu = MacroMenu},&ImgInfo.nCurrentMacro},
     {eMenu,"Saved Settings",{.menu = EepromMenu}},
     {eMenu,"System Settings",{.menu = SystemMenu}},
     {eText,"Light Bar",LightBar},
@@ -910,14 +848,13 @@ std::stack<MenuInfo*> MenuStack;
 
 bool bMenuChanged = true;
 
-char FileToShow[100];
 // save and load variables from MIW files
 enum SETVARTYPE {
     vtInt,
     vtBool,
     vtRGB,
-    vtShowFile,     // run a file on the display, the file has the path which is used to set the current path
-    vtBuiltIn,      // bool for builtins or SD
+    vtShowFile,         // run a file on the display, the file has the path which is used to set the current path
+    vtBuiltIn,          // bool for builtins or SD
 };
 struct SETTINGVAR {
     char* name;
@@ -926,28 +863,29 @@ struct SETTINGVAR {
     int min, max;
 };
 struct SETTINGVAR SettingsVarList[] = {
-    {"STRIP BRIGHTNESS",&nStripBrightness,vtInt,1,255},
-    {"FADE IN/OUT FRAMES",&nFadeInOutFrames,vtInt,0,255},
-    {"REPEAT COUNT",&repeatCount,vtInt},
-    {"REPEAT DELAY",&repeatDelay,vtInt},
-    {"FRAME TIME",&nFrameHold,vtInt},
-    {"USE FIXED TIME",&bFixedTime,vtBool},
-    {"FIXED IMAGE TIME",&nFixedImageTime,vtInt},
-    {"START DELAY",&startDelay,vtInt},
-    {"REVERSE IMAGE",&bReverseImage,vtBool},
-    {"UPSIDE DOWN IMAGE",&bUpsideDown,vtBool},
-    {"MIRROR PLAY IMAGE",&bMirrorPlayImage,vtBool},
-    {"MIRROR PLAY DELAY",&nMirrorDelay,vtInt},
-    {"CHAIN FILES",&bChainFiles,vtBool},
-    {"CHAIN REPEATS",&nChainRepeats,vtInt},
-    {"CHAIN DELAY",&nChainDelay,vtInt},
-    {"CHAIN WAIT FOR KEY",&bChainWaitKey,vtBool},
-    {"WHITE BALANCE",&whiteBalance,vtRGB},
-    {"DISPLAY BRIGHTNESS",&nDisplayBrightness,vtInt,0,100},
-    {"DISPLAY MENULINE COLOR",&menuTextColor,vtInt},
-    {"MENU STAR",&bMenuStar,vtBool},
-    {"HILITE FILE",&bHiLiteCurrentFile,vtBool},
-    {"GAMMA CORRECTION",&bGammaCorrection,vtBool},
-    {"SELECT BUILTINS",&bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
-    {"SHOW FILE",&FileToShow,vtShowFile},
+    {"STRIP BRIGHTNESS",&LedInfo.nLEDBrightness,vtInt,1,255},
+    {"GAMMA CORRECTION",&LedInfo.bGammaCorrection,vtBool},
+    {"WHITE BALANCE",&LedInfo.whiteBalance,vtRGB},
+    {"FADE IN/OUT FRAMES",&ImgInfo.nFadeInOutFrames,vtInt,0,255},
+    {"REPEAT COUNT",&ImgInfo.repeatCount,vtInt},
+    {"REPEAT DELAY",&ImgInfo.repeatDelay,vtInt},
+    {"FRAME TIME",&ImgInfo.nFrameHold,vtInt},
+    {"USE FIXED TIME",&ImgInfo.bFixedTime,vtBool},
+    {"FIXED IMAGE TIME",&ImgInfo.nFixedImageTime,vtInt},
+    {"START DELAY",&ImgInfo.startDelay,vtInt},
+    {"REVERSE IMAGE",&ImgInfo.bReverseImage,vtBool},
+    {"UPSIDE DOWN IMAGE",&ImgInfo.bUpsideDown,vtBool},
+    {"MIRROR PLAY IMAGE",&ImgInfo.bMirrorPlayImage,vtBool},
+    {"MIRROR PLAY DELAY",&ImgInfo.nMirrorDelay,vtInt},
+    {"CHAIN FILES",&ImgInfo.bChainFiles,vtBool},
+    {"CHAIN REPEATS",&ImgInfo.nChainRepeats,vtInt},
+    {"CHAIN DELAY",&ImgInfo.nChainDelay,vtInt},
+    {"CHAIN WAIT FOR KEY",&ImgInfo.bChainWaitKey,vtBool},
+    {"DISPLAY BRIGHTNESS",&SystemInfo.nDisplayBrightness,vtInt,0,100},
+    {"DISPLAY MENULINE COLOR",&SystemInfo.menuTextColor,vtInt},
+    {"SHOW BMP ON LCD",&SystemInfo.bShowDuringBmpFile,vtBool},
+    {"MENU STAR",&SystemInfo.bMenuStar,vtBool},
+    {"HILITE FILE",&SystemInfo.bHiLiteCurrentFile,vtBool},
+    {"SELECT BUILTINS",&SystemInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
+    {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };

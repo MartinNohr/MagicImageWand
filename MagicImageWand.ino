@@ -6,6 +6,7 @@
 
 #include "MagicImageWand.h"
 #include "fonts.h"
+#include <nvs_flash.h>
 
 RTC_DATA_ATTR int nBootCount = 0;
 
@@ -27,7 +28,7 @@ void IRAM_ATTR oneshot_LED_timer_callback(void* arg)
 	//ESP_LOGI(TAG, "One-shot timer called, time since boot: %lld us", time_since_boot);
 }
 
-#define TFT_ENABLE 4
+constexpr int TFT_ENABLE = 4;
 // use these to control the LCD brightness
 const int freq = 5000;
 const int ledChannel = 0;
@@ -44,7 +45,7 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	SetDisplayBrightness(nDisplayBrightness);
+	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	tft.fillScreen(TFT_BLACK);
 	tft.setRotation(3);
 	//Serial.println("boot: " + String(nBootCount));
@@ -90,35 +91,33 @@ void setup()
 	int width = tft.width();
 	int height = tft.height();
 	tft.fillScreen(TFT_BLACK);
-	tft.setTextColor(menuTextColor);
+	tft.setTextColor(SystemInfo.menuTextColor);
 	rainbow_fill();
-	tft.setFreeFont(&Dialog_bold_16);
 	if (nBootCount == 0)
 	{
 		tft.setTextColor(TFT_BLACK);
 		tft.setFreeFont(&Irish_Grover_Regular_24);
-		tft.drawRect(0, 0, width - 1, height - 1, menuTextColor);
+		tft.drawRect(0, 0, width - 1, height - 1, SystemInfo.menuTextColor);
 		tft.drawString("Magic Image Wand", 5, 10);
 		tft.setFreeFont(&Dialog_bold_16);
-		tft.drawString("Version " + myVersion, 20, 90);
+		tft.drawString(String("Version ") + myVersion, 20, 70);
 		tft.setTextSize(1);
-		tft.drawString(__DATE__, 20, 110);
+		tft.drawString(__DATE__, 20, 90);
 	}
-	delay(1000);
 	tft.setFreeFont(&Dialog_bold_16);
-	tft.setTextColor(menuTextColor);
 
-	EEPROM.begin(1024);
-	// this will fix the signature if necessary
-	if (SaveSettings(false, true)) {
-		// get the autoload flag
-		SaveSettings(false, false, true);
+	if (SaveLoadSettings(false, true, false, true)) {
+		if ((nBootCount == 0) && bAutoLoadSettings && gpio_get_level((gpio_num_t)DIAL_BTN)) {
+			SaveLoadSettings(false, false, false, true);
+			tft.drawString("Settings Loaded", 20, 110);
+		}
 	}
-	// load the saved settings if flag is true and the button isn't pushed
-	if ((nBootCount == 0) && bAutoLoadSettings && gpio_get_level((gpio_num_t)DIAL_BTN)) {
-		// read all the settings
-		SaveSettings(false);
+	else {
+		// must not be anything there, so save it
+		SaveLoadSettings(true, false, false, true);
 	}
+	tft.setFreeFont(&Dialog_bold_16);
+	tft.setTextColor(SystemInfo.menuTextColor);
 
 	menuPtr = new MenuInfo;
 	MenuStack.push(menuPtr);
@@ -126,13 +125,12 @@ void setup()
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
 
-	leds = (CRGB*)calloc(TotalLeds, sizeof(*leds));
-	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, bSecondController ? TotalLeds / 2 : TotalLeds);
+	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
+	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
-	//if (bSecondStrip)
 	// create the second led controller
-	if (bSecondController) {
-		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, TotalLeds / 2, TotalLeds / 2);
+	if (LedInfo.bSecondController) {
+		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 		SetPixel(144, CRGB::Red);
 		SetPixel(145, CRGB::Red);
 		SetPixel(146, CRGB::Red);
@@ -145,9 +143,9 @@ void setup()
 		FastLED.show();
 	}
 	//FastLED.setTemperature(whiteBalance);
-	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
-	FastLED.setBrightness(nStripBrightness);
-	FastLED.setMaxPowerInVoltsAndMilliamps(5, nStripMaxCurrent);
+	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
+	FastLED.setBrightness(LedInfo.nLEDBrightness);
+	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nStripMaxCurrent);
 	if (nBootCount == 0) {
 		//bool oldSecond = bSecondStrip;
 		//bSecondStrip = true;
@@ -170,6 +168,7 @@ void setup()
 		delay(100);
 		FastLED.clear(true);
 		RainbowPulse();
+
 		//fill_noise8(leds, 144, 2, 0, 10, 2, 0, 0, 10);
 		//FastSPI_LED.show();
 		//delay(5000);
@@ -279,7 +278,7 @@ void loop()
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	if (!bSettingsMode && bControllerReboot) {
 		WriteMessage("Rebooting due to\nLED controller change", false, 2000);
-		SaveSettings(true, false, false, true);
+		SaveLoadSettings(true, true);
 		ESP.restart();
 	}
 	server.handleClient();
@@ -298,14 +297,19 @@ void loop()
 		delay(30);
 		if (digitalRead(0) == 0) {
 			ShowBmp(NULL);
+			// kill the cancel flag
+			bCancelRun = bCancelMacro = false;
 			bButton0 = true;
+			// wait for release
+			while (digitalRead(0) == 0)
+				;
 			// restore the screen to what it was doing before the bmp display
 			if (bSettingsMode) {
 				ShowMenu(MenuStack.top()->menu);
 			}
 			else {
 				tft.fillScreen(TFT_BLACK);
-				DisplayCurrentFile(bShowFolder);
+				DisplayCurrentFile(SystemInfo.bShowFolder);
 			}
 		}
 	}
@@ -406,7 +410,7 @@ bool RunMenus(int button)
 	// see if the autoload flag changed
 	if (bAutoLoadSettings != lastAutoLoadFlag) {
 		// the flag is now true, so we should save the current settings
-		SaveSettings(true, false, true, false);
+		SaveLoadSettings(true);
 	}
 }
 
@@ -419,7 +423,7 @@ void ShowMenu(struct MenuItem* menu)
 	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
-	char line[100];
+	char line[100]{};
 	bool skip = false;
 	// loop through the menu
 	for (int menix = 0; menu->op != eTerminate; ++menu, ++menix) {
@@ -447,7 +451,7 @@ void ShowMenu(struct MenuItem* menu)
 			bMenuValid[menix] = false;
 			continue;
 		}
-		char line[100], xtraline[100];
+		char line[100]{}, xtraline[100]{};
 		// only displayable menu items should be in this switch
 		line[0] = '\0';
 		int val;
@@ -566,17 +570,17 @@ void ToggleFilesBuiltin(MenuItem* menu)
 {
 	// clear filenames list
 	FileNames.clear();
-	bool lastval = bShowBuiltInTests;
+	bool lastval = SystemInfo.bShowBuiltInTests;
 	int oldIndex = CurrentFileIndex;
 	String oldFolder = currentFolder;
 	if (menu != NULL) {
 		ToggleBool(menu);
 	}
 	else {
-		bShowBuiltInTests = !bShowBuiltInTests;
+		SystemInfo.bShowBuiltInTests = !SystemInfo.bShowBuiltInTests;
 	}
-	if (lastval != bShowBuiltInTests) {
-		if (bShowBuiltInTests) {
+	if (lastval != SystemInfo.bShowBuiltInTests) {
+		if (SystemInfo.bShowBuiltInTests) {
 			CurrentFileIndex = 0;
 			for (int ix = 0; ix < sizeof(BuiltInFiles) / sizeof(*BuiltInFiles); ++ix) {
 				// add each one
@@ -624,8 +628,8 @@ void GetIntegerValue(MenuItem* menu)
 	char minstr[20], maxstr[20];
 	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
 	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
-	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), menuTextColor);
-	DisplayLine(3, "Long Press to Accept", menuTextColor);
+	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), SystemInfo.menuTextColor);
+	DisplayLine(3, "Long Press to Accept", SystemInfo.menuTextColor);
 	int oldVal = *(int*)menu->value;
 	if (menu->change != NULL) {
 		(*menu->change)(menu, 1);
@@ -666,10 +670,10 @@ void GetIntegerValue(MenuItem* menu)
 		*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
 		// show slider bar
 		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
-		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100));
+		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100), true);
 		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
-		DisplayLine(0, line, menuTextColor);
-		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)", menuTextColor);
+		DisplayLine(0, line, SystemInfo.menuTextColor);
+		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)", SystemInfo.menuTextColor);
 		if (menu->change != NULL && oldVal != *(int*)menu->value) {
 			(*menu->change)(menu, 0);
 			oldVal = *(int*)menu->value;
@@ -712,7 +716,7 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 		FastLED.show();
 		break;
 	case 0:		// every change
-		FastLED.setTemperature(CRGB(*(int*)menu->value, whiteBalance.g, whiteBalance.b));
+		FastLED.setTemperature(CRGB(*(int*)menu->value, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 		FastLED.show();
 		break;
 	case -1:	// last time
@@ -725,6 +729,10 @@ void UpdateControllers(MenuItem* menu, int flag)
 {
 	WriteMessage("Reboot needed\nto take effect", false, 1000);
 	bControllerReboot = true;
+	if (LedInfo.bSecondController)
+		LedInfo.nTotalLeds *= 2;
+	else
+		LedInfo.nTotalLeds /= 2;
 }
 
 void UpdateStripsMode(MenuItem* menu, int flag)
@@ -732,12 +740,12 @@ void UpdateStripsMode(MenuItem* menu, int flag)
 	static int lastmode;
 	switch (flag) {
 	case 1:		// first time
-		lastmode = stripsMode;
+		lastmode = LedInfo.stripsMode;
 		break;
 	case 0:		// every change
 		break;
 	case -1:	// last time, expand but don't shrink
-		if (lastmode != stripsMode) {
+		if (lastmode != LedInfo.stripsMode) {
 			WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
@@ -750,12 +758,12 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 	static int lastcount;
 	switch (flag) {
 	case 1:		// first time
-		lastcount = TotalLeds;
+		lastcount = LedInfo.nTotalLeds;
 		break;
 	case 0:		// every change
 		break;
 	case -1:	// last time, expand but don't shrink
-		if (TotalLeds != lastcount) {
+		if (LedInfo.nTotalLeds != lastcount) {
 			WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
@@ -773,7 +781,7 @@ void UpdateStripWhiteBalanceG(MenuItem* menu, int flag)
 		FastLED.show();
 		break;
 	case 0:		// every change
-		FastLED.setTemperature(CRGB(whiteBalance.r, *(int*)menu->value, whiteBalance.b));
+		FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, *(int*)menu->value, LedInfo.whiteBalance.b));
 		FastLED.show();
 		break;
 	case -1:	// last time
@@ -792,7 +800,7 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 		FastLED.show();
 		break;
 	case 0:		// every change
-		FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, *(int*)menu->value));
+		FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, *(int*)menu->value));
 		FastLED.show();
 		break;
 	case -1:	// last time
@@ -849,15 +857,15 @@ int FindMenuColor(uint16_t col)
 void SetMenuColor(MenuItem* menu)
 {
 	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
-	int colorIndex = FindMenuColor(menuTextColor);
+	int colorIndex = FindMenuColor(SystemInfo.menuTextColor);
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(4, "Rotate change value", menuTextColor);
-	DisplayLine(5, "Long Press Exit", menuTextColor);
+	DisplayLine(4, "Rotate change value", SystemInfo.menuTextColor);
+	DisplayLine(5, "Long Press Exit", SystemInfo.menuTextColor);
 	bool done = false;
 	bool change = true;
 	while (!done) {
 		if (change) {
-			DisplayLine(0, "Text Color", menuTextColor);
+			DisplayLine(0, "Text Color", SystemInfo.menuTextColor);
 			change = false;
 		}
 		switch (CRotaryDialButton::dequeue()) {
@@ -874,7 +882,7 @@ void SetMenuColor(MenuItem* menu)
 			break;
 		}
 		colorIndex = constrain(colorIndex, 0, maxIndex);
-		menuTextColor = ColorList[colorIndex];
+		SystemInfo.menuTextColor = ColorList[colorIndex];
 	}
 }
 
@@ -897,7 +905,7 @@ bool HandleMenus()
 		bMenuChanged = true;
 		break;
 	case BTN_RIGHT:
-		if (bAllowMenuWrap || MenuStack.top()->index < MenuStack.top()->menucount - 1) {
+		if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index < MenuStack.top()->menucount - 1) {
 			++MenuStack.top()->index;
 		}
 		if (MenuStack.top()->index >= MenuStack.top()->menucount) {
@@ -913,7 +921,7 @@ bool HandleMenus()
 		}
 		break;
 	case BTN_LEFT:
-		if (bAllowMenuWrap || MenuStack.top()->index > 0) {
+		if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index > 0) {
 			--MenuStack.top()->index;
 		}
 		if (MenuStack.top()->index < 0) {
@@ -961,7 +969,7 @@ bool HandleRunMode()
 		ProcessFileOrTest();
 		break;
 	case BTN_RIGHT:
-		if (bAllowMenuWrap || (CurrentFileIndex < FileNames.size() - 1))
+		if (SystemInfo.bAllowMenuWrap || (CurrentFileIndex < FileNames.size() - 1))
 			++CurrentFileIndex;
 		if (CurrentFileIndex >= FileNames.size())
 			CurrentFileIndex = 0;
@@ -969,7 +977,7 @@ bool HandleRunMode()
 			DisplayCurrentFile();
 		break;
 	case BTN_LEFT:
-		if (bAllowMenuWrap || (CurrentFileIndex > 0))
+		if (SystemInfo.bAllowMenuWrap || (CurrentFileIndex > 0))
 			--CurrentFileIndex;
 		if (CurrentFileIndex < 0)
 			CurrentFileIndex = FileNames.size() - 1;
@@ -1071,7 +1079,7 @@ void setupSDcard()
 
 // return the pixel
 CRGB IRAM_ATTR getRGBwithGamma() {
-	if (bGammaCorrection) {
+	if (LedInfo.bGammaCorrection) {
 		b = gammaB[readByte(false)];
 		g = gammaG[readByte(false)];
 		r = gammaR[readByte(false)];
@@ -1085,7 +1093,7 @@ CRGB IRAM_ATTR getRGBwithGamma() {
 }
 
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp) {
-	if (bGammaCorrection) {
+	if (LedInfo.bGammaCorrection) {
 		*gp = gammaG[*gp];
 		*bp = gammaB[*bp];
 		*rp = gammaR[*rp];
@@ -1129,7 +1137,7 @@ void TestBouncingBalls() {
 		CRGB::WhiteSmoke,
 	};
 
-	BouncingColoredBalls(nBouncingBallsCount, colors);
+	BouncingColoredBalls(BuiltinInfo.nBouncingBallsCount, colors);
 	FastLED.clear(true);
 }
 
@@ -1155,7 +1163,7 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 		Dampening[i] = 0.90 - float(i) / pow(balls, 2);
 	}
 
-	long percent;
+	long percent = 0;
 	int colorChangeCounter = 0;
 	bool done = false;
 	while (!done) {
@@ -1169,7 +1177,7 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 				break;
 			}
 			TimeSinceLastBounce[i] = millis() - ClockTimeSinceLastBounce[i];
-			Height[i] = 0.5 * Gravity * pow(TimeSinceLastBounce[i] / nBouncingBallsDecay, 2.0) + ImpactVelocity[i] * TimeSinceLastBounce[i] / nBouncingBallsDecay;
+			Height[i] = 0.5 * Gravity * pow(TimeSinceLastBounce[i] / BuiltinInfo.nBouncingBallsDecay, 2.0) + ImpactVelocity[i] * TimeSinceLastBounce[i] / BuiltinInfo.nBouncingBallsDecay;
 
 			if (Height[i] < 0) {
 				Height[i] = 0;
@@ -1180,7 +1188,7 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 					ImpactVelocity[i] = ImpactVelocityStart;
 				}
 			}
-			Position[i] = round(Height[i] * (TotalLeds - 1) / StartHeight);
+			Position[i] = round(Height[i] * (LedInfo.nTotalLeds - 1) / StartHeight);
 		}
 
 		for (int i = 0; i < balls; i++) {
@@ -1189,14 +1197,15 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 				done = true;
 				break;
 			}
-			ix = (i + nBouncingBallsFirstColor) % 32;
+			ix = (i + BuiltinInfo.nBouncingBallsFirstColor) % 32;
 			SetPixel(Position[i], colors[ix]);
 		}
-		if (nBouncingBallsChangeColors && colorChangeCounter++ > (nBouncingBallsChangeColors * 100)) {
-			++nBouncingBallsFirstColor;
+		if (BuiltinInfo.nBouncingBallsChangeColors && colorChangeCounter++ > (BuiltinInfo.nBouncingBallsChangeColors * 100)) {
+			++BuiltinInfo.nBouncingBallsFirstColor;
 			colorChangeCounter = 0;
 		}
-		FastLED.show();
+		ShowLeds();
+		//FastLED.show();
 		delayMicroseconds(50);
 		FastLED.clear();
 	}
@@ -1212,7 +1221,7 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 #define BARBERCOUNT 40
 void BarberPole()
 {
-CRGB:CRGB red, white, blue;
+	CRGB red, white, blue;
 	byte r, g, b;
 	r = 255, g = 0, b = 0;
 	fixRGBwithGamma(&r, &g, &b);
@@ -1229,7 +1238,7 @@ CRGB:CRGB red, white, blue;
 			done = true;
 			break;
 		}
-		for (int ledIx = 0; ledIx < TotalLeds; ++ledIx) {
+		for (int ledIx = 0; ledIx < LedInfo.nTotalLeds; ++ledIx) {
 			if (CheckCancel()) {
 				done = true;
 				break;
@@ -1248,39 +1257,41 @@ CRGB:CRGB red, white, blue;
 				break;
 			}
 		}
-		FastLED.show();
-		delay(nFrameHold);
+		ShowLeds();
+		//FastLED.show();
+		delay(ImgInfo.nFrameHold);
 	}
 }
 
 // checkerboard
 void CheckerBoard()
 {
-	int width = nCheckboardBlackWidth + nCheckboardWhiteWidth;
+	int width = BuiltinInfo.nCheckboardBlackWidth + BuiltinInfo.nCheckboardWhiteWidth;
 	int times = 0;
 	CRGB color1 = CRGB::Black, color2 = CRGB::White;
 	int addPixels = 0;
 	bool done = false;
 	while (!done) {
-		for (int y = 0; y < TotalLeds; ++y) {
-			SetPixel(y, ((y + addPixels) % width) < nCheckboardBlackWidth ? color1 : color2);
+		for (int y = 0; y < LedInfo.nTotalLeds; ++y) {
+			SetPixel(y, ((y + addPixels) % width) < BuiltinInfo.nCheckboardBlackWidth ? color1 : color2);
 		}
-		FastLED.show();
-		int count = nCheckerboardHoldframes;
+		ShowLeds();
+		//FastLED.show();
+		int count = BuiltinInfo.nCheckerboardHoldframes;
 		while (count-- > 0) {
-			delay(nFrameHold);
+			delay(ImgInfo.nFrameHold);
 			if (CheckCancel()) {
 				done = true;
 				break;
 			}
 		}
-		if (bCheckerBoardAlternate && (times++ % 2)) {
+		if (BuiltinInfo.bCheckerBoardAlternate && (times++ % 2)) {
 			// swap colors
 			CRGB temp = color1;
 			color1 = color2;
 			color2 = temp;
 		}
-		addPixels += nCheckerboardAddPixels;
+		addPixels += BuiltinInfo.nCheckerboardAddPixels;
 		if (CheckCancel()) {
 			done = true;
 			break;
@@ -1290,7 +1301,7 @@ void CheckerBoard()
 
 void RandomBars()
 {
-	ShowRandomBars(bRandomBarsBlacks);
+	ShowRandomBars(BuiltinInfo.bRandomBarsBlacks);
 }
 
 // show random bars of lights with optional blacks between
@@ -1299,7 +1310,7 @@ void ShowRandomBars(bool blacks)
 	time_t start = time(NULL);
 	byte r, g, b;
 	srand(millis());
-	char line[40];
+	char line[40]{};
 	bool done = false;
 	for (int pass = 0; !done; ++pass) {
 		if (blacks && (pass % 2)) {
@@ -1315,9 +1326,9 @@ void ShowRandomBars(bool blacks)
 			// fill the strip color
 			FastLED.showColor(CRGB(r, g, b));
 		}
-		int count = nRandomBarsHoldframes;
+		int count = BuiltinInfo.nRandomBarsHoldframes;
 		while (count-- > 0) {
-			delay(nFrameHold);
+			delay(ImgInfo.nFrameHold);
 			if (CheckCancel()) {
 				done = true;
 				break;
@@ -1355,8 +1366,8 @@ void RunningDot()
 			break;
 		}
 		fixRGBwithGamma(&r, &g, &b);
-		char line[10];
-		for (int ix = 0; ix < TotalLeds; ++ix) {
+		char line[10]{};
+		for (int ix = 0; ix < LedInfo.nTotalLeds; ++ix) {
 			if (CheckCancel()) {
 				break;
 			}
@@ -1364,12 +1375,14 @@ void RunningDot()
 				SetPixel(ix - 1, CRGB::Black);
 			}
 			SetPixel(ix, CRGB(r, g, b));
-			FastLED.show();
-			delay(nFrameHold);
+			ShowLeds();
+			//FastLED.show();
+			delay(ImgInfo.nFrameHold);
 		}
 		// remember the last one, turn it off
-		SetPixel(TotalLeds - 1, CRGB::Black);
-		FastLED.show();
+		SetPixel(LedInfo.nTotalLeds - 1, CRGB::Black);
+		ShowLeds();
+		//FastLED.show();
 	}
 	FastLED.clear(true);
 }
@@ -1404,17 +1417,18 @@ void OppositeRunningDots()
 			break;
 		}
 		fixRGBwithGamma(&r, &g, &b);
-		for (int ix = 0; ix < TotalLeds; ++ix) {
+		for (int ix = 0; ix < LedInfo.nTotalLeds; ++ix) {
 			if (CheckCancel())
 				return;
 			if (ix > 0) {
 				SetPixel(ix - 1, CRGB::Black);
-				SetPixel(TotalLeds - ix + 1, CRGB::Black);
+				SetPixel(LedInfo.nTotalLeds - ix + 1, CRGB::Black);
 			}
-			SetPixel(TotalLeds - ix, CRGB(r, g, b));
+			SetPixel(LedInfo.nTotalLeds - ix, CRGB(r, g, b));
 			SetPixel(ix, CRGB(r, g, b));
-			FastLED.show();
-			delay(nFrameHold);
+			ShowLeds();
+			//FastLED.show();
+			delay(ImgInfo.nFrameHold);
 		}
 	}
 }
@@ -1430,9 +1444,9 @@ void Sleep(MenuItem* menu)
 void LightBar(MenuItem* menu)
 {
 	tft.fillScreen(TFT_BLACK);
-	DisplayLine(0, "LED Light Bar", menuTextColor);
-	DisplayLine(3, "Rotate Dial to Change", menuTextColor);
-	DisplayLine(4, "Click to Set Operation", menuTextColor);
+	DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
+	DisplayLine(3, "Rotate Dial to Change", SystemInfo.menuTextColor);
+	DisplayLine(4, "Click to Set Operation", SystemInfo.menuTextColor);
 	DisplayLedLightBar();
 	FastLED.clear(true);
 	// these were set by CheckCancel() in DisplayAllColor() and need to be cleared
@@ -1442,14 +1456,15 @@ void LightBar(MenuItem* menu)
 // utility for DisplayLedLightBar()
 void FillLightBar()
 {
-	int offset = bDisplayAllFromMiddle ? (TotalLeds - nDisplayAllPixelCount) / 2 : 0;
-	if (!bDisplayAllFromMiddle && bUpsideDown)
-		offset = TotalLeds - nDisplayAllPixelCount;
+	int offset = BuiltinInfo.bDisplayAllFromMiddle ? (LedInfo.nTotalLeds - BuiltinInfo.nDisplayAllPixelCount) / 2 : 0;
+	if (!BuiltinInfo.bDisplayAllFromMiddle && ImgInfo.bUpsideDown)
+		offset = LedInfo.nTotalLeds - BuiltinInfo.nDisplayAllPixelCount;
 	FastLED.clear();
-	for (int ix = 0; ix < nDisplayAllPixelCount; ++ix) {
-		SetPixel(ix + offset, bDisplayAllRGB ? CRGB(nDisplayAllRed, nDisplayAllGreen, nDisplayAllBlue) : CHSV(nDisplayAllHue, nDisplayAllSaturation, nDisplayAllBrightness));
+	for (int ix = 0; ix < BuiltinInfo.nDisplayAllPixelCount; ++ix) {
+		SetPixel(ix + offset, BuiltinInfo.bDisplayAllRGB ? CRGB(BuiltinInfo.nDisplayAllRed, BuiltinInfo.nDisplayAllGreen, BuiltinInfo.nDisplayAllBlue) : CHSV(BuiltinInfo.nDisplayAllHue, BuiltinInfo.nDisplayAllSaturation, BuiltinInfo.nDisplayAllBrightness));
 	}
-	FastLED.show();
+	ShowLeds();
+	//FastLED.show();
 }
 
 // Used LEDs as a light bar
@@ -1467,34 +1482,34 @@ void DisplayLedLightBar()
 			String line;
 			switch (what) {
 			case 0:
-				if (bDisplayAllRGB)
-					line = "Red: " + String(nDisplayAllRed);
+				if (BuiltinInfo.bDisplayAllRGB)
+					line = "Red: " + String(BuiltinInfo.nDisplayAllRed);
 				else
-					line = "HUE: " + String(nDisplayAllHue);
+					line = "HUE: " + String(BuiltinInfo.nDisplayAllHue);
 				break;
 			case 1:
-				if (bDisplayAllRGB)
-					line = "Green: " + String(nDisplayAllGreen);
+				if (BuiltinInfo.bDisplayAllRGB)
+					line = "Green: " + String(BuiltinInfo.nDisplayAllGreen);
 				else
-					line = "Saturation: " + String(nDisplayAllSaturation);
+					line = "Saturation: " + String(BuiltinInfo.nDisplayAllSaturation);
 				break;
 			case 2:
-				if (bDisplayAllRGB)
-					line = "Blue: " + String(nDisplayAllBlue);
+				if (BuiltinInfo.bDisplayAllRGB)
+					line = "Blue: " + String(BuiltinInfo.nDisplayAllBlue);
 				else
-					line = "Brightness: " + String(nDisplayAllBrightness);
+					line = "Brightness: " + String(BuiltinInfo.nDisplayAllBrightness);
 				break;
 			case 3:
-				line = "Pixels: " + String(nDisplayAllPixelCount);
+				line = "Pixels: " + String(BuiltinInfo.nDisplayAllPixelCount);
 				break;
 			case 4:
-				line = "From: " + String((bDisplayAllFromMiddle ? "Middle" : "End"));
+				line = "From: " + String((BuiltinInfo.bDisplayAllFromMiddle ? "Middle" : "End"));
 				break;
 			case 5:
 				line = " (step size: " + String(increment) + ")";
 				break;
 			}
-			DisplayLine(2, line, menuTextColor);
+			DisplayLine(2, line, SystemInfo.menuTextColor);
 		}
 		btn = ReadButton();
 		bChange = true;
@@ -1505,28 +1520,28 @@ void DisplayLedLightBar()
 		case BTN_RIGHT:
 			switch (what) {
 			case 0:
-				if (bDisplayAllRGB)
-					nDisplayAllRed += increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllRed += increment;
 				else
-					nDisplayAllHue += increment;
+					BuiltinInfo.nDisplayAllHue += increment;
 				break;
 			case 1:
-				if (bDisplayAllRGB)
-					nDisplayAllGreen += increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllGreen += increment;
 				else
-					nDisplayAllSaturation += increment;
+					BuiltinInfo.nDisplayAllSaturation += increment;
 				break;
 			case 2:
-				if (bDisplayAllRGB)
-					nDisplayAllBlue += increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllBlue += increment;
 				else
-					nDisplayAllBrightness += increment;
+					BuiltinInfo.nDisplayAllBrightness += increment;
 				break;
 			case 3:
-				nDisplayAllPixelCount += increment;
+				BuiltinInfo.nDisplayAllPixelCount += increment;
 				break;
 			case 4:
-				bDisplayAllFromMiddle = true;
+				BuiltinInfo.bDisplayAllFromMiddle = true;
 				break;
 			case 5:
 				increment *= 10;
@@ -1536,28 +1551,28 @@ void DisplayLedLightBar()
 		case BTN_LEFT:
 			switch (what) {
 			case 0:
-				if (bDisplayAllRGB)
-					nDisplayAllRed -= increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllRed -= increment;
 				else
-					nDisplayAllHue -= increment;
+					BuiltinInfo.nDisplayAllHue -= increment;
 				break;
 			case 1:
-				if (bDisplayAllRGB)
-					nDisplayAllGreen -= increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllGreen -= increment;
 				else
-					nDisplayAllSaturation -= increment;
+					BuiltinInfo.nDisplayAllSaturation -= increment;
 				break;
 			case 2:
-				if (bDisplayAllRGB)
-					nDisplayAllBlue -= increment;
+				if (BuiltinInfo.bDisplayAllRGB)
+					BuiltinInfo.nDisplayAllBlue -= increment;
 				else
-					nDisplayAllBrightness -= increment;
+					BuiltinInfo.nDisplayAllBrightness -= increment;
 				break;
 			case 3:
-				nDisplayAllPixelCount -= increment;
+				BuiltinInfo.nDisplayAllPixelCount -= increment;
 				break;
 			case 4:
-				bDisplayAllFromMiddle = false;
+				BuiltinInfo.bDisplayAllFromMiddle = false;
 				break;
 			case 5:
 				increment /= 10;
@@ -1576,46 +1591,46 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
-			nDisplayAllPixelCount = constrain(nDisplayAllPixelCount, 1, TotalLeds);
+			BuiltinInfo.nDisplayAllPixelCount = constrain(BuiltinInfo.nDisplayAllPixelCount, 1, LedInfo.nTotalLeds);
 			increment = constrain(increment, 1, 100);
-			if (bDisplayAllRGB) {
-				if (bAllowRollover) {
-					if (nDisplayAllRed < 0)
-						nDisplayAllRed = RollDownRollOver(increment);
-					if (nDisplayAllRed > 255)
-						nDisplayAllRed = 0;
-					if (nDisplayAllGreen < 0)
-						nDisplayAllGreen = RollDownRollOver(increment);
-					if (nDisplayAllGreen > 255)
-						nDisplayAllGreen = 0;
-					if (nDisplayAllBlue < 0)
-						nDisplayAllBlue = RollDownRollOver(increment);
-					if (nDisplayAllBlue > 255)
-						nDisplayAllBlue = 0;
+			if (BuiltinInfo.bDisplayAllRGB) {
+				if (BuiltinInfo.bAllowRollover) {
+					if (BuiltinInfo.nDisplayAllRed < 0)
+						BuiltinInfo.nDisplayAllRed = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllRed > 255)
+						BuiltinInfo.nDisplayAllRed = 0;
+					if (BuiltinInfo.nDisplayAllGreen < 0)
+						BuiltinInfo.nDisplayAllGreen = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllGreen > 255)
+						BuiltinInfo.nDisplayAllGreen = 0;
+					if (BuiltinInfo.nDisplayAllBlue < 0)
+						BuiltinInfo.nDisplayAllBlue = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllBlue > 255)
+						BuiltinInfo.nDisplayAllBlue = 0;
 				}
 				else {
-					nDisplayAllRed = constrain(nDisplayAllRed, 0, 255);
-					nDisplayAllGreen = constrain(nDisplayAllGreen, 0, 255);
-					nDisplayAllBlue = constrain(nDisplayAllBlue, 0, 255);
+					BuiltinInfo.nDisplayAllRed = constrain(BuiltinInfo.nDisplayAllRed, 0, 255);
+					BuiltinInfo.nDisplayAllGreen = constrain(BuiltinInfo.nDisplayAllGreen, 0, 255);
+					BuiltinInfo.nDisplayAllBlue = constrain(BuiltinInfo.nDisplayAllBlue, 0, 255);
 				}
 				FillLightBar();
 			}
 			else {
-				if (bAllowRollover) {
-					if (nDisplayAllHue < 0)
-						nDisplayAllHue = RollDownRollOver(increment);
-					if (nDisplayAllHue > 255)
-						nDisplayAllHue = 0;
-					if (nDisplayAllSaturation < 0)
-						nDisplayAllSaturation = RollDownRollOver(increment);
-					if (nDisplayAllSaturation > 255)
-						nDisplayAllSaturation = 0;
+				if (BuiltinInfo.bAllowRollover) {
+					if (BuiltinInfo.nDisplayAllHue < 0)
+						BuiltinInfo.nDisplayAllHue = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllHue > 255)
+						BuiltinInfo.nDisplayAllHue = 0;
+					if (BuiltinInfo.nDisplayAllSaturation < 0)
+						BuiltinInfo.nDisplayAllSaturation = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllSaturation > 255)
+						BuiltinInfo.nDisplayAllSaturation = 0;
 				}
 				else {
-					nDisplayAllHue = constrain(nDisplayAllHue, 0, 255);
-					nDisplayAllSaturation = constrain(nDisplayAllSaturation, 0, 255);
+					BuiltinInfo.nDisplayAllHue = constrain(BuiltinInfo.nDisplayAllHue, 0, 255);
+					BuiltinInfo.nDisplayAllSaturation = constrain(BuiltinInfo.nDisplayAllSaturation, 0, 255);
 				}
-				nDisplayAllBrightness = constrain(nDisplayAllBrightness, 0, 255);
+				BuiltinInfo.nDisplayAllBrightness = constrain(BuiltinInfo.nDisplayAllBrightness, 0, 255);
 				FillLightBar();
 			}
 		}
@@ -1635,14 +1650,15 @@ int RollDownRollOver(int inc)
 }
 
 void TestTwinkle() {
-	TwinkleRandom(nFrameHold, bTwinkleOnlyOne);
+	TwinkleRandom(ImgInfo.nFrameHold, BuiltinInfo.bTwinkleOnlyOne);
 }
 void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	time_t start = time(NULL);
 	bool done = false;
 	while (!done) {
-		SetPixel(random(TotalLeds), CRGB(random(0, 255), random(0, 255), random(0, 255)));
-		FastLED.show();
+		SetPixel(random(LedInfo.nTotalLeds), CRGB(random(0, 255), random(0, 255), random(0, 255)));
+		ShowLeds();
+		//FastLED.show();
 		delay(SpeedDelay);
 		if (OnlyOne) {
 			FastLED.clear(true);
@@ -1656,11 +1672,11 @@ void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 
 void TestCylon()
 {
-	CylonBounce(nCylonEyeRed, nCylonEyeGreen, nCylonEyeBlue, nCylonEyeSize, nFrameHold, 50);
+	CylonBounce(BuiltinInfo.nCylonEyeRed, BuiltinInfo.nCylonEyeGreen, BuiltinInfo.nCylonEyeBlue, BuiltinInfo.nCylonEyeSize, ImgInfo.nFrameHold, 50);
 }
 void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay)
 {
-	for (int i = 0; i < TotalLeds - EyeSize - 2; i++) {
+	for (int i = 0; i < LedInfo.nTotalLeds - EyeSize - 2; i++) {
 		if (CheckCancel()) {
 			break;
 		}
@@ -1670,11 +1686,12 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 			SetPixel(i + j, CRGB(red, green, blue));
 		}
 		SetPixel(i + EyeSize + 1, CRGB(red / 10, green / 10, blue / 10));
-		FastLED.show();
+		ShowLeds();
+		//FastLED.show();
 		delay(SpeedDelay);
 	}
 	delay(ReturnDelay);
-	for (int i = TotalLeds - EyeSize - 2; i > 0; i--) {
+	for (int i = LedInfo.nTotalLeds - EyeSize - 2; i > 0; i--) {
 		if (CheckCancel()) {
 			break;
 		}
@@ -1684,25 +1701,26 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 			SetPixel(i + j, CRGB(red, green, blue));
 		}
 		SetPixel(i + EyeSize + 1, CRGB(red / 10, green / 10, blue / 10));
-		FastLED.show();
+		ShowLeds();
+		//FastLED.show();
 		delay(SpeedDelay);
 	}
 	FastLED.clear(true);
 }
 
 void TestMeteor() {
-	meteorRain(nMeteorRed, nMeteorGreen, nMeteorBlue, nMeteorSize, 64, true, 30);
+	meteorRain(BuiltinInfo.nMeteorRed, BuiltinInfo.nMeteorGreen, BuiltinInfo.nMeteorBlue, BuiltinInfo.nMeteorSize, 64, true, 30);
 }
 
 void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTrailDecay, boolean meteorRandomDecay, int SpeedDelay)
 {
 	FastLED.clear(true);
 
-	for (int i = 0; i < TotalLeds + TotalLeds; i++) {
+	for (int i = 0; i < LedInfo.nTotalLeds + LedInfo.nTotalLeds; i++) {
 		if (CheckCancel())
 			break;;
 		// fade brightness all LEDs one step
-		for (int j = 0; j < TotalLeds; j++) {
+		for (int j = 0; j < LedInfo.nTotalLeds; j++) {
 			if (CheckCancel())
 				break;
 			if ((!meteorRandomDecay) || (random(10) > 5)) {
@@ -1713,11 +1731,12 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 		for (int j = 0; j < meteorSize; j++) {
 			if (CheckCancel())
 				break;
-			if ((i - j < TotalLeds) && (i - j >= 0)) {
+			if ((i - j < LedInfo.nTotalLeds) && (i - j >= 0)) {
 				SetPixel(i - j, CRGB(red, green, blue));
 			}
 		}
-		FastLED.show();
+		ShowLeds();
+		//FastLED.show();
 		delay(SpeedDelay);
 	}
 }
@@ -1725,14 +1744,15 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 void TestConfetti()
 {
 	time_t start = time(NULL);
-	gHue = 0;
+	BuiltinInfo.gHue = 0;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(nFrameHold) {
-			if (bConfettiCycleHue)
-				++gHue;
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+			if (BuiltinInfo.bConfettiCycleHue)
+				++BuiltinInfo.gHue;
 			confetti();
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -1746,18 +1766,19 @@ void TestConfetti()
 void confetti()
 {
 	// random colored speckles that blink in and fade smoothly
-	fadeToBlackBy(leds, TotalLeds, 10);
-	int pos = random16(TotalLeds);
-	leds[pos] += CHSV(gHue + random8(64), 200, 255);
+	fadeToBlackBy(leds, LedInfo.nTotalLeds, 10);
+	int pos = random16(LedInfo.nTotalLeds);
+	leds[pos] += CHSV(BuiltinInfo.gHue + random8(64), 200, 255);
 }
 
 void TestJuggle()
 {
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(nFrameHold) {
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
 			juggle();
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -1769,11 +1790,11 @@ void TestJuggle()
 void juggle()
 {
 	// eight colored dots, weaving in and out of sync with each other
-	fadeToBlackBy(leds, TotalLeds, 20);
+	fadeToBlackBy(leds, LedInfo.nTotalLeds, 20);
 	byte dothue = 0;
 	uint16_t index;
 	for (int i = 0; i < 8; i++) {
-		index = beatsin16(i + 7, 0, TotalLeds);
+		index = beatsin16(i + 7, 0, LedInfo.nTotalLeds);
 		// use AdjustStripIndex to get the right one
 		SetPixel(index, leds[AdjustStripIndex(index)] | CHSV(dothue, 255, 255));
 		//leds[beatsin16(i + 7, 0, STRIPLENGTH)] |= CHSV(dothue, 255, 255);
@@ -1783,12 +1804,13 @@ void juggle()
 
 void TestSine()
 {
-	gHue = nSineStartingHue;
+	BuiltinInfo.gHue = BuiltinInfo.nSineStartingHue;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(nFrameHold) {
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
 			sinelon();
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -1799,21 +1821,22 @@ void TestSine()
 void sinelon()
 {
 	// a colored dot sweeping back and forth, with fading trails
-	fadeToBlackBy(leds, TotalLeds, 20);
-	int pos = beatsin16(nSineSpeed, 0, TotalLeds);
-	leds[AdjustStripIndex(pos)] += CHSV(gHue, 255, 192);
-	if (bSineCycleHue)
-		++gHue;
+	fadeToBlackBy(leds, LedInfo.nTotalLeds, 20);
+	int pos = beatsin16(BuiltinInfo.nSineSpeed, 0, LedInfo.nTotalLeds);
+	leds[AdjustStripIndex(pos)] += CHSV(BuiltinInfo.gHue, 255, 192);
+	if (BuiltinInfo.bSineCycleHue)
+		++BuiltinInfo.gHue;
 }
 
 void TestBpm()
 {
-	gHue = 0;
+	BuiltinInfo.gHue = 0;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(nFrameHold) {
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
 			bpm();
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -1826,12 +1849,12 @@ void bpm()
 {
 	// colored stripes pulsing at a defined Beats-Per-Minute (BPM)
 	CRGBPalette16 palette = PartyColors_p;
-	uint8_t beat = beatsin8(nBpmBeatsPerMinute, 64, 255);
-	for (int i = 0; i < TotalLeds; i++) { //9948
-		SetPixel(i, ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10)));
+	uint8_t beat = beatsin8(BuiltinInfo.nBpmBeatsPerMinute, 64, 255);
+	for (int i = 0; i < LedInfo.nTotalLeds; i++) { //9948
+		SetPixel(i, ColorFromPalette(palette, BuiltinInfo.gHue + (i * 2), beat - BuiltinInfo.gHue + (i * 10)));
 	}
-	if (bBpmCycleHue)
-		++gHue;
+	if (BuiltinInfo.bBpmCycleHue)
+		++BuiltinInfo.gHue;
 }
 
 void FillRainbow(struct CRGB* pFirstLED, int numToFill,
@@ -1850,27 +1873,28 @@ void FillRainbow(struct CRGB* pFirstLED, int numToFill,
 
 void TestRainbow()
 {
-	gHue = nRainbowInitialHue;
-	FillRainbow(leds, TotalLeds, gHue, nRainbowHueDelta);
-	FadeInOut(nRainbowFadeTime * 100, true);
+	BuiltinInfo.gHue = BuiltinInfo.nRainbowInitialHue;
+	FillRainbow(leds, LedInfo.nTotalLeds, BuiltinInfo.gHue, BuiltinInfo.nRainbowHueDelta);
+	FadeInOut(BuiltinInfo.nRainbowFadeTime * 100, true);
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(nFrameHold) {
-			if (bRainbowCycleHue)
-				++gHue;
-			FillRainbow(leds, TotalLeds, gHue, nRainbowHueDelta);
-			if (bRainbowAddGlitter)
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+			if (BuiltinInfo.bRainbowCycleHue)
+				++BuiltinInfo.gHue;
+			FillRainbow(leds, LedInfo.nTotalLeds, BuiltinInfo.gHue, BuiltinInfo.nRainbowHueDelta);
+			if (BuiltinInfo.bRainbowAddGlitter)
 				addGlitter(80);
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
-			FastLED.setBrightness(nStripBrightness);
+			FastLED.setBrightness(LedInfo.nLEDBrightness);
 			break;
 		}
 	}
-	FadeInOut(nRainbowFadeTime * 100, false);
-	FastLED.setBrightness(nStripBrightness);
+	FadeInOut(BuiltinInfo.nRainbowFadeTime * 100, false);
+	FastLED.setBrightness(LedInfo.nLEDBrightness);
 }
 
 // create a user defined stripe set
@@ -1885,7 +1909,7 @@ struct {
 
 void TestStripes()
 {
-	FastLED.setBrightness(nStripBrightness);
+	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	// let's fill in some data
 	for (int ix = 0; ix < NUM_STRIPES; ++ix) {
 		Stripes[ix].start = ix * 20;
@@ -1901,7 +1925,8 @@ void TestStripes()
 			SetPixel(pix++, CRGB(Stripes[ix].color));
 		}
 	}
-	FastLED.show();
+	ShowLeds();
+	//FastLED.show();
 	bool done = false;
 	while (!done) {
 		if (CheckCancel()) {
@@ -1915,17 +1940,18 @@ void TestStripes()
 // alternating white and black lines
 void TestLines()
 {
-	FastLED.setBrightness(nStripBrightness);
+	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	FastLED.clear(true);
 	bool bWhite = true;
-	for (int pix = 0; pix < TotalLeds; ++pix) {
+	for (int pix = 0; pix < LedInfo.nTotalLeds; ++pix) {
 		// fill in each block of pixels
-		for (int len = 0; len < (bWhite ? nLinesWhite : nLinesBlack); ++len) {
+		for (int len = 0; len < (bWhite ? BuiltinInfo.nLinesWhite : BuiltinInfo.nLinesBlack); ++len) {
 			SetPixel(pix++, bWhite ? CRGB::White : CRGB::Black);
 		}
 		bWhite = !bWhite;
 	}
-	FastLED.show();
+	ShowLeds();
+	//FastLED.show();
 	bool done = false;
 	while (!done) {
 		if (CheckCancel()) {
@@ -1937,7 +1963,8 @@ void TestLines()
 		//for (int ix = 0; ix < STRIPLENGTH; ++ix) {
 		//	leds[ix] = (leds[ix] == CRGB::White) ? CRGB::Black : CRGB::White;
 		//}
-		FastLED.show();
+		ShowLeds();
+		//FastLED.show();
 	}
 	FastLED.clear(true);
 }
@@ -1946,17 +1973,19 @@ void TestLines()
 void FadeInOut(int time, bool in)
 {
 	if (in) {
-		for (int i = 0; i <= nStripBrightness; ++i) {
+		for (int i = 0; i <= LedInfo.nLEDBrightness; ++i) {
 			FastLED.setBrightness(i);
-			FastLED.show();
-			delay(time / nStripBrightness);
+			ShowLeds();
+			//FastLED.show();
+			delay(time / LedInfo.nLEDBrightness);
 		}
 	}
 	else {
-		for (int i = nStripBrightness; i >= 0; --i) {
+		for (int i = LedInfo.nLEDBrightness; i >= 0; --i) {
 			FastLED.setBrightness(i);
-			FastLED.show();
-			delay(time / nStripBrightness);
+			ShowLeds();
+			//FastLED.show();
+			delay(time / LedInfo.nLEDBrightness);
 		}
 	}
 }
@@ -1964,7 +1993,7 @@ void FadeInOut(int time, bool in)
 void addGlitter(fract8 chanceOfGlitter)
 {
 	if (random8() < chanceOfGlitter) {
-		leds[random16(TotalLeds)] += CRGB::White;
+		leds[random16(LedInfo.nTotalLeds)] += CRGB::White;
 	}
 }
 
@@ -2001,65 +2030,75 @@ void ProcessFileOrTest()
 	}
 	if (bRecordingMacro) {
 		strcpy(FileToShow, FileNames[CurrentFileIndex].c_str());
-		WriteOrDeleteConfigFile(String(nCurrentMacro), false, false);
+		// tag the start time
+		recordingTimeStart = time(NULL);
+		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
 	}
 	bIsRunning = true;
 	// clear the rest of the lines
 	for (int ix = 1; ix < MENU_LINES; ++ix)
 		DisplayLine(ix, "");
 	//DisplayCurrentFile();
-	if (startDelay) {
+	if (ImgInfo.startDelay) {
 		// set a timer
-		nTimerSeconds = startDelay;
+		nTimerSeconds = ImgInfo.startDelay;
 		while (nTimerSeconds && !CheckCancel()) {
 			line = "Start Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-			DisplayLine(2, line, menuTextColor);
+			DisplayLine(2, line, SystemInfo.menuTextColor);
 			delay(100);
 			--nTimerSeconds;
 		}
 		DisplayLine(3, "");
 	}
-	int chainCount = bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
-	int chainRepeatCount = bChainFiles ? nChainRepeats : 1;
+	int chainCount = ImgInfo.bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
+	int chainFileCount = chainCount;
+	int chainRepeatCount = ImgInfo.bChainFiles ? ImgInfo.nChainRepeats : 1;
 	int lastFileIndex = CurrentFileIndex;
 	// don't allow chaining for built-ins, although maybe we should
-	if (bShowBuiltInTests) {
+	if (SystemInfo.bShowBuiltInTests) {
 		chainCount = 1;
 		chainRepeatCount = 1;
 	}
 	// set the basic LED info
-	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
-	FastLED.setBrightness(nStripBrightness);
-	FastLED.setMaxPowerInVoltsAndMilliamps(5, nStripMaxCurrent);
+	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
+	FastLED.setBrightness(LedInfo.nLEDBrightness);
+	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nStripMaxCurrent);
 	line = "";
 	while (chainRepeatCount-- > 0) {
 		while (chainCount-- > 0) {
 			DisplayCurrentFile();
-			if (bChainFiles && !bShowBuiltInTests) {
-				line = "Files: " + String(chainCount + 1);
-				DisplayLine(4, line, menuTextColor);
-				line = "";
+			if (ImgInfo.bChainFiles && !SystemInfo.bShowBuiltInTests) {
+				line = "Remaining: " + String(chainCount + 1);
+				DisplayLine(4, line, SystemInfo.menuTextColor);
+				if (CurrentFileIndex < chainFileCount - 1) {
+					line = "Next: " + FileNames[CurrentFileIndex + 1];
+				}
+				else {
+					line = "";
+				}
+				DisplayLine(5, line, SystemInfo.menuTextColor);
 			}
+			line = "";
 			// process the repeats and waits for each file in the list
-			for (nRepeatsLeft = repeatCount; nRepeatsLeft > 0; nRepeatsLeft--) {
+			for (nRepeatsLeft = ImgInfo.repeatCount; nRepeatsLeft > 0; nRepeatsLeft--) {
 				// fill the progress bar
-				if (!bShowBuiltInTests)
+				if (!SystemInfo.bShowBuiltInTests)
 					ShowProgressBar(0);
-				if (repeatCount > 1) {
+				if (ImgInfo.repeatCount > 1) {
 					line = "Repeats: " + String(nRepeatsLeft) + " ";
 				}
-				if (!bShowBuiltInTests && nChainRepeats > 1) {
+				if (!SystemInfo.bShowBuiltInTests && ImgInfo.nChainRepeats > 1) {
 					line += "Chains: " + String(chainRepeatCount + 1);
 				}
-				DisplayLine(3, line, menuTextColor);
-				if (bShowBuiltInTests) {
-					DisplayLine(4, "Running (long cancel)", menuTextColor);
+				DisplayLine(3, line, SystemInfo.menuTextColor);
+				if (SystemInfo.bShowBuiltInTests) {
+					DisplayLine(4, "Running (long cancel)", SystemInfo.menuTextColor);
 					// run the test
 					(*BuiltInFiles[CurrentFileIndex].function)();
 				}
 				else {
-					if (nRepeatCountMacro > 1 && bRunningMacro) {
-						DisplayLine(4, String("Macro Repeats: ") + String(nMacroRepeatsLeft), menuTextColor);
+					if (ImgInfo.nRepeatCountMacro > 1 && bRunningMacro) {
+						DisplayLine(4, String("Macro Repeats: ") + String(nMacroRepeatsLeft), SystemInfo.menuTextColor);
 					}
 					// output the file
 					SendFile(FileNames[CurrentFileIndex]);
@@ -2067,16 +2106,16 @@ void ProcessFileOrTest()
 				if (bCancelRun) {
 					break;
 				}
-				if (!bShowBuiltInTests)
+				if (!SystemInfo.bShowBuiltInTests)
 					ShowProgressBar(0);
 				if (nRepeatsLeft > 1) {
-					if (repeatDelay) {
+					if (ImgInfo.repeatDelay) {
 						FastLED.clear(true);
 						// start timer
-						nTimerSeconds = repeatDelay;
+						nTimerSeconds = ImgInfo.repeatDelay;
 						while (nTimerSeconds > 0 && !CheckCancel()) {
 							line = "Repeat Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-							DisplayLine(2, line, menuTextColor);
+							DisplayLine(2, line, SystemInfo.menuTextColor);
 							line = "";
 							delay(100);
 							--nTimerSeconds;
@@ -2089,24 +2128,24 @@ void ProcessFileOrTest()
 				chainCount = 0;
 				break;
 			}
-			if (bShowBuiltInTests)
+			if (SystemInfo.bShowBuiltInTests)
 				break;
 			// see if we are chaining, if so, get the next file, if a folder we're done
-			if (bChainFiles) {
+			if (ImgInfo.bChainFiles) {
 				// grab the next file
 				if (CurrentFileIndex < FileNames.size() - 1)
 					++CurrentFileIndex;
 				if (IsFolder(CurrentFileIndex))
 					break;
 				// handle any chain delay
-				for (int dly = nChainDelay; dly > 0 && !CheckCancel(); --dly) {
+				for (int dly = ImgInfo.nChainDelay; dly > 0 && !CheckCancel(); --dly) {
 					line = "Chain Delay: " + String(dly / 10) + "." + String(dly % 10);
-					DisplayLine(2, line, menuTextColor);
+					DisplayLine(2, line, SystemInfo.menuTextColor);
 					delay(100);
 				}
 				// check for chain wait for keypress
-				if (chainCount && bChainWaitKey) {
-					DisplayLine(2, "Click: " + FileNames[CurrentFileIndex], menuTextColor);
+				if (chainCount && ImgInfo.bChainWaitKey) {
+					DisplayLine(2, "Click: " + FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
 					bool waitNext = true;
 					int wbtn;
 					while (waitNext) {
@@ -2138,27 +2177,32 @@ void ProcessFileOrTest()
 		}
 		// start again
 		CurrentFileIndex = lastFileIndex;
-		chainCount = bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
-		if (repeatDelay && (nRepeatsLeft > 1) || chainRepeatCount >= 1) {
+		chainCount = ImgInfo.bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
+		if (ImgInfo.repeatDelay && (nRepeatsLeft > 1) || chainRepeatCount >= 1) {
 			FastLED.clear(true);
 			// start timer
-			nTimerSeconds = repeatDelay;
+			nTimerSeconds = ImgInfo.repeatDelay;
 			while (nTimerSeconds > 0 && !CheckCancel()) {
 				line = "Repeat Delay: " + String(nTimerSeconds / 10) + "." + String(nTimerSeconds % 10);
-				DisplayLine(2, line, menuTextColor);
+				DisplayLine(2, line, SystemInfo.menuTextColor);
 				line = "";
 				delay(100);
 				--nTimerSeconds;
 			}
 		}
 	}
-	if (bChainFiles)
+	if (ImgInfo.bChainFiles)
 		CurrentFileIndex = lastFileIndex;
 	FastLED.clear(true);
 	tft.fillScreen(TFT_BLACK);
 	bIsRunning = false;
 	if (!bRunningMacro)
 		DisplayCurrentFile();
+	if (bRecordingMacro) {
+		// write the time for this macro into the file
+		time_t now = time(NULL);
+		recordingTotalTime += difftime(now, recordingTimeStart);
+	}
 	// clear buttons
 	CRotaryDialButton::clear();
 }
@@ -2172,12 +2216,12 @@ void SendFile(String Filename) {
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
 	if (dataFile.available()) {
-		for (int cnt = 0; cnt < (bMirrorPlayImage ? 2 : 1); ++cnt) {
+		for (int cnt = 0; cnt < (ImgInfo.bMirrorPlayImage ? 2 : 1); ++cnt) {
 			ReadAndDisplayFile(cnt == 0);
-			bReverseImage = !bReverseImage; // note this will be restored by SettingsSaveRestore
+			ImgInfo.bReverseImage = !ImgInfo.bReverseImage; // note this will be restored by SettingsSaveRestore
 			dataFile.seek(0);
 			FastLED.clear(true);
-			int wait = nMirrorDelay;
+			int wait = ImgInfo.nMirrorDelay;
 			while (wait-- > 0) {
 				delay(100);
 			}
@@ -2249,8 +2293,8 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		return;
 	}
 	int displayWidth = imgWidth;
-	if (imgWidth > TotalLeds) {
-		displayWidth = TotalLeds;           //only display the number of led's we have
+	if (imgWidth > LedInfo.nTotalLeds) {
+		displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
 	}
 
 	/* compute the line length */
@@ -2270,18 +2314,21 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	int percent;
 	unsigned minLoopTime = 0; // the minimum time it takes to process a line
 	bool bLoopTimed = false;
+	if (SystemInfo.bShowDuringBmpFile) {
+		ShowLeds(1);
+	}
 	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
-	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
+	for (int y = ImgInfo.bReverseImage ? imgHeight - 1 : 0; ImgInfo.bReverseImage ? y >= 0 : y < imgHeight; ImgInfo.bReverseImage ? --y : ++y) {
 		// approximate time left
-		if (bReverseImage)
-			secondsLeft = ((long)y * (nFrameHold + minLoopTime) / 1000L) + 1;
+		if (ImgInfo.bReverseImage)
+			secondsLeft = ((long)y * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
 		else
-			secondsLeft = ((long)(imgHeight - y) * (nFrameHold + minLoopTime) / 1000L) + 1;
+			secondsLeft = ((long)(imgHeight - y) * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
 		// mark the time for timing the loop
 		if (!bLoopTimed) {
 			minLoopTime = millis();
 		}
-		if (bMirrorPlayImage) {
+		if (ImgInfo.bMirrorPlayImage) {
 			if (totalSeconds == -1)
 				totalSeconds = secondsLeft;
 			if (doingFirstHalf) {
@@ -2291,10 +2338,10 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		if (secondsLeft != lastSeconds) {
 			lastSeconds = secondsLeft;
 			sprintf(num, "File Seconds: %d", secondsLeft);
-			DisplayLine(2, num, menuTextColor);
+			DisplayLine(2, num, SystemInfo.menuTextColor);
 		}
-		percent = map(bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
-		if (bMirrorPlayImage) {
+		percent = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+		if (ImgInfo.bMirrorPlayImage) {
 			percent /= 2;
 			if (!doingFirstHalf) {
 				percent += 50;
@@ -2312,7 +2359,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
 			// see if we want this one
-			if (bScaleHeight && (x * displayWidth) % imgWidth) {
+			if (ImgInfo.bScaleHeight && (x * displayWidth) % imgWidth) {
 				continue;
 			}
 			SetPixel(x, pixel, y);
@@ -2322,11 +2369,11 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 			minLoopTime = millis() - minLoopTime;
 			bLoopTimed = true;
 			// if fixed time then we need to calculate the framehold value
-			if (bFixedTime) {
+			if (ImgInfo.bFixedTime) {
 				// divide the time by the number of frames
-				nFrameHold = 1000 * nFixedImageTime / imgHeight;
-				nFrameHold -= minLoopTime;
-				nFrameHold = max(nFrameHold, 0);
+				ImgInfo.nFrameHold = 1000 * ImgInfo.nFixedImageTime / imgHeight;
+				ImgInfo.nFrameHold -= minLoopTime;
+				ImgInfo.nFrameHold = max(ImgInfo.nFrameHold, 0);
 			}
 		}
 		// wait for timer to expire before we show the next frame
@@ -2336,16 +2383,19 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		// now show the lights
 		FastLED.show();
+		if (SystemInfo.bShowDuringBmpFile) {
+			ShowLeds(0);
+		}
 		// set a timer while we go ahead and load the next frame
 		bStripWaiting = true;
-		esp_timer_start_once(oneshot_LED_timer, nFrameHold * 1000);
+		esp_timer_start_once(oneshot_LED_timer, static_cast<uint64_t>(ImgInfo.nFrameHold) * 1000);
 		// check keys
 		if (CheckCancel())
 			break;
-		if (bManualFrameAdvance) {
+		if (ImgInfo.bManualFrameAdvance) {
 			// check if frame advance button requested
-			if (nFramePulseCount) {
-				for (int ix = nFramePulseCount; ix; --ix) {
+			if (ImgInfo.nFramePulseCount) {
+				for (int ix = ImgInfo.nFramePulseCount; ix; --ix) {
 					// wait for press
 					while (digitalRead(FRAMEBUTTON)) {
 						if (CheckCancel())
@@ -2371,7 +2421,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 						CRotaryDialButton::pushButton(BTN_LONG);
 					else if (btn == BTN_LEFT) {
 						// backup a line, use 2 because the for loop does one when we're done here
-						if (bReverseImage) {
+						if (ImgInfo.bReverseImage) {
 							y += 2;
 							if (y > imgHeight)
 								y = imgHeight;
@@ -2396,14 +2446,23 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	}
 	// all done
 	readByte(true);
+	if (SystemInfo.bShowDuringBmpFile) {
+		ShowLeds(2);
+	}
 }
 
 // put the current file on the display
 // Note that menu is not used, it is called with NULL sometimes
 void ShowBmp(MenuItem*)
 {
-	if (bShowBuiltInTests)
+	if (SystemInfo.bShowBuiltInTests) {
+		if (BuiltInFiles[CurrentFileIndex].function) {
+			ShowLeds(1);    // get ready for preview
+			(*BuiltInFiles[CurrentFileIndex].function)();
+			ShowLeds(2);    // go back to normal
+		}
 		return;
+	}
 	String fn = currentFolder + FileNames[CurrentFileIndex];
 	// make sure this is a bmp file, if not just quietly go away
 	String tmp = fn.substring(fn.length() - 3);
@@ -2418,8 +2477,8 @@ void ShowBmp(MenuItem*)
 		WriteMessage("Not enough memory", true, 5000);
 		return;
 	}
-	bool bOldGamma = bGammaCorrection;
-	bGammaCorrection = false;
+	bool bOldGamma = LedInfo.bGammaCorrection;
+	LedInfo.bGammaCorrection = false;
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
 	if (!dataFile.available()) {
@@ -2466,8 +2525,8 @@ void ShowBmp(MenuItem*)
 	}
 	bool bHalfSize = false;
 	int displayWidth = imgWidth;
-	if (imgWidth > TotalLeds) {
-		displayWidth = TotalLeds;           //only display the number of led's we have
+	if (imgWidth > LedInfo.nTotalLeds) {
+		displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
 	}
 	// see if this is too big for the TFT
 	if (imgWidth > 144) {
@@ -2527,13 +2586,13 @@ void ShowBmp(MenuItem*)
 		switch (ReadButton()) {
 		case CRotaryDialButton::BTN_RIGHT:
 			if (allowScroll) {
-				imgOffset -= bHalfSize ? (nPreviewScrollCols * 2) : nPreviewScrollCols;
+				imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = max(0, imgOffset);
 			}
 			break;
 		case CRotaryDialButton::BTN_LEFT:
 			if (allowScroll) {
-				imgOffset += bHalfSize ? (nPreviewScrollCols * 2) : nPreviewScrollCols;
+				imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
 			}
 			break;
@@ -2547,14 +2606,14 @@ void ShowBmp(MenuItem*)
 			}
 			else {
 				tft.fillScreen(TFT_BLACK);
-				DisplayLine(0, currentFolder, menuTextColor);
-				DisplayLine(1, FileNames[CurrentFileIndex], menuTextColor);
+				DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
+				DisplayLine(1, FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
 				float walk = (float)imgHeight / (float)imgWidth;
-				DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", menuTextColor);
-				DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", menuTextColor);
+				DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
+				DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 				// calculate display time
-				float dspTime = bFixedTime ? nFixedImageTime : (imgHeight * nFrameHold / 1000.0 + imgHeight * .008);
-				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", menuTextColor);
+				float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
 				bShowingSize = true;
 				redraw = false;
 			}
@@ -2575,31 +2634,32 @@ void ShowBmp(MenuItem*)
 	free(scrBuf);
 	dataFile.close();
 	readByte(true);
-	bGammaCorrection = bOldGamma;
+	LedInfo.bGammaCorrection = bOldGamma;
 	tft.fillScreen(TFT_BLACK);
 }
 
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
-	if (bPauseDisplay)
-		return;
-	int y = line * tft.fontHeight();
-	tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
-	tft.setTextColor(color, backColor);
-	tft.drawString(text, 0, y);
+	// don't show if running and displaying file on LCD
+	if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
+		int y = line * tft.fontHeight();
+		tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
+		tft.setTextColor(color, backColor);
+		tft.drawString(text, 0, y);
+	}
 }
 
 // active menu line is in reverse video or * at front depending on bMenuStar
 void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
-	String mline = (hilite && bMenuStar ? "*" : " ") + text;
+	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
 	if (displine < MENU_LINES) {
-		if (bMenuStar) {
-			DisplayLine(displine, mline, menuTextColor, TFT_BLACK);
+		if (SystemInfo.bMenuStar) {
+			DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
 		}
 		else {
-			DisplayLine(displine, mline, hilite ? TFT_BLACK : menuTextColor, hilite ? menuTextColor : TFT_BLACK);
+			DisplayLine(displine, mline, hilite ? TFT_BLACK : SystemInfo.menuTextColor, hilite ? SystemInfo.menuTextColor : TFT_BLACK);
 		}
 	}
 }
@@ -2625,7 +2685,7 @@ uint32_t IRAM_ATTR readLong() {
 
 uint16_t IRAM_ATTR readInt() {
 	byte incomingbyte;
-	uint16_t retValue;
+	uint16_t retValue = 0;
 
 	incomingbyte = readByte(false);
 	retValue += (uint16_t)((byte)incomingbyte);
@@ -2707,54 +2767,58 @@ void DisplayCurrentFile(bool path)
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
 	//tft.setTextColor(TFT_BLACK, menuTextColor);
-	if (bShowBuiltInTests) {
-		if (bHiLiteCurrentFile) {
-			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, menuTextColor);
+	if (SystemInfo.bShowBuiltInTests) {
+		if (SystemInfo.bHiLiteCurrentFile) {
+			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
 		}
 		else {
-			DisplayLine(0, FileNames[CurrentFileIndex], menuTextColor, TFT_BLACK);
+			DisplayLine(0, FileNames[CurrentFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
 		}
 	}
 	else {
 		if (bSdCardValid) {
-			if (bHiLiteCurrentFile) {
-				DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), TFT_BLACK, menuTextColor);
+			if (SystemInfo.bHiLiteCurrentFile) {
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(0, ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (bMirrorPlayImage ? "><" : ""), menuTextColor, TFT_BLACK);
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
 		}
 	}
-	if (!bIsRunning && bShowNextFiles) {
+	if (!bIsRunning && SystemInfo.bShowNextFiles) {
 		for (int ix = 1; ix < MENU_LINES; ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
-				DisplayLine(ix, "", menuTextColor);
+				DisplayLine(ix, "", SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], menuTextColor);
+				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], SystemInfo.menuTextColor);
 			}
 		}
 	}
-	tft.setTextColor(menuTextColor);
+	tft.setTextColor(SystemInfo.menuTextColor);
 	// for debugging keypresses
 	//DisplayLine(3, String(nButtonDowns) + " " + nButtonUps);
 }
 
 void ShowProgressBar(int percent)
 {
-	if (!bShowProgress || bPauseDisplay)
-		return;
-	static int lastpercent;
-	if (lastpercent && (lastpercent == percent))
-		return;
-	if (percent == 0) {
-		tft.fillRect(0, tft.fontHeight() + 4, tft.width() - 1, 8, TFT_BLACK);
+	//if (SystemInfo.bShowProgress && !(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
+	if (SystemInfo.bShowProgress) {
+		static int lastpercent = 0;
+		if (lastpercent && (lastpercent == percent))
+			return;
+		int x = tft.width() - 1;
+		int y = SystemInfo.bShowDuringBmpFile ? 0 : (tft.fontHeight() + 4);
+		int h = SystemInfo.bShowDuringBmpFile ? 4 : 8;
+		if (percent == 0) {
+			tft.fillRect(0, y, x, h, TFT_BLACK);
+		}
+		DrawProgressBar(0, y, x, h, percent, !SystemInfo.bShowDuringBmpFile);
+		lastpercent = percent;
 	}
-	DrawProgressBar(0, tft.fontHeight() + 4, tft.width() - 1, 8, percent);
-	lastpercent = percent;
 }
 
 // display message on first line
@@ -2766,7 +2830,7 @@ void WriteMessage(String txt, bool error, int wait)
 		tft.setTextColor(TFT_RED);
 	}
 	else {
-		tft.setTextColor(menuTextColor);
+		tft.setTextColor(SystemInfo.menuTextColor);
 	}
 	tft.setCursor(0, tft.fontHeight());
 	tft.setTextWrap(true);
@@ -2790,7 +2854,7 @@ String MakeMIWFilename(String filename, bool addext)
 int LookUpFile(String name)
 {
 	int ix = 0;
-	for (auto nm : FileNames) {
+	for (auto &nm : FileNames) {
 		if (name.equalsIgnoreCase(nm)) {
 			return ix;
 		}
@@ -2844,7 +2908,7 @@ bool ProcessConfigFile(String filename)
 							break;
 						case vtBuiltIn:
 						{
-							bool bLastBuiltIn = bShowBuiltInTests;
+							bool bLastBuiltIn = SystemInfo.bShowBuiltInTests;
 							args.toUpperCase();
 							bool value = args[0] == 'T';
 							if (value != bLastBuiltIn) {
@@ -2863,7 +2927,7 @@ bool ProcessConfigFile(String filename)
 							int oldFileIndex = CurrentFileIndex;
 							// save the old folder if necessary
 							String oldFolder;
-							if (!bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
+							if (!SystemInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
 								oldFolder = currentFolder;
 								currentFolder = folder;
 								GetFileNamesFromSD(folder);
@@ -2919,7 +2983,7 @@ bool GetFileNamesFromSD(String dir) {
 	FileNames.clear();
 	if (nBootCount == 0)
 		CurrentFileIndex = 0;
-	if (bShowBuiltInTests) {
+	if (SystemInfo.bShowBuiltInTests) {
 		for (int ix = 0; ix < (sizeof(BuiltInFiles) / sizeof(*BuiltInFiles)); ++ix) {
 			FileNames.push_back(String(BuiltInFiles[ix].text));
 		}
@@ -3137,7 +3201,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					break;
 				case vtShowFile:
 					if (*(char*)(SettingsVarList[ix].address)) {
-						line = String(SettingsVarList[ix].name) + "=" + (bShowBuiltInTests ? "" : currentFolder) + String((char*)(SettingsVarList[ix].address));
+						line = String(SettingsVarList[ix].name) + "=" + (SystemInfo.bShowBuiltInTests ? "" : currentFolder) + String((char*)(SettingsVarList[ix].address));
 					}
 					break;
 				case vtInt:
@@ -3171,93 +3235,23 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 	return retval;
 }
 
-// save some settings in the eeprom
-// return true if valid, false if failed
-// the LED total count and controllers must always be saved and loaded
-bool SaveSettings(bool save, bool bOnlySignature, bool bAutoloadOnlyFlag, bool bLEDControllersOnly)
-{
-	bool retvalue = true;
-	int blockpointer = 0;
-	for (int ix = 0; ix < (sizeof(saveValueList) / sizeof(*saveValueList)); blockpointer += saveValueList[ix++].size) {
-		if (save) {
-			EEPROM.writeBytes(blockpointer, saveValueList[ix].val, saveValueList[ix].size);
-			if (ix == 0 && bOnlySignature) {
-				break;
-			}
-			if (ix == 3 && bLEDControllersOnly) {
-				break;
-			}
-			if (ix == 4 && bAutoloadOnlyFlag) {
-				break;
-			}
-		}
-		else {  // load
-			if (ix == 0) {
-				// check signature
-				char svalue[sizeof(signature)];
-				memset(svalue, 0, sizeof(svalue));
-				size_t bytesread = EEPROM.readBytes(0, svalue, sizeof(signature));
-				if (strcmp(svalue, signature)) {
-					WriteMessage("bad eeprom signature\nrepairing...", true);
-					return SaveSettings(true);
-				}
-				if (bOnlySignature) {
-					return true;
-				}
-			}
-			else {
-				EEPROM.readBytes(blockpointer, saveValueList[ix].val, saveValueList[ix].size);
-			}
-			if (ix == 3 && bLEDControllersOnly) {
-				return true;
-			}
-			if (ix == 4 && bAutoloadOnlyFlag) {
-				return true;
-			}
-		}
-	}
-	if (save) {
-		retvalue = EEPROM.commit();
-	}
-	else {
-		int savedFileIndex = CurrentFileIndex;
-		// we don't know the folder path, so just reset the folder level
-		currentFolder = "/";
-		setupSDcard();
-		CurrentFileIndex = savedFileIndex;
-		// make sure file index isn't too big
-		if (CurrentFileIndex >= FileNames.size()) {
-			CurrentFileIndex = 0;
-		}
-		// set the brightness values since they might have changed
-		SetDisplayBrightness(nDisplayBrightness);
-		// don't need to do this here since it is always set right before running
-		//FastLED.setBrightness(nStripBrightness);
-	}
-	// don't display if only loading the autoload flag
-	if (save || !bAutoloadOnlyFlag) {
-		WriteMessage(String(save ? (bAutoloadOnlyFlag ? "Autoload Saved" : "Settings Saved") : "Settings Loaded"), false, 500);
-	}
-	return retvalue;
-}
-
 // save the eeprom settings
 void SaveEepromSettings(MenuItem* menu)
 {
-	SaveSettings(true);
+	SaveLoadSettings(true);
 }
 
 // load eeprom settings
 void LoadEepromSettings(MenuItem* menu)
 {
-	SaveSettings(false);
+	SaveLoadSettings(false);
 }
 
 // save the macro with the current settings
 void SaveMacro(MenuItem* menu)
 {
 	bRecordingMacro = true;
-	WriteOrDeleteConfigFile(String(nCurrentMacro), false, false);
+	WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
 	bRecordingMacro = false;
 }
 
@@ -3265,18 +3259,18 @@ void SaveMacro(MenuItem* menu)
 void RunMacro(MenuItem* menu)
 {
 	bCancelMacro = false;
-	for (nMacroRepeatsLeft = nRepeatCountMacro; nMacroRepeatsLeft; --nMacroRepeatsLeft) {
+	for (nMacroRepeatsLeft = ImgInfo.nRepeatCountMacro; nMacroRepeatsLeft; --nMacroRepeatsLeft) {
 		MacroLoadRun(menu, true);
 		if (bCancelMacro) {
 			break;
 		}
 		tft.fillScreen(TFT_BLACK);
-		for (int wait = nRepeatWaitMacro; nMacroRepeatsLeft > 1 && wait; --wait) {
+		for (int wait = ImgInfo.nRepeatWaitMacro; nMacroRepeatsLeft > 1 && wait; --wait) {
 			if (CheckCancel()) {
 				nMacroRepeatsLeft = 0;
 				break;
 			}
-			DisplayLine(5, "#" + String(nCurrentMacro) + String(" Wait: ") + String(wait / 10) + "." + String(wait % 10) + " Repeat: " + String(nMacroRepeatsLeft - 1), menuTextColor);
+			DisplayLine(5, "#" + String(ImgInfo.nCurrentMacro) + String(" Wait: ") + String(wait / 10) + "." + String(wait % 10) + " Repeat: " + String(nMacroRepeatsLeft - 1), SystemInfo.menuTextColor);
 			delay(100);
 		}
 	}
@@ -3293,12 +3287,12 @@ void MacroLoadRun(MenuItem* menu, bool save)
 {
 	bool oldShowBuiltins;
 	if (save) {
-		oldShowBuiltins = bShowBuiltInTests;
+		oldShowBuiltins = SystemInfo.bShowBuiltInTests;
 		SettingsSaveRestore(true, 1);
 	}
 	bRunningMacro = true;
 	bRecordingMacro = false;
-	String line = String(nCurrentMacro) + ".miw";
+	String line = String(ImgInfo.nCurrentMacro) + ".miw";
 	if (!ProcessConfigFile(line)) {
 		line += " not found";
 		WriteMessage(line, true);
@@ -3306,7 +3300,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	bRunningMacro = false;
 	if (save) {
 		// need to handle if the builtins was changed
-		if (oldShowBuiltins != bShowBuiltInTests) {
+		if (oldShowBuiltins != SystemInfo.bShowBuiltInTests) {
 			ToggleFilesBuiltin(NULL);
 		}
 		SettingsSaveRestore(false, 1);
@@ -3315,7 +3309,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 
 void DeleteMacro(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile(String(nCurrentMacro), true, false);
+	WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), true, false);
 }
 
 // show some LED's with and without white balance adjust
@@ -3329,7 +3323,7 @@ void ShowWhiteBalance(MenuItem* menu)
 	delay(2000);
 	FastLED.clear(true);
 	delay(50);
-	FastLED.setTemperature(CRGB(whiteBalance.r, whiteBalance.g, whiteBalance.b));
+	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.show();
 	delay(3000);
 	FastLED.clear(true);
@@ -3339,8 +3333,8 @@ void ShowWhiteBalance(MenuItem* menu)
 // also check to make sure it isn't out of range
 int AdjustStripIndex(int ix)
 {
-	int ledCount = bSecondController ? TotalLeds / 2 : TotalLeds;
-	switch (stripsMode) {
+	int ledCount = LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds;
+	switch (LedInfo.stripsMode) {
 	case STRIPS_MIDDLE_WIRED:	// bottom reversed, top normal, both wired in the middle
 		if (ix < ledCount) {
 			ix = (ledCount - 1 - ix);
@@ -3350,12 +3344,12 @@ int AdjustStripIndex(int ix)
 		break;
 	case STRIPS_OUTSIDE_WIRED:	// top reversed, bottom normal, no connection in the middle
 		if (ix >= ledCount) {
-			ix = (TotalLeds - 1 - ix) + ledCount;
+			ix = (LedInfo.nTotalLeds - 1 - ix) + ledCount;
 		}
 		break;
 	}
 	// make sure it isn't too big or too small
-	ix = constrain(ix, 0, TotalLeds - 1);
+	ix = constrain(ix, 0, LedInfo.nTotalLeds - 1);
 	return ix;
 }
 
@@ -3371,10 +3365,10 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 	static int lastColumn;
 	static int maxColumn;
 	static int fade;
-	if (nFadeInOutFrames) {
+	if (ImgInfo.nFadeInOutFrames) {
 		// handle fading
 		if (column == -1) {
-			fadeColumns = min(totalColumns / 2, nFadeInOutFrames);
+			fadeColumns = min(totalColumns / 2, ImgInfo.nFadeInOutFrames);
 			maxColumn = totalColumns;
 			fadeStep = 255 / fadeColumns;
 			//Serial.println("fadeStep: " + String(fadeStep) + " fadeColumns: " + String(fadeColumns) + " maxColumn: " + String(maxColumn));
@@ -3384,7 +3378,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		}
 		// when the column changes check if we are in the fade areas
 		if (column != lastColumn) {
-			int realColumn = bReverseImage ? maxColumn - 1 - column : column;
+			int realColumn = ImgInfo.bReverseImage ? maxColumn - 1 - column : column;
 			if (realColumn <= fadeColumns) {
 				// calculate the fade amount
 				fade = realColumn * fadeStep;
@@ -3409,17 +3403,17 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		fade = 255;
 	}
 	int ix1, ix2;
-	if (bUpsideDown) {
-		if (bDoublePixels && !bShowBuiltInTests) {
-			ix1 = AdjustStripIndex(TotalLeds - 1 - 2 * ix);
-			ix2 = AdjustStripIndex(TotalLeds - 2 - 2 * ix);
+	if (ImgInfo.bUpsideDown) {
+		if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests) {
+			ix1 = AdjustStripIndex(LedInfo.nTotalLeds - 1 - 2 * ix);
+			ix2 = AdjustStripIndex(LedInfo.nTotalLeds - 2 - 2 * ix);
 		}
 		else {
-			ix1 = AdjustStripIndex(TotalLeds - 1 - ix);
+			ix1 = AdjustStripIndex(LedInfo.nTotalLeds - 1 - ix);
 		}
 	}
 	else {
-		if (bDoublePixels && !bShowBuiltInTests) {
+		if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(2 * ix);
 			ix2 = AdjustStripIndex(2 * ix + 1);
 		}
@@ -3432,7 +3426,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		//Serial.println("col: " + String(column) + " fade: " + String(fade));
 	}
 	leds[ix1] = pixel;
-	if (bDoublePixels && !bShowBuiltInTests)
+	if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests)
 		leds[ix2] = pixel;
 }
 
@@ -3512,22 +3506,24 @@ void RainbowPulse()
 	//Serial.println("second: " + String(bSecondStrip));
 	//Serial.println("Len: " + String(STRIPLENGTH));
 	for (int i = 0; i < TWO_HUNDRED_PI; i++) {
-		element = round((TotalLeds - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
+		element = round((LedInfo.nTotalLeds - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
 		//Serial.println("elements: " + String(element) + " " + String(last_element));
 		if (element > last_element) {
-			SetPixel(element, CHSV(element * nRainbowPulseColorScale + nRainbowPulseStartColor, nRainbowPulseSaturation, 255));
-			FastLED.show();
+			SetPixel(element, CHSV(element * BuiltinInfo.nRainbowPulseColorScale + BuiltinInfo.nRainbowPulseStartColor, BuiltinInfo.nRainbowPulseSaturation, 255));
+			ShowLeds();
+			//FastLED.show();
 			highest_element = max(highest_element, element);
 		}
 		if (CheckCancel()) {
 			break;
 		}
-		delayMicroseconds(nRainbowPulsePause * 10);
+		delayMicroseconds(BuiltinInfo.nRainbowPulsePause * 10);
 		if (element < last_element) {
 			// cleanup the highest one
 			SetPixel(highest_element, CRGB::Black);
 			SetPixel(element, CRGB::Black);
-			FastLED.show();
+			ShowLeds();
+			//FastLED.show();
 		}
 		last_element = element;
 	}
@@ -3538,11 +3534,11 @@ void RainbowPulse()
 */
 void TestWedge()
 {
-	int midPoint = TotalLeds / 2 - 1;
-	for (int ix = 0; ix < TotalLeds / 2; ++ix) {
-		SetPixel(midPoint + ix, CRGB(nWedgeRed, nWedgeGreen, nWedgeBlue));
-		SetPixel(midPoint - ix, CRGB(nWedgeRed, nWedgeGreen, nWedgeBlue));
-		if (!bWedgeFill) {
+	int midPoint = LedInfo.nTotalLeds / 2 - 1;
+	for (int ix = 0; ix < LedInfo.nTotalLeds / 2; ++ix) {
+		SetPixel(midPoint + ix, CRGB(BuiltinInfo.nWedgeRed, BuiltinInfo.nWedgeGreen, BuiltinInfo.nWedgeBlue));
+		SetPixel(midPoint - ix, CRGB(BuiltinInfo.nWedgeRed, BuiltinInfo.nWedgeGreen, BuiltinInfo.nWedgeBlue));
+		if (!BuiltinInfo.bWedgeFill) {
 			if (ix > 1) {
 				SetPixel(midPoint + ix - 1, CRGB::Black);
 				SetPixel(midPoint - ix + 1, CRGB::Black);
@@ -3551,8 +3547,9 @@ void TestWedge()
 				SetPixel(midPoint, CRGB::Black);
 			}
 		}
-		FastLED.show();
-		delay(nFrameHold);
+		ShowLeds();
+		//FastLED.show();
+		delay(ImgInfo.nFrameHold);
 		if (CheckCancel()) {
 			return;
 		}
@@ -3650,14 +3647,100 @@ void rainbow_fill()
 }
 
 // draw a progress bar
-void DrawProgressBar(int x, int y, int dx, int dy, int percent)
+void DrawProgressBar(int x, int y, int dx, int dy, int percent, bool rect)
 {
-	tft.drawRoundRect(x, y, dx, dy, 2, menuTextColor);
+	if (rect)
+		tft.drawRoundRect(x, y, dx, dy, 2, SystemInfo.menuTextColor);
 	int fill = (dx - 2) * percent / 100;
 	// fill the filled part
 	tft.fillRect(x + 1, y + 1, fill, dy - 2, TFT_DARKGREEN);
 	// blank the empty part
 	tft.fillRect(x + 1 + fill, y + 1, dx - 2 - fill, dy - 2, TFT_BLACK);
+}
+
+// save/load settings
+// return false if not found or wrong version
+bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay)
+{
+	bool retvalue = true;
+	Preferences prefs;
+	prefs.begin(prefsName, !save);
+	if (save) {
+		Serial.println("saving");
+		prefs.putString(prefsVersion, myVersion);
+		prefs.putBool(prefsAutoload, bAutoLoadSettings);
+		// save things
+		if (!ledonly) {
+			prefs.putBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
+			prefs.putBytes(prefsBuiltInInfo, &BuiltinInfo, sizeof(BuiltinInfo));
+			prefs.putBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
+			prefs.putInt(prefsLongPressTimer, CRotaryDialButton::m_nLongPressTimerValue);
+			prefs.putInt(prefsDialSensitivity, CRotaryDialButton::m_nDialSensitivity);
+			prefs.putInt(prefsDialSpeed, CRotaryDialButton::m_nDialSpeed);
+			prefs.putBool(prefsDialReverse, CRotaryDialButton::m_bReverseDial);
+			if (!nodisplay)
+				WriteMessage("Settings Saved", false, 500);
+		}
+		// we always do these since they are hardware related
+		prefs.putBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
+	}
+	else {
+		// load things
+		String vsn = prefs.getString(prefsVersion, "");
+		if (vsn == myVersion) {
+			if (autoloadonly) {
+				bAutoLoadSettings = prefs.getBool(prefsAutoload, false);
+				Serial.println("getting autoload: " + String(bAutoLoadSettings));
+			}
+			else if (!ledonly) {
+				prefs.getBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
+				prefs.getBytes(prefsBuiltInInfo, &BuiltinInfo, sizeof(BuiltinInfo));
+				prefs.getBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
+				CRotaryDialButton::m_nLongPressTimerValue = prefs.getInt(prefsLongPressTimer, 40);
+				CRotaryDialButton::m_nDialSensitivity = prefs.getInt(prefsDialSensitivity, 1);
+				CRotaryDialButton::m_nDialSpeed = prefs.getInt(prefsDialSpeed, 300);
+				CRotaryDialButton::m_bReverseDial = prefs.getBool(prefsDialReverse, false);
+				int savedFileIndex = CurrentFileIndex;
+				// we don't know the folder path, so just reset the folder level
+				currentFolder = "/";
+				setupSDcard();
+				CurrentFileIndex = savedFileIndex;
+				// make sure file index isn't too big
+				if (CurrentFileIndex >= FileNames.size()) {
+					CurrentFileIndex = 0;
+				}
+				// set the brightness values since they might have changed
+				SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+				if (!nodisplay)
+					WriteMessage("Settings Loaded", false, 500);
+			}
+			prefs.getBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
+		}
+		else {
+			retvalue = false;
+			if (!nodisplay)
+				WriteMessage("Settings not saved yet", true, 2000);
+		}
+	}
+	prefs.end();
+	return retvalue;
+}
+
+// delete saved settings
+void FactorySettings(MenuItem* menu)
+{
+	Preferences prefs;
+	prefs.begin(prefsName);
+	prefs.clear();
+	prefs.end();
+	ESP.restart();
+}
+
+void EraseFlash(MenuItem* menu)
+{
+	nvs_flash_erase(); // erase the NVS partition and...
+	nvs_flash_init(); // initialize the NVS partition.
+	//SaveLoadSettings(true);
 }
 
 void ReportCouldNotCreateFile(String target){
@@ -3673,7 +3756,7 @@ FsFile UploadFile; // I would need some Help here, Martin
 void handleFileUpload(){ // upload a new file to the Filing system
   HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
                                             // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
-  if(uploadfile.status == UPLOAD_FILE_START)
+  if (uploadfile.status == UPLOAD_FILE_START)
   {
     String filename = uploadfile.filename;
     String filepath = String("/");
@@ -3702,7 +3785,7 @@ void handleFileUpload(){ // upload a new file to the Filing system
       append_page_footer();
       server.send(200,"text/html",webpage);
 	  // reload the file list, if not showing built-ins
-	  if (!bShowBuiltInTests) {
+	  if (!SystemInfo.bShowBuiltInTests) {
 		  GetFileNamesFromSD(currentFolder);
 	  }
     } 
@@ -3863,16 +3946,16 @@ void ShowSettings() {
 	append_page_header();
 	webpage += "<h3>Current Settings</h3>";
 	webpage += String("<p>Current File: ") +currentFolder+ FileNames[CurrentFileIndex];
-	if (bFixedTime) {
-		webpage += String("<p>Fixed Image Time: ") + String(nFixedImageTime) + " S";
+	if (ImgInfo.bFixedTime) {
+		webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	}
 	else {
-		webpage += String("<p>Column Time: ") + String(nFrameHold) + " mS";
+		webpage += String("<p>Column Time: ") + String(ImgInfo.nFrameHold) + " mS";
 	}
-	webpage += String("<p>Repeat Count: ") + String(repeatCount);
+	webpage += String("<p>Repeat Count: ") + String(ImgInfo.repeatCount);
 	IncreaseRepeatButton();
 	DecreaseRepeatButton();
-	webpage += String("<p>LED Brightness: ") + String(nStripBrightness);
+	webpage += String("<p>LED Brightness: ") + String(LedInfo.nLEDBrightness);
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
@@ -3886,4 +3969,40 @@ void File_Upload(){
   webpage += F("<a href='/'>[Back]</a><br><br>");
   append_page_footer();
   server.send(200, "text/html",webpage);
+}
+
+// show on leds or display
+// mode 0 is normal, mode 1 is prepare for LCD, mode 2 is reset to normal
+void ShowLeds(int mode)
+{
+	static uint16_t* scrBuf = nullptr;
+	static int col = 0;
+	if (scrBuf == nullptr && mode == 0) {
+		FastLED.show();
+		return;
+	}
+	else if (mode == 0) {
+		for (int ix = 0; ix < tft.height(); ++ix) {
+			uint16_t color = tft.color565(leds[ix].r, leds[ix].g, leds[ix].b);
+			uint16_t sbcolor;
+			// the memory image colors are byte swapped
+			swab(&color, &sbcolor, sizeof(uint16_t));
+			scrBuf[ix] = sbcolor;
+		}
+		tft.pushRect(col, 0, 1, tft.height(), scrBuf);
+		++col;
+		if (col == tft.width())
+			tft.fillScreen(TFT_BLACK);
+		col = col % tft.width();
+	}
+	else if (mode == 1) {
+		col = 0;
+		tft.fillScreen(TFT_BLACK);
+		FastLED.clearData();
+		scrBuf = (uint16_t*)calloc(144, sizeof(uint16_t));
+	}
+	else if (mode == 2) {
+		free(scrBuf);
+		scrBuf = NULL;
+	}
 }
