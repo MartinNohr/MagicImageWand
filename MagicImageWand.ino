@@ -423,7 +423,7 @@ void ShowMenu(struct MenuItem* menu)
 	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
-	char line[100]{};
+	char line[50]{};
 	bool skip = false;
 	// loop through the menu
 	for (int menix = 0; menu->op != eTerminate; ++menu, ++menix) {
@@ -2005,6 +2005,7 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 // run file or built-in
 void ProcessFileOrTest()
 {
+	time_t recordingTimeStart;                // holds the start time for the current recording part
 	String line;
 	// let's see if this is a folder command
 	String tmp = FileNames[CurrentFileIndex];
@@ -2029,10 +2030,12 @@ void ProcessFileOrTest()
 		return;
 	}
 	if (bRecordingMacro) {
+		// get the starting name, the index will change for chaining, but the macro file has to have the start
 		strcpy(FileToShow, FileNames[CurrentFileIndex].c_str());
 		// tag the start time
 		recordingTimeStart = time(NULL);
-		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
+		recordingTime = 0;
+		//Serial.println("marking macro start time: " + String(recordingTimeStart));
 	}
 	bIsRunning = true;
 	// clear the rest of the lines
@@ -2201,7 +2204,9 @@ void ProcessFileOrTest()
 	if (bRecordingMacro) {
 		// write the time for this macro into the file
 		time_t now = time(NULL);
-		recordingTotalTime += difftime(now, recordingTimeStart);
+		recordingTime = (int)difftime(now, recordingTimeStart);
+		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
+		DisplayCurrentFile(SystemInfo.bShowFolder);
 	}
 	// clear buttons
 	CRotaryDialButton::clear();
@@ -2767,21 +2772,22 @@ void DisplayCurrentFile(bool path)
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
 	//tft.setTextColor(TFT_BLACK, menuTextColor);
+	String line = FileNames[CurrentFileIndex];
 	if (SystemInfo.bShowBuiltInTests) {
 		if (SystemInfo.bHiLiteCurrentFile) {
-			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
+			DisplayLine(0, line, TFT_BLACK, SystemInfo.menuTextColor);
 		}
 		else {
-			DisplayLine(0, FileNames[CurrentFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
+			DisplayLine(0, line, SystemInfo.menuTextColor, TFT_BLACK);
 		}
 	}
 	else {
 		if (bSdCardValid) {
 			if (SystemInfo.bHiLiteCurrentFile) {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + line + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + line + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {
@@ -2797,6 +2803,11 @@ void DisplayCurrentFile(bool path)
 				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], SystemInfo.menuTextColor);
 			}
 		}
+	}
+	// if recording put a red digit at the top right
+	if (bRecordingMacro) {
+		tft.setTextColor(TFT_BLACK, TFT_RED);
+		tft.drawString(String(ImgInfo.nCurrentMacro), tft.width() - 10, 2);
 	}
 	tft.setTextColor(SystemInfo.menuTextColor);
 	// for debugging keypresses
@@ -2959,6 +2970,11 @@ bool ProcessConfigFile(String filename)
 							cp->b = args.toInt();
 						}
 						break;
+						case vtMacroTime:
+						{
+							*(int*)(SettingsVarList[which].address) = args.toInt();
+						}
+						break;
 						default:
 							break;
 						}
@@ -2972,6 +2988,60 @@ bool ProcessConfigFile(String filename)
 	}
 	else
 		retval = false;
+	return retval;
+}
+
+// return the total time from the macro file
+int MacroTime(String filepath, int* files)
+{
+	int retval = 0;
+	int count = 0;
+#if USE_STANDARD_SD
+	SDFile rdfile;
+#else
+	FsFile rdfile;
+#endif
+	rdfile = SD.open(filepath);
+	if (rdfile.available()) {
+		String line, command, args;
+		while (line = rdfile.readStringUntil('\n'), line.length()) {
+			// read the lines and do what they say
+			int ix = line.indexOf('=', 0);
+			if (ix > 0) {
+				command = line.substring(0, ix);
+				command.trim();
+				command.toUpperCase();
+				args = line.substring(ix + 1);
+				args.trim();
+				// loop through the var list looking for a match, only do the time ones
+				for (int which = 0; which < sizeof(SettingsVarList) / sizeof(*SettingsVarList); ++which) {
+					if (command.compareTo(SettingsVarList[which].name) == 0) {
+						switch (SettingsVarList[which].type) {
+						case vtInt:
+						case vtBool:
+						case vtBuiltIn:
+						case vtShowFile:
+						case vtRGB:
+							break;
+						case vtMacroTime:
+							{
+								retval += args.toInt();
+								++count;
+							}
+							break;
+						default:
+							break;
+						}
+						// we found it, so carry on
+						break;
+					}
+				}
+			}
+		}
+		rdfile.close();
+	}
+	//Serial.println("macro time: " + String(retval));
+	*files = count;
 	return retval;
 }
 
@@ -3175,6 +3245,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 	else {
 		filepath = ((bRecordingMacro || bRunningMacro) ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
 	}
+	bool fileExists = SD.exists(filepath.c_str());
 	if (remove) {
 		if (!SD.exists(filepath.c_str()))
 			WriteMessage(String("Not Found:\n") + filepath);
@@ -3217,6 +3288,9 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					line = String(SettingsVarList[ix].name) + "=" + String(cp->r) + "," + String(cp->g) + "," + String(cp->b);
 				}
 				break;
+				case vtMacroTime:
+					line = String(SettingsVarList[ix].name) + "=" + String(*(int*)(SettingsVarList[ix].address));
+					break;
 				default:
 					line = "";
 					break;
@@ -3277,6 +3351,21 @@ void RunMacro(MenuItem* menu)
 	bCancelMacro = false;
 }
 
+// display some macro info
+void InfoMacro(MenuItem* menu)
+{
+	tft.fillScreen(TFT_BLACK);
+	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
+	int files;
+	DisplayLine(0, line, SystemInfo.menuTextColor);
+	DisplayLine(1, "calculating...", SystemInfo.menuTextColor);
+	int seconds = MacroTime(line, &files);
+	DisplayLine(1, "Files: " + String(files), SystemInfo.menuTextColor);
+	DisplayLine(2, "Time: " + String(seconds) + " Sec", SystemInfo.menuTextColor);
+	while (ReadButton() == BTN_NONE)
+		;
+}
+
 // like run, but doesn't restore settings
 void LoadMacro(MenuItem* menu)
 {
@@ -3292,7 +3381,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	}
 	bRunningMacro = true;
 	bRecordingMacro = false;
-	String line = String(ImgInfo.nCurrentMacro) + ".miw";
+	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
 	if (!ProcessConfigFile(line)) {
 		line += " not found";
 		WriteMessage(line, true);

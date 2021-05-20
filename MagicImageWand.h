@@ -312,8 +312,7 @@ bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
 bool bRecordingMacro = false;             // set while recording
 char FileToShow[100];
-double recordingTotalTime;                // incremented as each part is added
-time_t recordingTimeStart;                // holds the start time for the current recording part
+int recordingTime;                        // shows the time for each part
 bool bRunningMacro = false;               // set while running
 int nMacroRepeatsLeft = 1;                // set during macro running
 volatile int nTimerSeconds;
@@ -404,6 +403,7 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag);
 bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile);
 void RunMacro(MenuItem* menu);
 void LoadMacro(MenuItem* menu);
+void InfoMacro(MenuItem* menu);
 void SaveMacro(MenuItem* menu);
 void DeleteMacro(MenuItem* menu);
 void LightBar(MenuItem* menu);
@@ -747,16 +747,16 @@ MenuItem EepromMenu[] = {
 };
 MenuItem MacroSelectMenu[] = {
     //{eExit,"Previous Menu"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
-    {eList,"Macro: #%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
+    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
     //{eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -774,6 +774,7 @@ MenuItem MacroMenu[] = {
     {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.nRepeatCountMacro,1,100},
         {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
+        {eTextInt,"Info: #%d",InfoMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Load: #%d",LoadMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Save: #%d",SaveMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Delete: #%d",DeleteMacro,&ImgInfo.nCurrentMacro},
@@ -855,6 +856,7 @@ enum SETVARTYPE {
     vtRGB,
     vtShowFile,         // run a file on the display, the file has the path which is used to set the current path
     vtBuiltIn,          // bool for builtins or SD
+    vtMacroTime,        // holds the estimated time to run this macro
 };
 struct SETTINGVAR {
     char* name;
@@ -863,6 +865,7 @@ struct SETTINGVAR {
     int min, max;
 };
 struct SETTINGVAR SettingsVarList[] = {
+    {"MACRO TIME",&recordingTime,vtMacroTime},
     {"STRIP BRIGHTNESS",&LedInfo.nLEDBrightness,vtInt,1,255},
     {"GAMMA CORRECTION",&LedInfo.bGammaCorrection,vtBool},
     {"WHITE BALANCE",&LedInfo.whiteBalance,vtRGB},
