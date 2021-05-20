@@ -51,6 +51,7 @@ void setup()
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN);
 	setupSDcard();
+	GetFileNamesFromSDorBuiltins(currentFolder);
 	//listDir(SD, "/", 2, "");
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
@@ -243,12 +244,9 @@ void setup()
 		;
 	// clear the button buffer
 	CRotaryDialButton::clear();
-	if (!bSdCardValid) {
-		DisplayCurrentFile();
-		delay(1000);
-		ToggleFilesBuiltin(NULL);
-		tft.fillScreen(TFT_BLACK);
-	}
+	//if (!bSdCardValid) {
+	//	ToggleFilesBuiltin(NULL);
+	//}
 
 	DisplayCurrentFile();
 	/*
@@ -569,7 +567,6 @@ void ShowMenu(struct MenuItem* menu)
 void ToggleFilesBuiltin(MenuItem* menu)
 {
 	// clear filenames list
-	FileNames.clear();
 	bool lastval = SystemInfo.bShowBuiltInTests;
 	int oldIndex = CurrentFileIndex;
 	String oldFolder = currentFolder;
@@ -579,20 +576,13 @@ void ToggleFilesBuiltin(MenuItem* menu)
 	else {
 		SystemInfo.bShowBuiltInTests = !SystemInfo.bShowBuiltInTests;
 	}
+	if (!SystemInfo.bShowBuiltInTests && !bSdCardValid) {
+		// see if we can make it valid
+		setupSDcard();
+	}
 	if (lastval != SystemInfo.bShowBuiltInTests) {
-		if (SystemInfo.bShowBuiltInTests) {
-			CurrentFileIndex = 0;
-			for (int ix = 0; ix < sizeof(BuiltInFiles) / sizeof(*BuiltInFiles); ++ix) {
-				// add each one
-				FileNames.push_back(String(BuiltInFiles[ix].text));
-			}
-			currentFolder = "";
-		}
-		else {
-			// read the SD
-			currentFolder = lastFolder;
-			GetFileNamesFromSD(currentFolder);
-		}
+		currentFolder = lastFolder;
+		GetFileNamesFromSDorBuiltins(currentFolder);
 	}
 	// restore indexes
 	CurrentFileIndex = lastFileIndex;
@@ -986,7 +976,7 @@ bool HandleRunMode()
 		break;
 		//case btnShowFiles:
 		//	bShowBuiltInTests = !bShowBuiltInTests;
-		//	GetFileNamesFromSD(currentFolder);
+		//	GetFileNamesFromSDorBuiltins(currentFolder);
 		//	DisplayCurrentFile();
 		//	break;
 	case BTN_LONG:
@@ -1074,7 +1064,6 @@ void setupSDcard()
 	//uint64_t cardSize = (uint64_t)SD.clusterCount() * SD.bytesPerCluster() / (1024 * 1024 * 1024);
 	//Serial.printf("SD Card Size: %llu GB\n", cardSize);
 #endif
-	bSdCardValid = GetFileNamesFromSD(currentFolder);
 }
 
 // return the pixel
@@ -2014,7 +2003,7 @@ void ProcessFileOrTest()
 		tmp = tmp.substring(1);
 		// change folder, reload files
 		currentFolder += tmp + "/";
-		GetFileNamesFromSD(currentFolder);
+		GetFileNamesFromSDorBuiltins(currentFolder);
 		DisplayCurrentFile();
 		return;
 	}
@@ -2023,7 +2012,7 @@ void ProcessFileOrTest()
 		tmp = tmp.substring(0, tmp.lastIndexOf("/") + 1);
 		// change folder, reload files
 		currentFolder = tmp;
-		GetFileNamesFromSD(currentFolder);
+		GetFileNamesFromSDorBuiltins(currentFolder);
 		CurrentFileIndex = FileIndexStack.top();
 		FileIndexStack.pop();
 		DisplayCurrentFile();
@@ -2772,26 +2761,29 @@ void DisplayCurrentFile(bool path)
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
 	//tft.setTextColor(TFT_BLACK, menuTextColor);
-	String line = FileNames[CurrentFileIndex];
 	if (SystemInfo.bShowBuiltInTests) {
 		if (SystemInfo.bHiLiteCurrentFile) {
-			DisplayLine(0, line, TFT_BLACK, SystemInfo.menuTextColor);
+			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
 		}
 		else {
-			DisplayLine(0, line, SystemInfo.menuTextColor, TFT_BLACK);
+			DisplayLine(0, FileNames[CurrentFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
 		}
 	}
 	else {
 		if (bSdCardValid) {
 			if (SystemInfo.bHiLiteCurrentFile) {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + line + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + line + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
+				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
+			SystemInfo.bShowBuiltInTests = true;
+			GetFileNamesFromSDorBuiltins("/");
+			DisplayCurrentFile(path);
+			return;
 		}
 	}
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
@@ -2941,7 +2933,7 @@ bool ProcessConfigFile(String filename)
 							if (!SystemInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
 								oldFolder = currentFolder;
 								currentFolder = folder;
-								GetFileNamesFromSD(folder);
+								GetFileNamesFromSDorBuiltins(folder);
 							}
 							// search for the file in the list
 							int which = LookUpFile(name);
@@ -2954,7 +2946,7 @@ bool ProcessConfigFile(String filename)
 							}
 							if (oldFolder.length()) {
 								currentFolder = oldFolder;
-								GetFileNamesFromSD(currentFolder);
+								GetFileNamesFromSDorBuiltins(currentFolder);
 							}
 							CurrentFileIndex = oldFileIndex;
 						}
@@ -3040,25 +3032,22 @@ int MacroTime(String filepath, int* files)
 		}
 		rdfile.close();
 	}
-	//Serial.println("macro time: " + String(retval));
+	//Serial.println("macro time: " + String(worked));
 	*files = count;
 	return retval;
 }
 
 // read the files from the card or list the built-ins
 // look for start.MIW, and process it, but don't add it to the list
-bool GetFileNamesFromSD(String dir) {
+// the valid card flag is set here
+void GetFileNamesFromSDorBuiltins(String dir) {
+	bool worked = true;
 	// start over
 	// first empty the current file names
 	FileNames.clear();
 	if (nBootCount == 0)
 		CurrentFileIndex = 0;
-	if (SystemInfo.bShowBuiltInTests) {
-		for (int ix = 0; ix < (sizeof(BuiltInFiles) / sizeof(*BuiltInFiles)); ++ix) {
-			FileNames.push_back(String(BuiltInFiles[ix].text));
-		}
-	}
-	else {
+	if (!SystemInfo.bShowBuiltInTests) {
 		String startfile;
 		if (dir.length() > 1)
 			dir = dir.substring(0, dir.length() - 1);
@@ -3074,59 +3063,76 @@ bool GetFileNamesFromSD(String dir) {
 			//Serial.println("Failed to open directory: " + dir);
 			//Serial.println("error: " + String(root.getError()));
 			//SD.errorPrint("fail");
-			return false;
+			worked = false;
 		}
 		if (!root.isDirectory()) {
 			//Serial.println("Not a directory: " + dir);
-			return false;
+			worked = false;
 		}
-
-		file = root.openNextFile();
-		if (dir != "/") {
-			// add an arrow to go back
-			String sdir = currentFolder.substring(0, currentFolder.length() - 1);
-			sdir = sdir.substring(0, sdir.lastIndexOf("/"));
-			if (sdir.length() == 0)
-				sdir = "/";
-			FileNames.push_back(String(PREVIOUS_FOLDER_CHAR));
-		}
-		while (file) {
-#if USE_STANDARD_SD
-			CurrentFilename = file.name();
-#else
-			char fname[100];
-			file.getName(fname, sizeof(fname));
-			CurrentFilename = fname;
-#endif
-			// strip path
-			CurrentFilename = CurrentFilename.substring(CurrentFilename.lastIndexOf('/') + 1);
-			//Serial.println("name: " + CurrentFilename);
-			if (CurrentFilename != "System Volume Information") {
-				if (file.isDirectory()) {
-					FileNames.push_back(String(NEXT_FOLDER_CHAR) + CurrentFilename);
-				}
-				else {
-					String uppername = CurrentFilename;
-					uppername.toUpperCase();
-					if (uppername.endsWith(".BMP")) { //find files with our extension only
-						//Serial.println("name: " + CurrentFilename);
-						FileNames.push_back(CurrentFilename);
-					}
-					else if (uppername == "START.MIW") {
-						startfile = CurrentFilename;
-					}
-				}
-			}
-			file.close();
+		if (worked) {
 			file = root.openNextFile();
+			if (dir != "/") {
+				// add an arrow to go back
+				String sdir = currentFolder.substring(0, currentFolder.length() - 1);
+				sdir = sdir.substring(0, sdir.lastIndexOf("/"));
+				if (sdir.length() == 0)
+					sdir = "/";
+				FileNames.push_back(String(PREVIOUS_FOLDER_CHAR));
+			}
+			while (file) {
+#if USE_STANDARD_SD
+				CurrentFilename = file.name();
+#else
+				char fname[100];
+				file.getName(fname, sizeof(fname));
+				CurrentFilename = fname;
+#endif
+				// strip path
+				CurrentFilename = CurrentFilename.substring(CurrentFilename.lastIndexOf('/') + 1);
+				//Serial.println("name: " + CurrentFilename);
+				if (CurrentFilename != "System Volume Information") {
+					if (file.isDirectory()) {
+						FileNames.push_back(String(NEXT_FOLDER_CHAR) + CurrentFilename);
+					}
+					else {
+						String uppername = CurrentFilename;
+						uppername.toUpperCase();
+						if (uppername.endsWith(".BMP")) { //find files with our extension only
+							//Serial.println("name: " + CurrentFilename);
+							FileNames.push_back(CurrentFilename);
+						}
+						else if (uppername == "START.MIW") {
+							startfile = CurrentFilename;
+						}
+					}
+				}
+				file.close();
+				file = root.openNextFile();
+			}
+			root.close();
+			std::sort(FileNames.begin(), FileNames.end(), CompareNames);
+			// see if we need to process the auto start file
+			if (startfile.length())
+				ProcessConfigFile(startfile);
+			bSdCardValid = true;
 		}
-		root.close();
-		std::sort(FileNames.begin(), FileNames.end(), CompareNames);
-		// see if we need to process the auto start file
-		if (startfile.length())
-			ProcessConfigFile(startfile);
+		else {
+			SystemInfo.bShowBuiltInTests = true;
+			bSdCardValid = false;
+		}
 	}
-	return true;
+	// if nothing read, switch to built-in
+	if (FileNames.size() == 0) {
+		SystemInfo.bShowBuiltInTests = true;
+		bSdCardValid = false;
+	}
+	if (SystemInfo.bShowBuiltInTests) {
+		for (int ix = 0; ix < (sizeof(BuiltInFiles) / sizeof(*BuiltInFiles)); ++ix) {
+			FileNames.push_back(String(BuiltInFiles[ix].text));
+		}
+		currentFolder = "";
+	}
+	return;
 }
 
 // compare strings for sort ignoring case
@@ -3755,7 +3761,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 	Preferences prefs;
 	prefs.begin(prefsName, !save);
 	if (save) {
-		Serial.println("saving");
+		//Serial.println("saving");
 		prefs.putString(prefsVersion, myVersion);
 		prefs.putBool(prefsAutoload, bAutoLoadSettings);
 		// save things
@@ -3779,7 +3785,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 		if (vsn == myVersion) {
 			if (autoloadonly) {
 				bAutoLoadSettings = prefs.getBool(prefsAutoload, false);
-				Serial.println("getting autoload: " + String(bAutoLoadSettings));
+				//Serial.println("getting autoload: " + String(bAutoLoadSettings));
 			}
 			else if (!ledonly) {
 				prefs.getBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
@@ -3793,6 +3799,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 				// we don't know the folder path, so just reset the folder level
 				currentFolder = "/";
 				setupSDcard();
+				GetFileNamesFromSDorBuiltins(currentFolder);
 				CurrentFileIndex = savedFileIndex;
 				// make sure file index isn't too big
 				if (CurrentFileIndex >= FileNames.size()) {
@@ -3875,7 +3882,7 @@ void handleFileUpload(){ // upload a new file to the Filing system
       server.send(200,"text/html",webpage);
 	  // reload the file list, if not showing built-ins
 	  if (!SystemInfo.bShowBuiltInTests) {
-		  GetFileNamesFromSD(currentFolder);
+		  GetFileNamesFromSDorBuiltins(currentFolder);
 	  }
     } 
     else
