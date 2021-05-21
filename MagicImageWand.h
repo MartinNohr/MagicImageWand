@@ -892,3 +892,8 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SELECT BUILTINS",&SystemInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };
+
+#define MENU_LINES 7
+// keep the display lines in here so we can scroll sideways if necessary
+String TextScreenLines[MENU_LINES];
+bool TextHiLite[MENU_LINES];

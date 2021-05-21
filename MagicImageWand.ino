@@ -412,12 +412,12 @@ bool RunMenus(int button)
 	}
 }
 
-#define MENU_LINES 7
 // display the menu
 // if MenuStack.top()->index is > MENU_LINES, then shift the lines up by enough to display them
 // remember that we only have room for MENU_LINES lines
 void ShowMenu(struct MenuItem* menu)
 {
+	ResetTextLines();
 	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
@@ -2637,9 +2637,19 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 	// don't show if running and displaying file on LCD
 	if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
 		int y = line * tft.fontHeight();
+		int pixels = tft.textWidth(text);
 		tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
 		tft.setTextColor(color, backColor);
 		tft.drawString(text, 0, y);
+		// clear the rest of the line
+		tft.fillRect(pixels, y, tft.width() - pixels, tft.fontHeight(), backColor);
+	}
+}
+
+void ResetTextLines()
+{
+	for (int ix = 0; ix < MENU_LINES; ++ix) {
+		TextScreenLines[ix].clear();
 	}
 }
 
@@ -2648,12 +2658,17 @@ void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
 	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
-	if (displine < MENU_LINES) {
-		if (SystemInfo.bMenuStar) {
-			DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
-		}
-		else {
-			DisplayLine(displine, mline, hilite ? TFT_BLACK : SystemInfo.menuTextColor, hilite ? SystemInfo.menuTextColor : TFT_BLACK);
+	if (displine >= 0 && displine < MENU_LINES) {
+		//Serial.println("displine: " + String(displine) + " line: " + String(line));
+		if (TextScreenLines[displine] != mline || TextHiLite[displine] != hilite) {
+			if (SystemInfo.bMenuStar) {
+				DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
+			}
+			else {
+				DisplayLine(displine, mline, hilite ? TFT_BLACK : SystemInfo.menuTextColor, hilite ? SystemInfo.menuTextColor : TFT_BLACK);
+			}
+			TextScreenLines[displine] = mline;
+			TextHiLite[displine] = hilite;
 		}
 	}
 }
