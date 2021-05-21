@@ -46,7 +46,7 @@ void setup()
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	tft.setRotation(3);
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN);
@@ -91,7 +91,7 @@ void setup()
 
 	int width = tft.width();
 	int height = tft.height();
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	tft.setTextColor(SystemInfo.menuTextColor);
 	rainbow_fill();
 	if (nBootCount == 0)
@@ -234,7 +234,7 @@ void setup()
 		//}
 	}
 	FastLED.clear(true);
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 
 	// wait for button release
 	while (!digitalRead(DIAL_BTN))
@@ -272,6 +272,11 @@ void setup()
 
 void loop()
 {
+	static unsigned long menuUpdateTime = 0;
+	if (millis() > menuUpdateTime + 1000) {
+		menuUpdateTime = millis();
+		//Serial.println("update menu");
+	}
 	static bool didsomething = false;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	if (!bSettingsMode && bControllerReboot) {
@@ -306,7 +311,7 @@ void loop()
 				ShowMenu(MenuStack.top()->menu);
 			}
 			else {
-				tft.fillScreen(TFT_BLACK);
+				ClearScreen();
 				DisplayCurrentFile(SystemInfo.bShowFolder);
 			}
 		}
@@ -410,6 +415,7 @@ bool RunMenus(int button)
 		// the flag is now true, so we should save the current settings
 		SaveLoadSettings(true);
 	}
+	//ResetTextLines();
 }
 
 // display the menu
@@ -417,7 +423,6 @@ bool RunMenus(int button)
 // remember that we only have room for MENU_LINES lines
 void ShowMenu(struct MenuItem* menu)
 {
-	ResetTextLines();
 	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
@@ -606,7 +611,7 @@ void ToggleBool(MenuItem* menu)
 // get integer values
 void GetIntegerValue(MenuItem* menu)
 {
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	// -1 means to reset to original
 	int stepSize = 1;
 	int originalValue = *(int*)menu->value;
@@ -848,7 +853,7 @@ void SetMenuColor(MenuItem* menu)
 {
 	int maxIndex = sizeof(ColorList) / sizeof(*ColorList) - 1;
 	int colorIndex = FindMenuColor(SystemInfo.menuTextColor);
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	DisplayLine(4, "Rotate change value", SystemInfo.menuTextColor);
 	DisplayLine(5, "Long Press Exit", SystemInfo.menuTextColor);
 	bool done = false;
@@ -925,7 +930,7 @@ bool HandleMenus()
 		}
 		break;
 	case BTN_LONG:
-		tft.fillScreen(TFT_BLACK);
+		ClearScreen();
 		bSettingsMode = false;
 		DisplayCurrentFile();
 		bMenuChanged = true;
@@ -980,7 +985,7 @@ bool HandleRunMode()
 		//	DisplayCurrentFile();
 		//	break;
 	case BTN_LONG:
-		tft.fillScreen(TFT_BLACK);
+		ClearScreen();
 		bSettingsMode = true;
 		break;
 	default:
@@ -1432,7 +1437,7 @@ void Sleep(MenuItem* menu)
 
 void LightBar(MenuItem* menu)
 {
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
 	DisplayLine(3, "Rotate Dial to Change", SystemInfo.menuTextColor);
 	DisplayLine(4, "Click to Set Operation", SystemInfo.menuTextColor);
@@ -2186,7 +2191,7 @@ void ProcessFileOrTest()
 	if (ImgInfo.bChainFiles)
 		CurrentFileIndex = lastFileIndex;
 	FastLED.clear(true);
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	bIsRunning = false;
 	if (!bRunningMacro)
 		DisplayCurrentFile();
@@ -2480,7 +2485,7 @@ void ShowBmp(MenuItem*)
 		WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
 	}
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	// clear the file cache buffer
 	readByte(true);
 	uint16_t bmpType = readInt();
@@ -2599,7 +2604,7 @@ void ShowBmp(MenuItem*)
 				redraw = true;
 			}
 			else {
-				tft.fillScreen(TFT_BLACK);
+				ClearScreen();
 				DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
 				DisplayLine(1, FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
 				float walk = (float)imgHeight / (float)imgWidth;
@@ -2629,7 +2634,7 @@ void ShowBmp(MenuItem*)
 	dataFile.close();
 	readByte(true);
 	LedInfo.bGammaCorrection = bOldGamma;
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 }
 
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
@@ -2643,7 +2648,15 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 		tft.drawString(text, 0, y);
 		// clear the rest of the line
 		tft.fillRect(pixels, y, tft.width() - pixels, tft.fontHeight(), backColor);
+		if (line >= 0 && line < MENU_LINES)
+			TextScreenLines[line] = text;
 	}
+}
+
+void ClearScreen()
+{
+	tft.fillScreen(TFT_BLACK);
+	ResetTextLines();
 }
 
 void ResetTextLines()
@@ -2661,6 +2674,7 @@ void DisplayMenuLine(int line, int displine, String text)
 	if (displine >= 0 && displine < MENU_LINES) {
 		//Serial.println("displine: " + String(displine) + " line: " + String(line));
 		if (TextScreenLines[displine] != mline || TextHiLite[displine] != hilite) {
+			Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
 			if (SystemInfo.bMenuStar) {
 				DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
 			}
@@ -2842,7 +2856,7 @@ void ShowProgressBar(int percent)
 // display message on first line
 void WriteMessage(String txt, bool error, int wait)
 {
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	if (error) {
 		txt = "**" + txt + "**";
 		tft.setTextColor(TFT_RED);
@@ -2956,7 +2970,7 @@ bool ProcessConfigFile(String filename)
 								CurrentFileIndex = which;
 								// call the process routine
 								strcpy(FileToShow, name.c_str());
-								tft.fillScreen(TFT_BLACK);
+								ClearScreen();
 								ProcessFileOrTest();
 							}
 							if (oldFolder.length()) {
@@ -3359,7 +3373,7 @@ void RunMacro(MenuItem* menu)
 		if (bCancelMacro) {
 			break;
 		}
-		tft.fillScreen(TFT_BLACK);
+		ClearScreen();
 		for (int wait = ImgInfo.nRepeatWaitMacro; nMacroRepeatsLeft > 1 && wait; --wait) {
 			if (CheckCancel()) {
 				nMacroRepeatsLeft = 0;
@@ -3375,7 +3389,7 @@ void RunMacro(MenuItem* menu)
 // display some macro info
 void InfoMacro(MenuItem* menu)
 {
-	tft.fillScreen(TFT_BLACK);
+	ClearScreen();
 	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
 	int files;
 	DisplayLine(0, line, SystemInfo.menuTextColor);
@@ -4103,12 +4117,12 @@ void ShowLeds(int mode)
 		tft.pushRect(col, 0, 1, tft.height(), scrBuf);
 		++col;
 		if (col == tft.width())
-			tft.fillScreen(TFT_BLACK);
+			ClearScreen();
 		col = col % tft.width();
 	}
 	else if (mode == 1) {
 		col = 0;
-		tft.fillScreen(TFT_BLACK);
+		ClearScreen();
 		FastLED.clearData();
 		scrBuf = (uint16_t*)calloc(144, sizeof(uint16_t));
 	}
