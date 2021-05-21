@@ -2674,7 +2674,7 @@ void DisplayMenuLine(int line, int displine, String text)
 	if (displine >= 0 && displine < MENU_LINES) {
 		//Serial.println("displine: " + String(displine) + " line: " + String(line));
 		if (TextScreenLines[displine] != mline || TextHiLite[displine] != hilite) {
-			Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
+			//Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
 			if (SystemInfo.bMenuStar) {
 				DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
 			}
