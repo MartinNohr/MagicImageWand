@@ -48,6 +48,7 @@ void setup()
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	ClearScreen();
 	tft.setRotation(3);
+	tft.setTextPadding(tft.width());
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN);
 	setupSDcard();
@@ -272,9 +273,19 @@ void setup()
 
 void loop()
 {
+	// this loop handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
-	if (millis() > menuUpdateTime + 1000) {
+	if (millis() > menuUpdateTime + 100) {
 		menuUpdateTime = millis();
+		for (int ix = 0; ix < MENU_LINES; ++ix) {
+			if (TextRollLength[ix]) {
+				TextRollOffsets[ix] -= 2;
+				if (TextRollOffsets[ix] < (tft.width() - TextRollLength[ix] - 10)) {
+					TextRollOffsets[ix] = 0;
+				}
+				DisplayLine(ix, TextScreenLines[ix], TextHiLite[ix] ? TFT_BLACK : SystemInfo.menuTextColor, TextHiLite[ix] ? SystemInfo.menuTextColor : TFT_BLACK);
+			}
+		}
 		//Serial.println("update menu");
 	}
 	static bool didsomething = false;
@@ -415,7 +426,6 @@ bool RunMenus(int button)
 		// the flag is now true, so we should save the current settings
 		SaveLoadSettings(true);
 	}
-	//ResetTextLines();
 }
 
 // display the menu
@@ -604,6 +614,7 @@ void ToggleBool(MenuItem* menu)
 	if (menu->change != NULL) {
 		(*menu->change)(menu, -1);
 	}
+	ResetTextLines();
 	//Serial.println("autoload: " + String(bAutoLoadSettings));
 	//Serial.println("fixed time: " + String(bFixedTime));
 }
@@ -2639,17 +2650,19 @@ void ShowBmp(MenuItem*)
 
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
-	// don't show if running and displaying file on LCD
-	if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
-		int y = line * tft.fontHeight();
-		int pixels = tft.textWidth(text);
-		tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
-		tft.setTextColor(color, backColor);
-		tft.drawString(text, 0, y);
-		// clear the rest of the line
-		tft.fillRect(pixels, y, tft.width() - pixels, tft.fontHeight(), backColor);
-		if (line >= 0 && line < MENU_LINES)
-			TextScreenLines[line] = text;
+	if (line >= 0 && line < MENU_LINES) {
+		// don't show if running and displaying file on LCD
+		if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
+			int y = line * tft.fontHeight();
+			//tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
+			tft.setTextColor(color, backColor);
+			tft.drawString(text, TextRollOffsets[line], y);
+			//int pixels = tft.textWidth(text);
+			// clear the rest of the line
+			//tft.fillRect(pixels, y, tft.width() - pixels, tft.fontHeight(), backColor);
+			//if (line >= 0 && line < MENU_LINES)
+			//	TextScreenLines[line] = text;
+		}
 	}
 }
 
@@ -2663,6 +2676,8 @@ void ResetTextLines()
 {
 	for (int ix = 0; ix < MENU_LINES; ++ix) {
 		TextScreenLines[ix].clear();
+		TextRollOffsets[ix] = 0;
+		TextRollLength[ix] = 0;
 	}
 }
 
@@ -2674,6 +2689,15 @@ void DisplayMenuLine(int line, int displine, String text)
 	if (displine >= 0 && displine < MENU_LINES) {
 		//Serial.println("displine: " + String(displine) + " line: " + String(line));
 		if (TextScreenLines[displine] != mline || TextHiLite[displine] != hilite) {
+			int pixels = tft.textWidth(text);
+			if (pixels > tft.width()) {
+				TextRollLength[displine] = pixels;
+				TextRollOffsets[displine] = 0;
+				Serial.println("pixels: " + String(pixels) + " line: " + String(displine));
+			}
+			else {
+				TextRollOffsets[displine] = TextRollLength[displine] = 0;
+			}
 			//Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
 			if (SystemInfo.bMenuStar) {
 				DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);

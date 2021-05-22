@@ -784,6 +784,7 @@ MenuItem MacroMenu[] = {
     {eTerminate}
 };
 MenuItem MainMenu[] = {
+    {eText,"This is a very long dummy menu item for testing"},
     {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
         {eBool,"Switch to SD Card",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
@@ -897,3 +898,7 @@ struct SETTINGVAR SettingsVarList[] = {
 // keep the display lines in here so we can scroll sideways if necessary
 String TextScreenLines[MENU_LINES];
 bool TextHiLite[MENU_LINES];
+// pixels to scroll long lines
+int TextRollLength[MENU_LINES];
+// current scroll pixel offsets
+int TextRollOffsets[MENU_LINES];
