@@ -784,13 +784,14 @@ MenuItem MacroMenu[] = {
     {eTerminate}
 };
 MenuItem MainMenu[] = {
-    {eText,"This is a very long dummy menu item for testing"},
+    //{eText,"This is a very long dummy menu item for testing"},
     {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
         {eBool,"Switch to SD Card",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
         {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
         {eText,"Preview BMP",ShowBmp},
     {eEndif},
+    //{eText,"Another long menu item for testing"},
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},

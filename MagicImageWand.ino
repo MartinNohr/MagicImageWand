@@ -33,6 +33,7 @@ constexpr int TFT_ENABLE = 4;
 const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
+TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite" with pointer to "tft" object
 
 void setup()
 {
@@ -93,6 +94,7 @@ void setup()
 	int width = tft.width();
 	int height = tft.height();
 	ClearScreen();
+
 	tft.setTextColor(SystemInfo.menuTextColor);
 	rainbow_fill();
 	if (nBootCount == 0)
@@ -120,7 +122,13 @@ void setup()
 	}
 	tft.setFreeFont(&Dialog_bold_16);
 	tft.setTextColor(SystemInfo.menuTextColor);
-
+	// get our text line sprite ready
+	LineSprite.setColorDepth(16);
+	LineSprite.createSprite(tft.width(), tft.fontHeight());
+	LineSprite.fillSprite(TFT_BLACK);
+	LineSprite.setFreeFont(&Dialog_bold_16);
+	LineSprite.setTextPadding(tft.width());
+	// get the menu system ready
 	menuPtr = new MenuInfo;
 	MenuStack.push(menuPtr);
 	MenuStack.top()->menu = MainMenu;
@@ -248,7 +256,6 @@ void setup()
 	//if (!bSdCardValid) {
 	//	ToggleFilesBuiltin(NULL);
 	//}
-
 	DisplayCurrentFile();
 	/*
 		analogSetCycles(8);                   // Set number of cycles per sample, default is 8 and provides an optimal result, range is 1 - 255
@@ -269,17 +276,21 @@ void setup()
 		//adcAttachPin(36);
 		adcAttachPin(37);
 	*/
+	// Fill Sprite with a "transparent" colour
+	// TFT_TRANSPARENT is already defined for convenience
+	// We could also fill with any colour as "transparent" and later specify that
+	// same colour when we push the Sprite onto the screen.
 }
 
 void loop()
 {
 	// this loop handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
-	if (millis() > menuUpdateTime + 100) {
+	if (millis() > menuUpdateTime + 50) {
 		menuUpdateTime = millis();
 		for (int ix = 0; ix < MENU_LINES; ++ix) {
 			if (TextRollLength[ix]) {
-				TextRollOffsets[ix] -= 2;
+				TextRollOffsets[ix] -= 1;
 				if (TextRollOffsets[ix] < (tft.width() - TextRollLength[ix] - 10)) {
 					TextRollOffsets[ix] = 0;
 				}
@@ -2654,14 +2665,9 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 		// don't show if running and displaying file on LCD
 		if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
 			int y = line * tft.fontHeight();
-			//tft.fillRect(0, y, tft.width(), tft.fontHeight(), backColor);
-			tft.setTextColor(color, backColor);
-			tft.drawString(text, TextRollOffsets[line], y);
-			//int pixels = tft.textWidth(text);
-			// clear the rest of the line
-			//tft.fillRect(pixels, y, tft.width() - pixels, tft.fontHeight(), backColor);
-			//if (line >= 0 && line < MENU_LINES)
-			//	TextScreenLines[line] = text;
+			LineSprite.setTextColor(color, backColor);
+			LineSprite.drawString(text, TextRollOffsets[line], 0);
+			LineSprite.pushSprite(0, y);
 		}
 	}
 }
