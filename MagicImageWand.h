@@ -645,7 +645,7 @@ MenuItem SystemMenu[] = {
     {eText,"Set Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,"Menu Select: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
-    {eTextInt,"Long Roll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
+    {eTextInt,"Sideways Scroll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
@@ -898,10 +898,15 @@ struct SETTINGVAR SettingsVarList[] = {
 };
 
 #define MENU_LINES 7
+
 // keep the display lines in here so we can scroll sideways if necessary
-String TextScreenLines[MENU_LINES];
-bool TextHiLite[MENU_LINES];
-// pixels to scroll long lines
-int TextRollLength[MENU_LINES];
-// current scroll pixel offsets
-int TextRollOffsets[MENU_LINES];
+struct TEXTLINES {
+    String Line;
+    // the pixels length of this line
+    int nRollLength;
+    // current scroll pixel offsets
+    int nRollOffset;
+    // colors
+    uint16_t foreColor, backColor;
+};
+struct TEXTLINES TextLines[MENU_LINES];

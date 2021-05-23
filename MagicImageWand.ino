@@ -282,22 +282,29 @@ void setup()
 	// same colour when we push the Sprite onto the screen.
 }
 
-void loop()
+// scroll the long menu lines
+void MenuTextRoll()
 {
-	// this loop handles sideways scrolling of really long menu items
+	// this handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
 	if (millis() > menuUpdateTime + SystemInfo.nSidewayScrollSpeed) {
 		menuUpdateTime = millis();
 		for (int ix = 0; ix < MENU_LINES; ++ix) {
-			if (TextRollLength[ix]) {
-				TextRollOffsets[ix] -= 1;
-				if (TextRollOffsets[ix] < (tft.width() - TextRollLength[ix] - 10)) {
-					TextRollOffsets[ix] = 0;
+			if (TextLines[ix].nRollLength) {
+				//Serial.println("roll line: " + String(ix));
+				TextLines[ix].nRollOffset -= 1;
+				if (TextLines[ix].nRollOffset < (tft.width() - TextLines[ix].nRollLength - 10)) {
+					TextLines[ix].nRollOffset = 0;
 				}
-				DisplayLine(ix, TextScreenLines[ix], TextHiLite[ix] ? TFT_BLACK : SystemInfo.menuTextColor, TextHiLite[ix] ? SystemInfo.menuTextColor : TFT_BLACK);
+				DisplayLine(ix, TextLines[ix].Line, TextLines[ix].foreColor, TextLines[ix].backColor);
 			}
 		}
 	}
+}
+
+void loop()
+{
+	MenuTextRoll();
 	static bool didsomething = false;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	if (!bSettingsMode && bControllerReboot) {
@@ -695,7 +702,7 @@ void GetIntegerValue(MenuItem* menu)
 			oldVal = *(int*)menu->value;
 		}
 		while (!done && (button = ReadButton()) == BTN_NONE) {
-			delay(1);
+			MenuTextRoll();
 		}
 	} while (!done);
 	if (menu->change != NULL) {
@@ -2663,9 +2670,24 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 	if (line >= 0 && line < MENU_LINES) {
 		// don't show if running and displaying file on LCD
 		if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
+			if (TextLines[line].Line != text || TextLines[line].backColor != backColor || TextLines[line].foreColor != color) {
+				int pixels = tft.textWidth(text);
+				if (pixels > tft.width()) {
+					TextLines[line].nRollLength = pixels;
+					TextLines[line].nRollOffset = 0;
+				}
+				else {
+					TextLines[line].nRollOffset = TextLines[line].nRollLength = 0;
+				}
+				// save the line for scrolling purposes
+				TextLines[line].Line = text;
+				TextLines[line].foreColor = color;
+				TextLines[line].backColor = backColor;
+			}
+			// push the sprite text to the display
 			int y = line * tft.fontHeight();
 			LineSprite.setTextColor(color, backColor);
-			LineSprite.drawString(text, TextRollOffsets[line], 0);
+			LineSprite.drawString(text, TextLines[line].nRollOffset, 0);
 			LineSprite.pushSprite(0, y);
 		}
 	}
@@ -2680,9 +2702,11 @@ void ClearScreen()
 void ResetTextLines()
 {
 	for (int ix = 0; ix < MENU_LINES; ++ix) {
-		TextScreenLines[ix].clear();
-		TextRollOffsets[ix] = 0;
-		TextRollLength[ix] = 0;
+		TextLines[ix].Line.clear();
+		TextLines[ix].nRollOffset = 0;
+		TextLines[ix].nRollLength = 0;
+		TextLines[ix].foreColor = 0;
+		TextLines[ix].backColor = 0;
 	}
 }
 
@@ -2693,25 +2717,12 @@ void DisplayMenuLine(int line, int displine, String text)
 	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
 	if (displine >= 0 && displine < MENU_LINES) {
 		//Serial.println("displine: " + String(displine) + " line: " + String(line));
-		if (TextScreenLines[displine] != mline || TextHiLite[displine] != hilite) {
-			int pixels = tft.textWidth(text);
-			if (pixels > tft.width()) {
-				TextRollLength[displine] = pixels;
-				TextRollOffsets[displine] = 0;
-				Serial.println("pixels: " + String(pixels) + " line: " + String(displine));
-			}
-			else {
-				TextRollOffsets[displine] = TextRollLength[displine] = 0;
-			}
 			//Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
-			if (SystemInfo.bMenuStar) {
-				DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
-			}
-			else {
-				DisplayLine(displine, mline, hilite ? TFT_BLACK : SystemInfo.menuTextColor, hilite ? SystemInfo.menuTextColor : TFT_BLACK);
-			}
-			TextScreenLines[displine] = mline;
-			TextHiLite[displine] = hilite;
+		if (SystemInfo.bMenuStar) {
+			DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
+		}
+		else {
+			DisplayLine(displine, mline, hilite ? TFT_BLACK : SystemInfo.menuTextColor, hilite ? SystemInfo.menuTextColor : TFT_BLACK);
 		}
 	}
 }
