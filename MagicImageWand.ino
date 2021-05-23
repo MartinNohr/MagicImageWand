@@ -286,7 +286,7 @@ void loop()
 {
 	// this loop handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
-	if (millis() > menuUpdateTime + 50) {
+	if (millis() > menuUpdateTime + SystemInfo.nSidewayScrollSpeed) {
 		menuUpdateTime = millis();
 		for (int ix = 0; ix < MENU_LINES; ++ix) {
 			if (TextRollLength[ix]) {
@@ -297,7 +297,6 @@ void loop()
 				DisplayLine(ix, TextScreenLines[ix], TextHiLite[ix] ? TFT_BLACK : SystemInfo.menuTextColor, TextHiLite[ix] ? SystemInfo.menuTextColor : TFT_BLACK);
 			}
 		}
-		//Serial.println("update menu");
 	}
 	static bool didsomething = false;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();

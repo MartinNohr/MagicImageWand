@@ -210,6 +210,7 @@ struct SYSTEM_INFO {
     bool bAllowMenuWrap = false;              // allows menus to wrap around from end and start instead of pinning
     bool bShowNextFiles = true;               // show the next files in the main display
     bool bShowDuringBmpFile = false;          // set this to display the bmp on the LCD and the LED during BMP display
+    int nSidewayScrollSpeed = 50;             // mSec for pixel scroll
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -644,6 +645,7 @@ MenuItem SystemMenu[] = {
     {eText,"Set Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,"Menu Select: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
+    {eTextInt,"Long Roll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
