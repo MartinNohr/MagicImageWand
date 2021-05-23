@@ -199,18 +199,20 @@ RTC_DATA_ATTR IMG_INFO ImgInfo;
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 
 struct SYSTEM_INFO {
-    bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
+    bool bShowBuiltInTests = false;             // list the internal file instead of the SD card
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
     bool bHiLiteCurrentFile = true;
-    int nPreviewScrollCols = 120;             // now many columns to scroll with dial during preview
-    bool bShowProgress = true;                // show the progress bar
-    bool bShowFolder = true;                  // show the path in front of the file
-    int nDisplayBrightness = 50;              // this is in %
-    bool bAllowMenuWrap = false;              // allows menus to wrap around from end and start instead of pinning
-    bool bShowNextFiles = true;               // show the next files in the main display
-    bool bShowDuringBmpFile = false;          // set this to display the bmp on the LCD and the LED during BMP display
-    int nSidewayScrollSpeed = 50;             // mSec for pixel scroll
+    int nPreviewScrollCols = 120;               // now many columns to scroll with dial during preview
+    bool bShowProgress = true;                  // show the progress bar
+    bool bShowFolder = true;                    // show the path in front of the file
+    int nDisplayBrightness = 50;                // this is in %
+    bool bAllowMenuWrap = false;                // allows menus to wrap around from end and start instead of pinning
+    bool bShowNextFiles = true;                 // show the next files in the main display
+    bool bShowDuringBmpFile = false;            // set this to display the bmp on the LCD and the LED during BMP display
+    int nSidewayScrollSpeed = 25;               // mSec for pixel scroll
+    int nSidewaysScrollPause = 20;              // how long to wait at each end
+    int nSidewaysScrollReverse = 3;             // reverse speed multiplier
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -646,6 +648,8 @@ MenuItem SystemMenu[] = {
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
     {eBool,"Menu Select: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eTextInt,"Sideways Scroll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
+    {eTextInt,"Sideways Scroll Pause: %d",GetIntegerValue,&SystemInfo.nSidewaysScrollPause,1,100},
+    {eTextInt,"Sideways Scroll Reverse: %d",GetIntegerValue,&SystemInfo.nSidewaysScrollReverse,1,10},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
@@ -908,5 +912,7 @@ struct TEXTLINES {
     int nRollOffset;
     // colors
     uint16_t foreColor, backColor;
+    // whether we are going up or down
+    int nRollDirection;
 };
 struct TEXTLINES TextLines[MENU_LINES];

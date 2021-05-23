@@ -290,13 +290,36 @@ void MenuTextRoll()
 	if (millis() > menuUpdateTime + SystemInfo.nSidewayScrollSpeed) {
 		menuUpdateTime = millis();
 		for (int ix = 0; ix < MENU_LINES; ++ix) {
+			int offset = TextLines[ix].nRollOffset;
 			if (TextLines[ix].nRollLength) {
-				//Serial.println("roll line: " + String(ix));
-				TextLines[ix].nRollOffset -= 1;
-				if (TextLines[ix].nRollOffset < (tft.width() - TextLines[ix].nRollLength - 10)) {
-					TextLines[ix].nRollOffset = 0;
+				if (TextLines[ix].nRollOffset == 0 && TextLines[ix].nRollDirection == 0) {
+					TextLines[ix].nRollDirection = SystemInfo.nSidewaysScrollPause;
+					continue;
 				}
-				DisplayLine(ix, TextLines[ix].Line, TextLines[ix].foreColor, TextLines[ix].backColor);
+				if (TextLines[ix].nRollDirection > 1) {
+					--TextLines[ix].nRollDirection;
+				}
+				if (TextLines[ix].nRollDirection == 1) {
+					++TextLines[ix].nRollOffset;
+				}
+				if (TextLines[ix].nRollOffset >= (TextLines[ix].nRollLength - tft.width()) && TextLines[ix].nRollDirection > 0) {
+					TextLines[ix].nRollDirection = -SystemInfo.nSidewaysScrollPause;
+				}
+				if (TextLines[ix].nRollDirection < -1) {
+					++TextLines[ix].nRollDirection;
+				}
+				if (TextLines[ix].nRollDirection == -1) {
+					TextLines[ix].nRollOffset -= SystemInfo.nSidewaysScrollReverse;
+					if (TextLines[ix].nRollOffset < 0) {
+						TextLines[ix].nRollOffset = 0;
+					}
+					if (TextLines[ix].nRollOffset == 0) {
+						TextLines[ix].nRollDirection = 0;
+					}
+				}
+				if (offset != TextLines[ix].nRollOffset) {
+					DisplayLine(ix, TextLines[ix].Line, TextLines[ix].foreColor, TextLines[ix].backColor);
+				}
 			}
 		}
 	}
@@ -648,11 +671,11 @@ void GetIntegerValue(MenuItem* menu)
 	CRotaryDialButton::Button button = BTN_NONE;
 	bool done = false;
 	const char* fmt = menu->decimals ? "%ld.%ld" : "%ld";
-	char minstr[20], maxstr[20];
+	char minstr[20], maxstr[20], valstr[20];
 	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
 	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
 	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), SystemInfo.menuTextColor);
-	DisplayLine(3, "Long Press to Accept", SystemInfo.menuTextColor);
+	DisplayLine(6, "Long Press to Accept", SystemInfo.menuTextColor);
 	int oldVal = *(int*)menu->value;
 	if (menu->change != NULL) {
 		(*menu->change)(menu, 1);
@@ -696,7 +719,9 @@ void GetIntegerValue(MenuItem* menu)
 		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100), true);
 		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
 		DisplayLine(0, line, SystemInfo.menuTextColor);
-		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "step: " + String(stepSize) + " (Click +)", SystemInfo.menuTextColor);
+		sprintf(valstr, fmt, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
+		DisplayLine(3, String("Value: ") + valstr, SystemInfo.menuTextColor);
+		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "Step: " + String(stepSize) + " (Click +)", SystemInfo.menuTextColor);
 		if (menu->change != NULL && oldVal != *(int*)menu->value) {
 			(*menu->change)(menu, 0);
 			oldVal = *(int*)menu->value;
@@ -1922,7 +1947,7 @@ void TestRainbow()
 // create a user defined stripe set
 // it consists of a list of stripes, each of which have a width and color
 // there can be up to 10 of these
-#define NUM_STRIPES 20
+constexpr int NUM_STRIPES = 20;
 struct {
 	int start;
 	int length;
@@ -2687,7 +2712,7 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 			// push the sprite text to the display
 			int y = line * tft.fontHeight();
 			LineSprite.setTextColor(color, backColor);
-			LineSprite.drawString(text, TextLines[line].nRollOffset, 0);
+			LineSprite.drawString(text, -TextLines[line].nRollOffset, 0);
 			LineSprite.pushSprite(0, y);
 		}
 	}
@@ -2707,6 +2732,7 @@ void ResetTextLines()
 		TextLines[ix].nRollLength = 0;
 		TextLines[ix].foreColor = 0;
 		TextLines[ix].backColor = 0;
+		TextLines[ix].nRollDirection = 0;
 	}
 }
 
