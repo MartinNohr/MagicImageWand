@@ -2430,7 +2430,8 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		// wait for timer to expire before we show the next frame
 		while (bStripWaiting) {
-			delayMicroseconds(100);
+			MenuTextRoll();
+			//delayMicroseconds(100);
 			// we should maybe check the cancel key here to handle slow frame rates?
 		}
 		// now show the lights
@@ -4164,33 +4165,44 @@ void File_Upload(){
 
 // show on leds or display
 // mode 0 is normal, mode 1 is prepare for LCD, mode 2 is reset to normal
+constexpr int BMP_LCD_SKIP_TOP = 4;
 void ShowLeds(int mode)
 {
 	static uint16_t* scrBuf = nullptr;
 	static int col = 0;
+	static int top = 0;	// how much to ignore on the top of the column
 	if (scrBuf == nullptr && mode == 0) {
 		FastLED.show();
 		return;
 	}
 	else if (mode == 0) {
-		for (int ix = 0; ix < tft.height(); ++ix) {
-			uint16_t color = tft.color565(leds[ix].r, leds[ix].g, leds[ix].b);
+		int height = tft.height();
+		height = constrain(height, 0, LedInfo.nTotalLeds - BMP_LCD_SKIP_TOP);
+		for (int ix = top; ix < height - top; ++ix) {
+			uint16_t color = tft.color565(leds[ix + BMP_LCD_SKIP_TOP].r, leds[ix + BMP_LCD_SKIP_TOP].g, leds[ix + BMP_LCD_SKIP_TOP].b);
 			uint16_t sbcolor;
 			// the memory image colors are byte swapped
 			swab(&color, &sbcolor, sizeof(uint16_t));
-			scrBuf[ix] = sbcolor;
+			scrBuf[ix - top] = sbcolor;
 		}
-		tft.pushRect(col, 0, 1, tft.height(), scrBuf);
+		tft.pushRect(col, top, 1, tft.height() - top, scrBuf);
 		++col;
 		if (col == tft.width())
-			ClearScreen();
+			tft.fillRect(0, top, tft.width(), tft.height() - top, TFT_BLACK);
 		col = col % tft.width();
 	}
 	else if (mode == 1) {
 		col = 0;
-		ClearScreen();
+		tft.fillScreen(TFT_BLACK);
 		FastLED.clearData();
 		scrBuf = (uint16_t*)calloc(144, sizeof(uint16_t));
+		if (SystemInfo.bShowProgress && bIsRunning) {
+			// leave some room for the progress bar
+			top = 3;
+		}
+		else {
+			top = 0;
+		}
 	}
 	else if (mode == 2) {
 		free(scrBuf);

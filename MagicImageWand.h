@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.14";
+char* myVersion = "1.15";
 
 // ***** Various switchs for options are set here *****
 // 1 for standard SD library, 0 for the new exFat library
@@ -640,16 +640,16 @@ MenuItem SystemMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
-    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"Yes","No"},
+    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
     {eText,"Set Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
-    {eBool,"Menu Select: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
+    {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eTextInt,"Sideways Scroll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
     {eTextInt,"Sideways Scroll Pause: %d",GetIntegerValue,&SystemInfo.nSidewaysScrollPause,1,100},
-    {eTextInt,"Sideways Scroll Reverse: %d",GetIntegerValue,&SystemInfo.nSidewaysScrollReverse,1,10},
+    {eTextInt,"Sideways Scroll Reverse: %dx",GetIntegerValue,&SystemInfo.nSidewaysScrollReverse,1,20},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
