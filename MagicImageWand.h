@@ -95,7 +95,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
 
 // functions
-void ShowLeds(int mode = 0);
+void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);
 void SetDisplayBrightness(int val);
 void DisplayCurrentFile(bool path = true);
 void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);

@@ -1494,6 +1494,7 @@ void LightBar(MenuItem* menu)
 	DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
 	DisplayLine(3, "Rotate Dial to Change", SystemInfo.menuTextColor);
 	DisplayLine(4, "Click to Set Operation", SystemInfo.menuTextColor);
+	DisplayLine(5, "Long Press for Exit", SystemInfo.menuTextColor);
 	DisplayLedLightBar();
 	FastLED.clear(true);
 	// these were set by CheckCancel() in DisplayAllColor() and need to be cleared
@@ -2367,7 +2368,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	unsigned minLoopTime = 0; // the minimum time it takes to process a line
 	bool bLoopTimed = false;
 	if (SystemInfo.bShowDuringBmpFile) {
-		ShowLeds(1);
+		ShowLeds(1, TFT_BLACK, imgWidth);
 	}
 	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
 	for (int y = ImgInfo.bReverseImage ? imgHeight - 1 : 0; ImgInfo.bReverseImage ? y >= 0 : y < imgHeight; ImgInfo.bReverseImage ? --y : ++y) {
@@ -2407,6 +2408,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
 		//uint32_t offset = (bmpOffBits + (y * lineLength));
 		//dataFile.seekSet(offset);
+		// add the column here
 		for (int x = displayWidth - 1; x >= 0; --x) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
@@ -2415,6 +2417,9 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 				continue;
 			}
 			SetPixel(x, pixel, y);
+			if (SystemInfo.bShowDuringBmpFile) {
+				ShowLeds(4, pixel);
+			}
 		}
 		// see how long it took to get here
 		if (!bLoopTimed) {
@@ -2437,7 +2442,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		// now show the lights
 		FastLED.show();
 		if (SystemInfo.bShowDuringBmpFile) {
-			ShowLeds(0);
+			ShowLeds(3);
 		}
 		// set a timer while we go ahead and load the next frame
 		bStripWaiting = true;
@@ -4165,37 +4170,45 @@ void File_Upload(){
 
 // show on leds or display
 // mode 0 is normal, mode 1 is prepare for LCD, mode 2 is reset to normal
+// mode 3 writes to LCD, 4 adds a pixel to the buffer
 constexpr int BMP_LCD_SKIP_TOP = 4;
-void ShowLeds(int mode)
+void ShowLeds(int mode, CRGB colorval, int imgHeight)
 {
-	static uint16_t* scrBuf = nullptr;
+	static bool bSkipCol = false;
+	static bool bSkipRow = false;
+	static bool bHalfSize = false;
+	static int row = 0;
 	static int col = 0;
 	static int top = 0;	// how much to ignore on the top of the column
+	static uint16_t* scrBuf = nullptr;
+	uint16_t color;
+	uint16_t sbcolor;
+	int height;
+	// just send to the LEDs
 	if (scrBuf == nullptr && mode == 0) {
 		FastLED.show();
 		return;
 	}
-	else if (mode == 0) {
-		int height = tft.height();
+	switch (mode) {
+	case 0:	// get column from leds array
+		height = tft.height();
 		height = constrain(height, 0, LedInfo.nTotalLeds - BMP_LCD_SKIP_TOP);
 		for (int ix = top; ix < height - top; ++ix) {
-			uint16_t color = tft.color565(leds[ix + BMP_LCD_SKIP_TOP].r, leds[ix + BMP_LCD_SKIP_TOP].g, leds[ix + BMP_LCD_SKIP_TOP].b);
-			uint16_t sbcolor;
+			color = tft.color565(leds[ix + BMP_LCD_SKIP_TOP].r, leds[ix + BMP_LCD_SKIP_TOP].g, leds[ix + BMP_LCD_SKIP_TOP].b);
+			sbcolor;
 			// the memory image colors are byte swapped
 			swab(&color, &sbcolor, sizeof(uint16_t));
 			scrBuf[ix - top] = sbcolor;
 		}
-		tft.pushRect(col, top, 1, tft.height() - top, scrBuf);
-		++col;
-		if (col == tft.width())
-			tft.fillRect(0, top, tft.width(), tft.height() - top, TFT_BLACK);
-		col = col % tft.width();
-	}
-	else if (mode == 1) {
-		col = 0;
+		ShowLeds(3);
+		break;
+	case 1:	// initialize
+		row = col = 0;
+		bSkipCol = false;
+		bSkipRow = false;
 		tft.fillScreen(TFT_BLACK);
 		FastLED.clearData();
-		scrBuf = (uint16_t*)calloc(144, sizeof(uint16_t));
+		scrBuf = (uint16_t*)calloc(tft.height(), sizeof(uint16_t));
 		if (SystemInfo.bShowProgress && bIsRunning) {
 			// leave some room for the progress bar
 			top = 3;
@@ -4203,9 +4216,44 @@ void ShowLeds(int mode)
 		else {
 			top = 0;
 		}
-	}
-	else if (mode == 2) {
+		bHalfSize = imgHeight > 144;
+		break;
+	case 2:	// clean up and leave
 		free(scrBuf);
 		scrBuf = NULL;
+		break;
+	case 3:	// output to tft
+		row = 0;
+		if (bHalfSize) {
+			bSkipCol = !bSkipCol;
+		}
+		if (!bSkipCol) {
+			tft.pushRect(col, top, 1, tft.height() - top, scrBuf);
+			++col;
+			if (col >= tft.width()) {
+				tft.fillRect(0, top, tft.width(), tft.height() - top, TFT_BLACK);
+				col = 0;
+			}
+		}
+		break;
+	case 4:	// add to buffer
+		if (bHalfSize) {
+			bSkipRow = !bSkipRow;
+		}
+		if (!bSkipRow) {
+			// skip some rows because the LCD is too small
+			if (row >= BMP_LCD_SKIP_TOP + top) {
+				int rix = row - (BMP_LCD_SKIP_TOP + top);
+				rix = constrain(rix, 0, tft.height() - 1);
+				color = tft.color565(colorval.r, colorval.g, colorval.b);
+				// the memory image colors are byte swapped
+				swab(&color, &sbcolor, sizeof(uint16_t));
+				scrBuf[rix] = sbcolor;
+			}
+			++row;
+		}
+		break;
+	default:
+		break;
 	}
 }
