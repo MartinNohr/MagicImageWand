@@ -283,7 +283,7 @@ void setup()
 }
 
 // scroll the long menu lines
-void MenuTextRoll()
+void MenuTextScrollSideways()
 {
 	// this handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
@@ -327,7 +327,7 @@ void MenuTextRoll()
 
 void loop()
 {
-	MenuTextRoll();
+	MenuTextScrollSideways();
 	static bool didsomething = false;
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	if (!bSettingsMode && bControllerReboot) {
@@ -727,7 +727,7 @@ void GetIntegerValue(MenuItem* menu)
 			oldVal = *(int*)menu->value;
 		}
 		while (!done && (button = ReadButton()) == BTN_NONE) {
-			MenuTextRoll();
+			MenuTextScrollSideways();
 		}
 	} while (!done);
 	if (menu->change != NULL) {
@@ -2435,7 +2435,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		// wait for timer to expire before we show the next frame
 		while (bStripWaiting) {
-			MenuTextRoll();
+			MenuTextScrollSideways();
 			//delayMicroseconds(100);
 			// we should maybe check the cancel key here to handle slow frame rates?
 		}
@@ -2900,7 +2900,7 @@ void DisplayCurrentFile(bool path)
 	// if recording put a red digit at the top right
 	if (bRecordingMacro) {
 		tft.setTextColor(TFT_BLACK, TFT_RED);
-		tft.drawString(String(ImgInfo.nCurrentMacro), tft.width() - 10, 2);
+		tft.drawString(String(ImgInfo.nCurrentMacro), tft.width() - 10, 1);
 	}
 	tft.setTextColor(SystemInfo.menuTextColor);
 	// for debugging keypresses
@@ -2994,82 +2994,83 @@ bool ProcessConfigFile(String filename)
 				// loop through the var list looking for a match
 				for (int which = 0; which < sizeof(SettingsVarList) / sizeof(*SettingsVarList); ++which) {
 					if (command.compareTo(SettingsVarList[which].name) == 0) {
-						switch (SettingsVarList[which].type) {
-						case vtInt:
-						{
-							int val = args.toInt();
-							int min = SettingsVarList[which].min;
-							int max = SettingsVarList[which].max;
-							if (min != max) {
-								val = constrain(val, min, max);
+						// see if we want to ignore the settings
+						if (!SystemInfo.bMacroUseCurrentSettings || SettingsVarList[which].type == vtShowFile) {
+							switch (SettingsVarList[which].type) {
+							case vtInt:
+							{
+								int val = args.toInt();
+								int min = SettingsVarList[which].min;
+								int max = SettingsVarList[which].max;
+								if (min != max) {
+									val = constrain(val, min, max);
+								}
+								*(int*)(SettingsVarList[which].address) = val;
 							}
-							*(int*)(SettingsVarList[which].address) = val;
-						}
-						break;
-						case vtBool:
-							args.toUpperCase();
-							*(bool*)(SettingsVarList[which].address) = args[0] == 'T';
 							break;
-						case vtBuiltIn:
-						{
-							bool bLastBuiltIn = SystemInfo.bShowBuiltInTests;
-							args.toUpperCase();
-							bool value = args[0] == 'T';
-							if (value != bLastBuiltIn) {
-								ToggleFilesBuiltin(NULL);
+							case vtBool:
+								args.toUpperCase();
+								*(bool*)(SettingsVarList[which].address) = args[0] == 'T';
+								break;
+							case vtBuiltIn:
+							{
+								bool bLastBuiltIn = SystemInfo.bShowBuiltInTests;
+								args.toUpperCase();
+								bool value = args[0] == 'T';
+								if (value != bLastBuiltIn) {
+									ToggleFilesBuiltin(NULL);
+								}
 							}
-						}
-						break;
-						case vtShowFile:
-						{
-							// get the folder and set it first
-							String folder;
-							String name;
-							int ix = args.lastIndexOf('/');
-							folder = args.substring(0, ix + 1);
-							name = args.substring(ix + 1);
-							int oldFileIndex = CurrentFileIndex;
-							// save the old folder if necessary
-							String oldFolder;
-							if (!SystemInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
-								oldFolder = currentFolder;
-								currentFolder = folder;
-								GetFileNamesFromSDorBuiltins(folder);
-							}
-							// search for the file in the list
-							int which = LookUpFile(name);
-							if (which >= 0) {
-								CurrentFileIndex = which;
-								// call the process routine
-								strcpy(FileToShow, name.c_str());
-								ClearScreen();
-								ProcessFileOrTest();
-							}
-							if (oldFolder.length()) {
-								currentFolder = oldFolder;
-								GetFileNamesFromSDorBuiltins(currentFolder);
-							}
-							CurrentFileIndex = oldFileIndex;
-						}
-						break;
-						case vtRGB:
-						{
-							// handle the RBG colors
-							CRGB* cp = (CRGB*)(SettingsVarList[which].address);
-							cp->r = args.toInt();
-							args = args.substring(args.indexOf(',') + 1);
-							cp->g = args.toInt();
-							args = args.substring(args.indexOf(',') + 1);
-							cp->b = args.toInt();
-						}
-						break;
-						case vtMacroTime:
-						{
-							*(int*)(SettingsVarList[which].address) = args.toInt();
-						}
-						break;
-						default:
 							break;
+							case vtShowFile:
+							{
+								// get the folder and set it first
+								String folder;
+								String name;
+								int ix = args.lastIndexOf('/');
+								folder = args.substring(0, ix + 1);
+								name = args.substring(ix + 1);
+								int oldFileIndex = CurrentFileIndex;
+								// save the old folder if necessary
+								String oldFolder;
+								if (!SystemInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
+									oldFolder = currentFolder;
+									currentFolder = folder;
+									GetFileNamesFromSDorBuiltins(folder);
+								}
+								// search for the file in the list
+								int which = LookUpFile(name);
+								if (which >= 0) {
+									CurrentFileIndex = which;
+									// call the process routine
+									strcpy(FileToShow, name.c_str());
+									ClearScreen();
+									ProcessFileOrTest();
+								}
+								if (oldFolder.length()) {
+									currentFolder = oldFolder;
+									GetFileNamesFromSDorBuiltins(currentFolder);
+								}
+								CurrentFileIndex = oldFileIndex;
+							}
+							break;
+							case vtRGB:
+							{
+								// handle the RBG colors
+								CRGB* cp = (CRGB*)(SettingsVarList[which].address);
+								cp->r = args.toInt();
+								args = args.substring(args.indexOf(',') + 1);
+								cp->g = args.toInt();
+								args = args.substring(args.indexOf(',') + 1);
+								cp->b = args.toInt();
+							}
+							break;
+							case vtMacroTime:
+								*(int*)(SettingsVarList[which].address) = args.toInt();
+								break;
+							default:
+								break;
+							}
 						}
 						// we found it, so carry on
 						break;
@@ -3299,7 +3300,8 @@ bool SettingsSaveRestore(bool save, int set)
 
 void EraseStartFile(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile("", true, true);
+	if (GetYesNo("Erase START.MIW?"))
+		WriteOrDeleteConfigFile("", true, true);
 }
 
 void SaveStartFile(MenuItem* menu)
@@ -3309,7 +3311,11 @@ void SaveStartFile(MenuItem* menu)
 
 void EraseAssociatedFile(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), true, false);
+	String filepath;
+	filepath = currentFolder + MakeMIWFilename(FileNames[CurrentFileIndex], true);
+
+	if (GetYesNo(("Erase " + filepath + "?").c_str()))
+		WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), true, false);
 }
 
 void SaveAssociatedFile(MenuItem* menu)
@@ -3355,7 +3361,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 	bool fileExists = SD.exists(filepath.c_str());
 	if (remove) {
 		if (!SD.exists(filepath.c_str()))
-			WriteMessage(String("Not Found:\n") + filepath);
+			WriteMessage(String("Not Found:\n") + filepath, true);
 		else if (SD.remove(filepath.c_str())) {
 			WriteMessage(String("Erased:\n") + filepath);
 		}
@@ -3458,6 +3464,47 @@ void RunMacro(MenuItem* menu)
 	bCancelMacro = false;
 }
 
+// get a yes/no response
+bool GetYesNo(const char* msg)
+{
+	int pad = tft.getTextPadding();
+	tft.setTextPadding(0);
+	bool retval = false;
+	bool change = true;
+	ClearScreen();
+	DisplayLine(1, msg, SystemInfo.menuTextColor);
+	DisplayLine(4, "Rotate to Change", SystemInfo.menuTextColor);
+	DisplayLine(5, "Click to Select", SystemInfo.menuTextColor);
+	CRotaryDialButton::Button button = BTN_NONE;
+	bool done = false;
+	while (!done) {
+		button = ReadButton();
+		switch (button) {
+		case BTN_LEFT:
+		case BTN_RIGHT:
+			retval = !retval;
+			change = true;
+			break;
+		case BTN_SELECT:
+		//case BTN_LONG:
+			done = true;
+			break;
+		default:
+			break;
+		}
+		if (change) {
+			// draw the buttons
+			tft.fillRoundRect(60, 42, 60, 22, 8, SystemInfo.menuTextColor);
+			tft.setTextColor(TFT_BLACK, SystemInfo.menuTextColor);
+			tft.drawString(retval ? "Yes" : "No", 72, 46);
+			change = false;
+		}
+		MenuTextScrollSideways();
+	}
+	tft.setTextPadding(pad);
+	return retval;
+}
+
 // display some macro info
 void InfoMacro(MenuItem* menu)
 {
@@ -3505,7 +3552,8 @@ void MacroLoadRun(MenuItem* menu, bool save)
 
 void DeleteMacro(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), true, false);
+	if (GetYesNo(("Delete Macro #" + String(ImgInfo.nCurrentMacro) + "?").c_str()))
+		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), true, false);
 }
 
 // show some LED's with and without white balance adjust
@@ -3926,18 +3974,22 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 // delete saved settings
 void FactorySettings(MenuItem* menu)
 {
-	Preferences prefs;
-	prefs.begin(prefsName);
-	prefs.clear();
-	prefs.end();
-	ESP.restart();
+	if (GetYesNo("Reset All Settings? (reboot)")) {
+		Preferences prefs;
+		prefs.begin(prefsName);
+		prefs.clear();
+		prefs.end();
+		ESP.restart();
+	}
 }
 
 void EraseFlash(MenuItem* menu)
 {
-	nvs_flash_erase(); // erase the NVS partition and...
-	nvs_flash_init(); // initialize the NVS partition.
-	//SaveLoadSettings(true);
+	if (GetYesNo("Format EEPROM? (factory reset)")) {
+		nvs_flash_erase(); // erase the NVS partition and...
+		nvs_flash_init(); // initialize the NVS partition.
+		//SaveLoadSettings(true);
+	}
 }
 
 void ReportCouldNotCreateFile(String target){

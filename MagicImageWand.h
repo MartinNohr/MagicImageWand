@@ -213,6 +213,7 @@ struct SYSTEM_INFO {
     int nSidewayScrollSpeed = 25;               // mSec for pixel scroll
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
+    bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -745,7 +746,7 @@ MenuItem EepromMenu[] = {
     {eBool,"Autoload Settings: %s",ToggleBool,&bAutoLoadSettings,0,0,0,"On","Off"},
     {eText,"Save Current Settings",SaveEepromSettings},
     {eText,"Load Saved Settings",LoadEepromSettings},
-    {eText,"Factory Settings",FactorySettings},
+    {eText,"Reset All Settings",FactorySettings},
     {eText,"Format EEPROM",EraseFlash},
     {eExit,"Previous Menu"},
     // make sure this one is last
@@ -773,6 +774,7 @@ MenuItem MacroMenu[] = {
     {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
         {eTextInt,"Run: #%d",RunMacro,&ImgInfo.nCurrentMacro},
+        {eBool,"Override Settings: %s",ToggleBool,&SystemInfo.bMacroUseCurrentSettings,0,0,0,"Yes","No"},
     {eElse},
         {eTextInt,"Recording Macro: #%d",NULL,&ImgInfo.nCurrentMacro},
     {eEndif},
