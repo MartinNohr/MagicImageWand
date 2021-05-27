@@ -4312,22 +4312,36 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 
 void ShowBattery(MenuItem* menu)
 {
+#define BATTERY_SAMPLES 10
+	static int levelvals[BATTERY_SAMPLES]{ 0 };
+	static int index = 0;
 	int level;
 	int percent;
 	ClearScreen();
 	//gpio_set_direction((gpio_num_t)36, GPIO_MODE_INPUT);
 	while (ReadButton() != BTN_LONG) {
 		level = analogRead(36);
-		// calculate the %
-		if (level >= SystemInfo.nBatteryFullLevel)
-			level = 100;
-		else if (level <= SystemInfo.nBatteryEmptyLevel)
-			level = 0;
-		else {
-			percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+		// add to samples and get average
+		levelvals[index++] = level;
+		index %= BATTERY_SAMPLES;
+		level = 0;
+		for (auto& lvl : levelvals) {
+			level += lvl;
 		}
-		DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
-		DisplayLine(1, "Raw Battery: " + String(level), SystemInfo.menuTextColor);
+		level /= BATTERY_SAMPLES;
+		// display when 0
+		if (!index) {
+			// calculate the %
+			if (level >= SystemInfo.nBatteryFullLevel)
+				level = 100;
+			else if (level <= SystemInfo.nBatteryEmptyLevel)
+				level = 0;
+			else {
+				percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+			}
+			DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
+			DisplayLine(1, "Raw Battery: " + String(level), SystemInfo.menuTextColor);
+		}
 		//Serial.println("bat: " + String(level));
 		delay(100);
 	}
