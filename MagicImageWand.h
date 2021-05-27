@@ -3,6 +3,7 @@
 char* myVersion = "1.15";
 
 // ***** Various switchs for options are set here *****
+#define HAS_BATTERY_LEVEL 0
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
@@ -216,6 +217,7 @@ struct SYSTEM_INFO {
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
     int nBatteryFullLevel = 3150;               // 100% battery
     int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
+    int bShowBatteryLevel = false;              // display the battery level on the bottom line
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -659,9 +661,12 @@ MenuItem SystemMenu[] = {
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200},
+#if HAS_BATTERY_LEVEL
+    {eBool,"Show Battery: %s",ToggleBool,&SystemInfo.bShowBatteryLevel,0,0,0,"Yes","No"},
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,2000,4000},
     {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,1000,3000},
+#endif
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

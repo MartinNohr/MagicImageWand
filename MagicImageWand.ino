@@ -367,6 +367,10 @@ void loop()
 			}
 		}
 	}
+	// show battery level if on
+	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
+		ShowBattery(NULL);
+	}
 }
 
 bool RunMenus(int button)
@@ -2888,7 +2892,7 @@ void DisplayCurrentFile(bool path)
 		}
 	}
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
-		for (int ix = 1; ix < MENU_LINES; ++ix) {
+		for (int ix = 1; ix < MENU_LINES - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
 				DisplayLine(ix, "", SystemInfo.menuTextColor);
 			}
@@ -4310,39 +4314,61 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	}
 }
 
-void ShowBattery(MenuItem* menu)
+// read the battery level
+int ReadBattery(int* raw)
 {
 #define BATTERY_SAMPLES 10
 	static int levelvals[BATTERY_SAMPLES]{ 0 };
 	static int index = 0;
+	static int percent;
 	int level;
-	int percent;
-	ClearScreen();
-	//gpio_set_direction((gpio_num_t)36, GPIO_MODE_INPUT);
-	while (ReadButton() != BTN_LONG) {
-		level = analogRead(36);
-		// add to samples and get average
-		levelvals[index++] = level;
-		index %= BATTERY_SAMPLES;
-		level = 0;
-		for (auto& lvl : levelvals) {
-			level += lvl;
+	level = analogRead(36);
+	// add to samples and get average
+	levelvals[index++] = level;
+	index %= BATTERY_SAMPLES;
+	level = 0;
+	for (auto& lvl : levelvals) {
+		level += lvl;
+	}
+	level /= BATTERY_SAMPLES;
+	// display when 0
+	if (!index) {
+		// calculate the %
+		if (level >= SystemInfo.nBatteryFullLevel)
+			percent = 100;
+		else if (level <= SystemInfo.nBatteryEmptyLevel)
+			percent = 0;
+		else {
+			percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
 		}
-		level /= BATTERY_SAMPLES;
-		// display when 0
-		if (!index) {
-			// calculate the %
-			if (level >= SystemInfo.nBatteryFullLevel)
-				level = 100;
-			else if (level <= SystemInfo.nBatteryEmptyLevel)
-				level = 0;
-			else {
-				percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+	}
+	if (raw)
+		*raw = level;
+	return percent;
+}
+
+void ShowBattery(MenuItem* menu)
+{
+	static int percent = 0, raw = 0;
+	if (menu)
+		ClearScreen();
+	static unsigned long showtime = 0;
+	while (!menu || ReadButton() != BTN_LONG) {
+		percent = ReadBattery(&raw);
+		if (millis() > showtime + 1000) {
+			if (menu) {
+				DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
+				DisplayLine(1, "Raw Battery: " + String(raw), SystemInfo.menuTextColor);
+				DisplayLine(3, "Long Press to Cancel", SystemInfo.menuTextColor);
 			}
-			DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
-			DisplayLine(1, "Raw Battery: " + String(level), SystemInfo.menuTextColor);
+			else {
+				DisplayLine(MENU_LINES - 1, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
+			}
+			showtime = millis();
 		}
-		//Serial.println("bat: " + String(level));
-		delay(100);
+		if (menu)
+			delay(100);
+		else
+			break;
 	}
 }
