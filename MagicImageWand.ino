@@ -4324,7 +4324,7 @@ void ShowBattery(MenuItem* menu)
 		else if (level <= SystemInfo.nBatteryEmptyLevel)
 			level = 0;
 		else {
-			(level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+			percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
 		}
 		DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
 		DisplayLine(1, "Raw Battery: " + String(level), SystemInfo.menuTextColor);
