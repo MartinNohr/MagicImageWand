@@ -3,7 +3,7 @@
 char* myVersion = "1.15";
 
 // ***** Various switchs for options are set here *****
-// 1 for standard SD library, 0 for the new exFat library
+// 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
@@ -214,6 +214,8 @@ struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
+    int nBatteryFullLevel = 3150;               // 100% battery
+    int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -414,6 +416,7 @@ void LightBar(MenuItem* menu);
 void Sleep(MenuItem* menu);
 void ReadBattery(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
+void ShowBattery(MenuItem* menu);
 
 // SD details
 #define SDcsPin    33  // GPIO33
@@ -656,6 +659,7 @@ MenuItem SystemMenu[] = {
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200},
+    {eText,"Read Battery",ShowBattery},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

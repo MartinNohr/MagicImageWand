@@ -3750,7 +3750,7 @@ void RainbowPulse()
 	//Serial.println("second: " + String(bSecondStrip));
 	//Serial.println("Len: " + String(STRIPLENGTH));
 	for (int i = 0; i < TWO_HUNDRED_PI; i++) {
-		element = round((LedInfo.nTotalLeds - 1) / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
+		element = round(LedInfo.nTotalLeds / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
 		//Serial.println("elements: " + String(element) + " " + String(last_element));
 		if (element > last_element) {
 			SetPixel(element, CHSV(element * BuiltinInfo.nRainbowPulseColorScale + BuiltinInfo.nRainbowPulseStartColor, BuiltinInfo.nRainbowPulseSaturation, 255));
@@ -4307,5 +4307,28 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 		break;
 	default:
 		break;
+	}
+}
+
+void ShowBattery(MenuItem* menu)
+{
+	int level;
+	int percent;
+	ClearScreen();
+	//gpio_set_direction((gpio_num_t)36, GPIO_MODE_INPUT);
+	while (ReadButton() != BTN_LONG) {
+		level = analogRead(36);
+		// calculate the %
+		if (level >= SystemInfo.nBatteryFullLevel)
+			level = 100;
+		else if (level <= SystemInfo.nBatteryEmptyLevel)
+			level = 0;
+		else {
+			(level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+		}
+		DisplayLine(0, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
+		DisplayLine(1, "Raw Battery: " + String(level), SystemInfo.menuTextColor);
+		//Serial.println("bat: " + String(level));
+		delay(100);
 	}
 }
