@@ -660,6 +660,8 @@ MenuItem SystemMenu[] = {
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200},
     {eText,"Read Battery",ShowBattery},
+    {eTextInt,"100% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,2000,4000},
+    {eTextInt,"0% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,1000,3000},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
