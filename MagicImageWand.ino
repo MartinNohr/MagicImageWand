@@ -4362,7 +4362,13 @@ void ShowBattery(MenuItem* menu)
 				DisplayLine(3, "Long Press to Cancel", SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(MENU_LINES - 1, "Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
+				int x = tft.width() * 70 / 100;
+				int y = tft.height() - 20;
+				tft.drawRoundRect(x, y, 64, 17, 8, SystemInfo.menuTextColor);
+				tft.fillRoundRect(x + 1, y + 1, 62, 15, 8, TFT_BLACK);
+				tft.fillRoundRect(x + 1, y + 1, 62 * percent / 100, 15, 8, TFT_DARKGREY);
+				tft.drawString(String(percent) + "%", x + 10, y + 2);
+				//DisplayLine(MENU_LINES - 1, "          Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
 			}
 			showtime = millis();
 		}
