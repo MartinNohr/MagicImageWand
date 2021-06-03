@@ -3,11 +3,15 @@
 class CRotaryDialButton {
 public:
 	enum Button { BTN_NONE, BTN_LEFT, BTN_RIGHT, BTN_CLICK, BTN_LONGPRESS };
-    static int m_nLongPressTimerValue;
-    static int m_nDialSensitivity;
-    static int m_nDialSpeed;
-    static bool m_bReverseDial;
+    struct ROTARY_DIAL_SETTINGS {
+        int m_nLongPressTimerValue;
+        int m_nDialSensitivity;
+        int m_nDialSpeed;
+        bool m_bReverseDial;
+    };
+    typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
+    static ROTARY_DIAL_SETTINGS* pSettings;
     static std::queue<enum Button> btnBuf;
     static volatile int m_nLongPressTimer;
     static esp_timer_handle_t periodic_LONGPRESS_timer;
@@ -33,7 +37,7 @@ private:
         }
         // if the button is up and the timer hasn't finished counting, it must be a short press
         else if (level) {
-            if (m_nLongPressTimer > 0 && m_nLongPressTimer < m_nLongPressTimerValue - 1) {
+            if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
                 btn = BTN_CLICK;
                 btnBuf.push(btn);
                 m_nLongPressTimer = -1;
@@ -50,7 +54,7 @@ private:
         noInterrupts();
         // went low, if timer not started, start it
         if (m_nLongPressTimer == 0) {
-            m_nLongPressTimer = m_nLongPressTimerValue;
+            m_nLongPressTimer = pSettings->m_nLongPressTimerValue;
             esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
             esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
         }
@@ -67,14 +71,14 @@ private:
         static unsigned int countRight = 0;
         static unsigned int countLeft = 0;
         static enum Button pendingBtn = BTN_NONE;
-        static unsigned long lastTime;
+        static unsigned long lastTime = 0;
         static bool lastValA = true;
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
         enum Button btnToPush = BTN_NONE;
         // ignore until the time has expired
         unsigned long millisNow = millis();
-        if (millisNow - lastTime > m_nDialSpeed) {
+        if (millisNow - lastTime > pSettings->m_nDialSpeed) {
             // been too long, reset the counts
             countRight = countLeft = 0;
             // and the pending one
@@ -86,7 +90,7 @@ private:
                 pendingBtn = BTN_NONE;
             }
             else if (lastValA && !valA) {
-                enum Button btn = (m_bReverseDial ? !valB : valB) ? BTN_RIGHT : BTN_LEFT;
+                enum Button btn = (pSettings->m_bReverseDial ? !valB : valB) ? BTN_RIGHT : BTN_LEFT;
                 if (btn == BTN_RIGHT) {
                     pendingBtn = btn;
                 }
@@ -102,7 +106,7 @@ private:
                     ++countRight;
                 else
                     ++countLeft;
-                if (countRight >= m_nDialSensitivity || countLeft >= m_nDialSensitivity) {
+                if (countRight >= pSettings->m_nDialSensitivity || countLeft >= pSettings->m_nDialSensitivity) {
                     btnBuf.push(btnToPush);
                     countRight = countLeft = 0;
                 }
@@ -115,12 +119,13 @@ private:
 
     // public things
 public:
-	static void begin(int a, int b, int c) {
+	static void begin(int a, int b, int c, ROTARY_DIAL_SETTINGS* ps) {
         // first time, set things up
-        m_nLongPressTimerValue = 40;
-        m_nDialSensitivity = 1;
-        m_nDialSpeed = 300;
-        m_bReverseDial = false;
+        pSettings = ps;
+        pSettings->m_nLongPressTimerValue = 40;
+        pSettings->m_nDialSensitivity = 1;
+        pSettings->m_nDialSpeed = 300;
+        pSettings->m_bReverseDial = false;
         gpioA = a;
         gpioB = b;
         gpioC = c;
@@ -189,11 +194,8 @@ public:
     }
 };
 std::queue<enum CRotaryDialButton::Button> CRotaryDialButton::btnBuf;
-int CRotaryDialButton::m_nLongPressTimerValue;
 volatile int CRotaryDialButton::m_nLongPressTimer;
-int CRotaryDialButton::m_nDialSensitivity;
-int CRotaryDialButton::m_nDialSpeed;
-bool CRotaryDialButton::m_bReverseDial;
 esp_timer_handle_t CRotaryDialButton::periodic_LONGPRESS_timer;
 esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
 int CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
+CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };

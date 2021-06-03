@@ -51,7 +51,7 @@ void setup()
 	tft.setRotation(3);
 	tft.setTextPadding(tft.width());
 	//Serial.println("boot: " + String(nBootCount));
-	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN);
+	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, &SystemInfo.DialSettings);
 	setupSDcard();
 	GetFileNamesFromSDorBuiltins(currentFolder);
 	//listDir(SD, "/", 2, "");
@@ -327,12 +327,24 @@ void MenuTextScrollSideways()
 
 void loop()
 {
-	MenuTextScrollSideways();
+	static SYSTEM_INFO SystemInfoSaved;
 	static bool didsomething = false;
+	static bool bLastSettingsMode = false;
+
+	MenuTextScrollSideways();
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
+	if (bSettingsMode && !bLastSettingsMode) {
+		memcpy(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo));
+	}
+	if (!bSettingsMode && bLastSettingsMode) {
+		if (memcmp(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo))) {
+			SaveLoadSettings(true, false, true, true);
+		}
+	}
+	bLastSettingsMode = bSettingsMode;
 	if (!bSettingsMode && bControllerReboot) {
 		WriteMessage("Rebooting due to\nLED controller change", false, 2000);
-		SaveLoadSettings(true, true);
+		SaveLoadSettings(true, false, true, true);
 		ESP.restart();
 	}
 	server.handleClient();
@@ -3754,7 +3766,7 @@ void RainbowPulse()
 	//Serial.println("second: " + String(bSecondStrip));
 	//Serial.println("Len: " + String(STRIPLENGTH));
 	for (int i = 0; i < TWO_HUNDRED_PI; i++) {
-		element = round(LedInfo.nTotalLeds / 2 * (-cos(i / (PI_SCALE * 100.0)) + 1));
+		element = round(LedInfo.nTotalLeds / static_cast<double>(2) * (-cos(i / (PI_SCALE * 100.0)) + 1));
 		//Serial.println("elements: " + String(element) + " " + String(last_element));
 		if (element > last_element) {
 			SetPixel(element, CHSV(element * BuiltinInfo.nRainbowPulseColorScale + BuiltinInfo.nRainbowPulseStartColor, BuiltinInfo.nRainbowPulseSaturation, 255));
@@ -3921,16 +3933,12 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 		if (!ledonly) {
 			prefs.putBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
 			prefs.putBytes(prefsBuiltInInfo, &BuiltinInfo, sizeof(BuiltinInfo));
-			prefs.putBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
-			prefs.putInt(prefsLongPressTimer, CRotaryDialButton::m_nLongPressTimerValue);
-			prefs.putInt(prefsDialSensitivity, CRotaryDialButton::m_nDialSensitivity);
-			prefs.putInt(prefsDialSpeed, CRotaryDialButton::m_nDialSpeed);
-			prefs.putBool(prefsDialReverse, CRotaryDialButton::m_bReverseDial);
 			if (!nodisplay)
 				WriteMessage("Settings Saved", false, 500);
 		}
 		// we always do these since they are hardware related
 		prefs.putBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
+		prefs.putBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
 	}
 	else {
 		// load things
@@ -3943,11 +3951,6 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 			else if (!ledonly) {
 				prefs.getBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
 				prefs.getBytes(prefsBuiltInInfo, &BuiltinInfo, sizeof(BuiltinInfo));
-				prefs.getBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
-				CRotaryDialButton::m_nLongPressTimerValue = prefs.getInt(prefsLongPressTimer, 40);
-				CRotaryDialButton::m_nDialSensitivity = prefs.getInt(prefsDialSensitivity, 1);
-				CRotaryDialButton::m_nDialSpeed = prefs.getInt(prefsDialSpeed, 300);
-				CRotaryDialButton::m_bReverseDial = prefs.getBool(prefsDialReverse, false);
 				int savedFileIndex = CurrentFileIndex;
 				// we don't know the folder path, so just reset the folder level
 				currentFolder = "/";
@@ -3963,7 +3966,9 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 				if (!nodisplay)
 					WriteMessage("Settings Loaded", false, 500);
 			}
+			// these are always done
 			prefs.getBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
+			prefs.getBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
 		}
 		else {
 			retvalue = false;
@@ -4238,7 +4243,7 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	static int top = 0;	// how much to ignore on the top of the column
 	static uint16_t* scrBuf = nullptr;
 	uint16_t color;
-	uint16_t sbcolor;
+	uint16_t sbcolor = 0;
 	int height;
 	// just send to the LEDs
 	if (scrBuf == nullptr && mode == 0) {

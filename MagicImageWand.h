@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.15";
+char* myVersion = "1.16";
 
 // ***** Various switchs for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -122,19 +122,19 @@ void TestStripes();
 void TestLines();
 void RainbowPulse();
 void TestWedge();
-void ReportCouldNotCreateFile();
+void ReportCouldNotCreateFile(String target);
 void handleFileUpload();
 void append_page_header();
 void append_page_footer();
 void HomePage();
 void File_Download();
-void SD_file_download();
+void SD_file_download(String filename);
 void File_Upload();
 void SendHTML_Header();
 void SendHTML_Content();
 void SendHTML_Stop();
-void SelectInput();
-void ReportFileNotPresent();
+void SelectInput(String heading1, String command, String arg_calling_name);
+void ReportFileNotPresent(String target);
 void ReportSDNotPresent();
 void IncreaseRepeatButton();
 void DecreaseRepeatButton();
@@ -217,7 +217,8 @@ struct SYSTEM_INFO {
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
     int nBatteryFullLevel = 3150;               // 100% battery
     int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
-    int bShowBatteryLevel = false;              // display the battery level on the bottom line
+    int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
+    CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -674,13 +675,15 @@ MenuItem SystemMenu[] = {
     {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
-    {eBool,"Dial: %s",ToggleBool,&CRotaryDialButton::m_bReverseDial,0,0,0,"Reverse","Normal"},
-    {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSensitivity,1,5},
-    {eTextInt,"Dial Speed: %d",GetIntegerValue,&CRotaryDialButton::m_nDialSpeed,100,1000},
-    {eTextInt,"Long Press count: %d",GetIntegerValue,&CRotaryDialButton::m_nLongPressTimerValue,2,200},
+    {eBool,"Dial: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
+    {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSensitivity,1,5},
+    {eTextInt,"Dial Speed: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,100,1000},
+    {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
+    {eText,"IP: %s",NULL,&localIpAddress},
+    {eText,"Reset All Settings",FactorySettings},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -839,7 +842,6 @@ MenuItem MainMenu[] = {
     {eText,"Light Bar",LightBar},
     {eMenu,"Light Bar Settings",{.menu = LedLightBarMenu}},
     //{eText,"Battery",ReadBattery},
-    {eText,"IP: %s",NULL,&localIpAddress},
     {eText,"Sleep",Sleep},
     {eReboot,"Reboot"},
     // make sure this one is last
