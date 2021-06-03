@@ -53,7 +53,6 @@ void setup()
 	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, &SystemInfo.DialSettings);
 	setupSDcard();
-	GetFileNamesFromSDorBuiltins(currentFolder);
 	//listDir(SD, "/", 2, "");
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
@@ -120,6 +119,7 @@ void setup()
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
+	GetFileNamesFromSDorBuiltins(currentFolder);
 	tft.setFreeFont(&Dialog_bold_16);
 	tft.setTextColor(SystemInfo.menuTextColor);
 	// get our text line sprite ready
@@ -638,20 +638,20 @@ void ShowMenu(struct MenuItem* menu)
 void ToggleFilesBuiltin(MenuItem* menu)
 {
 	// clear filenames list
-	bool lastval = SystemInfo.bShowBuiltInTests;
+	bool lastval = ImgInfo.bShowBuiltInTests;
 	int oldIndex = CurrentFileIndex;
 	String oldFolder = currentFolder;
 	if (menu != NULL) {
 		ToggleBool(menu);
 	}
 	else {
-		SystemInfo.bShowBuiltInTests = !SystemInfo.bShowBuiltInTests;
+		ImgInfo.bShowBuiltInTests = !ImgInfo.bShowBuiltInTests;
 	}
-	if (!SystemInfo.bShowBuiltInTests && !bSdCardValid) {
+	if (!ImgInfo.bShowBuiltInTests && !bSdCardValid) {
 		// see if we can make it valid
 		setupSDcard();
 	}
-	if (lastval != SystemInfo.bShowBuiltInTests) {
+	if (lastval != ImgInfo.bShowBuiltInTests) {
 		currentFolder = lastFolder;
 		GetFileNamesFromSDorBuiltins(currentFolder);
 	}
@@ -2122,7 +2122,7 @@ void ProcessFileOrTest()
 	int chainRepeatCount = ImgInfo.bChainFiles ? ImgInfo.nChainRepeats : 1;
 	int lastFileIndex = CurrentFileIndex;
 	// don't allow chaining for built-ins, although maybe we should
-	if (SystemInfo.bShowBuiltInTests) {
+	if (ImgInfo.bShowBuiltInTests) {
 		chainCount = 1;
 		chainRepeatCount = 1;
 	}
@@ -2134,7 +2134,7 @@ void ProcessFileOrTest()
 	while (chainRepeatCount-- > 0) {
 		while (chainCount-- > 0) {
 			DisplayCurrentFile();
-			if (ImgInfo.bChainFiles && !SystemInfo.bShowBuiltInTests) {
+			if (ImgInfo.bChainFiles && !ImgInfo.bShowBuiltInTests) {
 				line = "Remaining: " + String(chainCount + 1);
 				DisplayLine(4, line, SystemInfo.menuTextColor);
 				if (CurrentFileIndex < chainFileCount - 1) {
@@ -2149,16 +2149,16 @@ void ProcessFileOrTest()
 			// process the repeats and waits for each file in the list
 			for (nRepeatsLeft = ImgInfo.repeatCount; nRepeatsLeft > 0; nRepeatsLeft--) {
 				// fill the progress bar
-				if (!SystemInfo.bShowBuiltInTests)
+				if (!ImgInfo.bShowBuiltInTests)
 					ShowProgressBar(0);
 				if (ImgInfo.repeatCount > 1) {
 					line = "Repeats: " + String(nRepeatsLeft) + " ";
 				}
-				if (!SystemInfo.bShowBuiltInTests && ImgInfo.nChainRepeats > 1) {
+				if (!ImgInfo.bShowBuiltInTests && ImgInfo.nChainRepeats > 1) {
 					line += "Chains: " + String(chainRepeatCount + 1);
 				}
 				DisplayLine(3, line, SystemInfo.menuTextColor);
-				if (SystemInfo.bShowBuiltInTests) {
+				if (ImgInfo.bShowBuiltInTests) {
 					DisplayLine(4, "Running (long cancel)", SystemInfo.menuTextColor);
 					// run the test
 					(*BuiltInFiles[CurrentFileIndex].function)();
@@ -2173,7 +2173,7 @@ void ProcessFileOrTest()
 				if (bCancelRun) {
 					break;
 				}
-				if (!SystemInfo.bShowBuiltInTests)
+				if (!ImgInfo.bShowBuiltInTests)
 					ShowProgressBar(0);
 				if (nRepeatsLeft > 1) {
 					if (ImgInfo.repeatDelay) {
@@ -2195,7 +2195,7 @@ void ProcessFileOrTest()
 				chainCount = 0;
 				break;
 			}
-			if (SystemInfo.bShowBuiltInTests)
+			if (ImgInfo.bShowBuiltInTests)
 				break;
 			// see if we are chaining, if so, get the next file, if a folder we're done
 			if (ImgInfo.bChainFiles) {
@@ -2529,7 +2529,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 // Note that menu is not used, it is called with NULL sometimes
 void ShowBmp(MenuItem*)
 {
-	if (SystemInfo.bShowBuiltInTests) {
+	if (ImgInfo.bShowBuiltInTests) {
 		if (BuiltInFiles[CurrentFileIndex].function) {
 			ShowLeds(1);    // get ready for preview
 			(*BuiltInFiles[CurrentFileIndex].function)();
@@ -2878,7 +2878,7 @@ void DisplayCurrentFile(bool path)
  //   if (upper.endsWith(".BMP"))
  //       name = name.substring(0, name.length() - 4);
 	//tft.setTextColor(TFT_BLACK, menuTextColor);
-	if (SystemInfo.bShowBuiltInTests) {
+	if (ImgInfo.bShowBuiltInTests) {
 		if (SystemInfo.bHiLiteCurrentFile) {
 			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
 		}
@@ -2897,7 +2897,7 @@ void DisplayCurrentFile(bool path)
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
-			SystemInfo.bShowBuiltInTests = true;
+			ImgInfo.bShowBuiltInTests = true;
 			GetFileNamesFromSDorBuiltins("/");
 			DisplayCurrentFile(path);
 			return;
@@ -3030,7 +3030,7 @@ bool ProcessConfigFile(String filename)
 								break;
 							case vtBuiltIn:
 							{
-								bool bLastBuiltIn = SystemInfo.bShowBuiltInTests;
+								bool bLastBuiltIn = ImgInfo.bShowBuiltInTests;
 								args.toUpperCase();
 								bool value = args[0] == 'T';
 								if (value != bLastBuiltIn) {
@@ -3049,7 +3049,7 @@ bool ProcessConfigFile(String filename)
 								int oldFileIndex = CurrentFileIndex;
 								// save the old folder if necessary
 								String oldFolder;
-								if (!SystemInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
+								if (!ImgInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
 									oldFolder = currentFolder;
 									currentFolder = folder;
 									GetFileNamesFromSDorBuiltins(folder);
@@ -3165,7 +3165,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 	FileNames.clear();
 	if (nBootCount == 0)
 		CurrentFileIndex = 0;
-	if (!SystemInfo.bShowBuiltInTests) {
+	if (!ImgInfo.bShowBuiltInTests) {
 		String startfile;
 		if (dir.length() > 1)
 			dir = dir.substring(0, dir.length() - 1);
@@ -3235,16 +3235,16 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 			bSdCardValid = true;
 		}
 		else {
-			SystemInfo.bShowBuiltInTests = true;
+			ImgInfo.bShowBuiltInTests = true;
 			bSdCardValid = false;
 		}
 	}
 	// if nothing read, switch to built-in
 	if (FileNames.size() == 0) {
-		SystemInfo.bShowBuiltInTests = true;
+		ImgInfo.bShowBuiltInTests = true;
 		bSdCardValid = false;
 	}
-	if (SystemInfo.bShowBuiltInTests) {
+	if (ImgInfo.bShowBuiltInTests) {
 		for (int ix = 0; ix < (sizeof(BuiltInFiles) / sizeof(*BuiltInFiles)); ++ix) {
 			FileNames.push_back(String(BuiltInFiles[ix].text));
 		}
@@ -3401,7 +3401,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					break;
 				case vtShowFile:
 					if (*(char*)(SettingsVarList[ix].address)) {
-						line = String(SettingsVarList[ix].name) + "=" + (SystemInfo.bShowBuiltInTests ? "" : currentFolder) + String((char*)(SettingsVarList[ix].address));
+						line = String(SettingsVarList[ix].name) + "=" + (ImgInfo.bShowBuiltInTests ? "" : currentFolder) + String((char*)(SettingsVarList[ix].address));
 					}
 					break;
 				case vtInt:
@@ -3546,7 +3546,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 {
 	bool oldShowBuiltins;
 	if (save) {
-		oldShowBuiltins = SystemInfo.bShowBuiltInTests;
+		oldShowBuiltins = ImgInfo.bShowBuiltInTests;
 		SettingsSaveRestore(true, 1);
 	}
 	bRunningMacro = true;
@@ -3559,7 +3559,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	bRunningMacro = false;
 	if (save) {
 		// need to handle if the builtins was changed
-		if (oldShowBuiltins != SystemInfo.bShowBuiltInTests) {
+		if (oldShowBuiltins != ImgInfo.bShowBuiltInTests) {
 			ToggleFilesBuiltin(NULL);
 		}
 		SettingsSaveRestore(false, 1);
@@ -3664,7 +3664,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 	}
 	int ix1, ix2;
 	if (ImgInfo.bUpsideDown) {
-		if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests) {
+		if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(LedInfo.nTotalLeds - 1 - 2 * ix);
 			ix2 = AdjustStripIndex(LedInfo.nTotalLeds - 2 - 2 * ix);
 		}
@@ -3673,7 +3673,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		}
 	}
 	else {
-		if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests) {
+		if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(2 * ix);
 			ix2 = AdjustStripIndex(2 * ix + 1);
 		}
@@ -3686,7 +3686,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		//Serial.println("col: " + String(column) + " fade: " + String(fade));
 	}
 	leds[ix1] = pixel;
-	if (ImgInfo.bDoublePixels && !SystemInfo.bShowBuiltInTests)
+	if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests)
 		leds[ix2] = pixel;
 }
 
@@ -4043,7 +4043,7 @@ void handleFileUpload(){ // upload a new file to the Filing system
       append_page_footer();
       server.send(200,"text/html",webpage);
 	  // reload the file list, if not showing built-ins
-	  if (!SystemInfo.bShowBuiltInTests) {
+	  if (!ImgInfo.bShowBuiltInTests) {
 		  GetFileNamesFromSDorBuiltins(currentFolder);
 	  }
     } 

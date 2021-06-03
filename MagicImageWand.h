@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.16";
+char* myVersion = "1.17";
 
 // ***** Various switchs for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -193,6 +193,7 @@ struct IMG_INFO {
     int nCurrentMacro = 0;                    // the number of the macro to select or run
     int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
     int nRepeatCountMacro = 1;                // repeat count for macros
+    bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
 };
 typedef IMG_INFO IMG_INFO;
 RTC_DATA_ATTR IMG_INFO ImgInfo;
@@ -200,7 +201,6 @@ RTC_DATA_ATTR IMG_INFO ImgInfo;
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 
 struct SYSTEM_INFO {
-    bool bShowBuiltInTests = false;             // list the internal file instead of the SD card
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
     bool bHiLiteCurrentFile = true;
@@ -699,7 +699,7 @@ MenuItem ImageMenu[] = {
     {eTextInt,"Start Delay (S): %d.%d",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
     {eTextInt,"Fade I/O Columns : %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
-    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Walk: %s",ToggleBool,&ImgInfo.bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,"Play Mirror Image: %s",ToggleBool,&ImgInfo.bMirrorPlayImage,0,0,0,"Yes","No"},
         {eIfEqual,"",NULL,&ImgInfo.bMirrorPlayImage,true},
@@ -708,7 +708,7 @@ MenuItem ImageMenu[] = {
         {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
     {eEndif},
     {eBool,"144 to 288 Pixels: %s",ToggleBool,&ImgInfo.bDoublePixels,0,0,0,"Yes","No"},
-    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Frame Advance: %s",ToggleBool,&ImgInfo.bManualFrameAdvance,0,0,0,"Step","Auto"},
         {eIfEqual,"",NULL,&ImgInfo.bManualFrameAdvance,true},
             {eTextInt,"Frame Counter: %d",GetIntegerValue,&ImgInfo.nFramePulseCount,0,32},
@@ -757,7 +757,7 @@ MenuItem RepeatMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.repeatCount,1,100},
     {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
-    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,false},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Chain Files: %s",ToggleBool,&ImgInfo.bChainFiles,0,0,0,"On","Off"},
         {eIfEqual,"",NULL,&ImgInfo.bChainFiles,true},
             {eTextInt,"Chain Repeats: %d",GetIntegerValue,&ImgInfo.nChainRepeats,1,100},
@@ -821,17 +821,17 @@ MenuItem MacroMenu[] = {
 };
 MenuItem MainMenu[] = {
     //{eText,"This is a very long dummy menu item for testing"},
-    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
-        {eBool,"Switch to SD Card",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
+        {eBool,"Switch to SD Card",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
-        {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&SystemInfo.bShowBuiltInTests,0,0,0,"On","Off"},
+        {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
         {eText,"Preview BMP",ShowBmp},
     {eEndif},
     //{eText,"Another long menu item for testing"},
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},
-    {eIfEqual,"",NULL,&SystemInfo.bShowBuiltInTests,true},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
         {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
     {eElse},
         {eMenu,"MIW File Operations",{.menu = StartFileMenu}},
@@ -926,7 +926,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SHOW BMP ON LCD",&SystemInfo.bShowDuringBmpFile,vtBool},
     {"MENU STAR",&SystemInfo.bMenuStar,vtBool},
     {"HILITE FILE",&SystemInfo.bHiLiteCurrentFile,vtBool},
-    {"SELECT BUILTINS",&SystemInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
+    {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };
 
