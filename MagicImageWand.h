@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.18";
+char* myVersion = "1.19";
 
 // ***** Various switchs for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -166,7 +166,7 @@ struct LED_INFO {
     int nStripMaxCurrent = 2000;              // maximum milliamps to allow
 };
 typedef LED_INFO LED_INFO;
-RTC_DATA_ATTR LED_INFO LedInfo;
+LED_INFO LedInfo;
 
 // image settings
 struct IMG_INFO {
@@ -221,7 +221,7 @@ struct SYSTEM_INFO {
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
-RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
+SYSTEM_INFO SystemInfo;
 
 struct BUILTIN_INFO {
     // adjustment values for builtins
@@ -301,7 +301,7 @@ RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
 
 // settings
 bool bSdCardValid = false;              // set to true when card is found
-bool bControllerReboot = false;                         // set this when controllers or led count changed
+bool bControllerReboot = false;         // set this when controllers or led count changed
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
 void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
@@ -313,10 +313,11 @@ int r = 0;                                // Variable for the Red Value
 constexpr auto NEXT_FOLDER_CHAR = '>';
 constexpr auto PREVIOUS_FOLDER_CHAR = '<';
 String currentFolder = "/";
-int lastFileIndex = 0;                                  // save between switching of internal and SD
+RTC_DATA_ATTR char sleepFolder[50];     // a place to save the folder during sleeping
+int lastFileIndex = 0;                  // save between switching of internal and SD
 String lastFolder = "/";
 std::vector<String> FileNames;
-bool bSettingsMode = false;                             // set true when settings are displayed
+bool bSettingsMode = false;               // set true when settings are displayed
 bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
 bool bRecordingMacro = false;             // set while recording
@@ -867,8 +868,8 @@ BuiltInItem BuiltInFiles[] = {
     {"Wedge",TestWedge,WedgeMenu},
 };
 
-// a stack to hold the file indexes as we navigate folders
-std::stack<int> FileIndexStack;
+// a stack to hold the file indexes as we navigate folders, put it in RTC memory for waking from sleep
+RTC_DATA_ATTR int FileIndexStack[10], FileIndexStackSize = 0;
 
 // a stack for menus so we can find our way back
 struct MENUINFO {

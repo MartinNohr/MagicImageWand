@@ -93,11 +93,12 @@ void setup()
 	int width = tft.width();
 	int height = tft.height();
 	ClearScreen();
+	tft.setFreeFont(&Dialog_bold_16);
+	tft.setTextSize(1);
 
-	tft.setTextColor(SystemInfo.menuTextColor);
-	rainbow_fill();
-	if (nBootCount == 0)
-	{
+	if (nBootCount == 0) {
+		tft.setTextColor(SystemInfo.menuTextColor);
+		rainbow_fill();
 		tft.setTextColor(TFT_BLACK);
 		tft.setFreeFont(&Irish_Grover_Regular_24);
 		tft.drawRect(0, 0, width - 1, height - 1, SystemInfo.menuTextColor);
@@ -107,8 +108,11 @@ void setup()
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 20, 90);
 	}
-	tft.setFreeFont(&Dialog_bold_16);
-
+	else {
+		// see if we need to get the path back
+		if (strlen(sleepFolder))
+			currentFolder = sleepFolder;
+	}
 	if (SaveLoadSettings(false, true, false, true)) {
 		if ((nBootCount == 0) && bAutoLoadSettings && gpio_get_level((gpio_num_t)DIAL_BTN)) {
 			SaveLoadSettings(false, false, false, true);
@@ -119,6 +123,7 @@ void setup()
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
+
 	GetFileNamesFromSDorBuiltins(currentFolder);
 	tft.setFreeFont(&Dialog_bold_16);
 	tft.setTextColor(SystemInfo.menuTextColor);
@@ -1501,6 +1506,9 @@ void Sleep(MenuItem* menu)
 {
 	++nBootCount;
 	//rtc_gpio_pullup_en(BTNPUSH);
+	// save the current folder
+	memset(sleepFolder, '\0', sizeof(sleepFolder));
+	strncpy(sleepFolder, currentFolder.c_str(), sizeof(sleepFolder) - 1);
 	esp_sleep_enable_ext0_wakeup((gpio_num_t)DIAL_BTN, LOW);
 	esp_deep_sleep_start();
 }
@@ -2067,6 +2075,23 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 	leds[ledNo].fadeToBlackBy(fadeValue);
 }
 
+// push file index on stack to save
+void PushFileIndex(int ix)
+{
+	if (FileIndexStackSize < sizeof(FileIndexStack)) {
+		FileIndexStack[FileIndexStackSize++] = ix;
+	}
+}
+
+// pop the file index from the saved stack
+int PopFileIndex()
+{
+	if (FileIndexStackSize) {
+		return FileIndexStack[--FileIndexStackSize];
+	}
+	return 0;
+}
+
 // run file or built-in
 void ProcessFileOrTest()
 {
@@ -2075,7 +2100,7 @@ void ProcessFileOrTest()
 	// let's see if this is a folder command
 	String tmp = FileNames[CurrentFileIndex];
 	if (tmp[0] == NEXT_FOLDER_CHAR) {
-		FileIndexStack.push(CurrentFileIndex);
+		PushFileIndex(CurrentFileIndex);
 		tmp = tmp.substring(1);
 		// change folder, reload files
 		currentFolder += tmp + "/";
@@ -2089,8 +2114,7 @@ void ProcessFileOrTest()
 		// change folder, reload files
 		currentFolder = tmp;
 		GetFileNamesFromSDorBuiltins(currentFolder);
-		CurrentFileIndex = FileIndexStack.top();
-		FileIndexStack.pop();
+		CurrentFileIndex = PopFileIndex();
 		DisplayCurrentFile();
 		return;
 	}
