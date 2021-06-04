@@ -280,6 +280,7 @@ void setup()
 	// TFT_TRANSPARENT is already defined for convenience
 	// We could also fill with any colour as "transparent" and later specify that
 	// same colour when we push the Sprite onto the screen.
+	nBootCount = 0;
 }
 
 // scroll the long menu lines

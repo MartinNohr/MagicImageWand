@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.17";
+char* myVersion = "1.18";
 
 // ***** Various switchs for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -820,14 +820,12 @@ MenuItem MacroMenu[] = {
     {eTerminate}
 };
 MenuItem MainMenu[] = {
-    //{eText,"This is a very long dummy menu item for testing"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
         {eBool,"Switch to SD Card",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
     {eElse},
         {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
         {eText,"Preview BMP",ShowBmp},
     {eEndif},
-    //{eText,"Another long menu item for testing"},
     {eMenu,"File Image Settings",{.menu = ImageMenu}},
     {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
     {eMenu,"LED Strip Settings",{.menu = StripMenu}},
@@ -841,9 +839,8 @@ MenuItem MainMenu[] = {
     {eMenu,"System Settings",{.menu = SystemMenu}},
     {eText,"Light Bar",LightBar},
     {eMenu,"Light Bar Settings",{.menu = LedLightBarMenu}},
-    //{eText,"Battery",ReadBattery},
-    {eText,"Sleep",Sleep},
     {eReboot,"Reboot"},
+    {eText,"Sleep",Sleep},
     // make sure this one is last
     {eTerminate}
 };
