@@ -28,6 +28,19 @@ void IRAM_ATTR oneshot_LED_timer_callback(void* arg)
 	//ESP_LOGI(TAG, "One-shot timer called, time since boot: %lld us", time_since_boot);
 }
 
+// timer called every second
+void IRAM_ATTR periodic_Second_timer_callback(void* arg)
+{
+	if (sleepTimer)
+		--sleepTimer;
+	if (displayDimTimer) {
+		--displayDimTimer;
+		if (displayDimTimer == 0) {
+			displayDimNow = true;
+		}
+	}
+}
+
 constexpr int TFT_ENABLE = 4;
 // use these to control the LCD brightness
 const int freq = 5000;
@@ -40,20 +53,15 @@ void setup()
 	Serial.begin(115200);
 	delay(10);
 	tft.init();
+	tft.fillScreen(TFT_BLACK);
 	// configure LCD PWM functionalitites
 	pinMode(TFT_ENABLE, OUTPUT);
 	digitalWrite(TFT_ENABLE, 1);
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
-	ClearScreen();
-	tft.setRotation(3);
-	tft.setTextPadding(tft.width());
-	//Serial.println("boot: " + String(nBootCount));
 	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, &SystemInfo.DialSettings);
 	setupSDcard();
-	//listDir(SD, "/", 2, "");
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
 	gpio_set_direction((gpio_num_t)FRAMEBUTTON, GPIO_MODE_INPUT);
@@ -62,7 +70,6 @@ void setup()
 	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
 	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
 	gpio_set_direction(GPIO_NUM_35, GPIO_MODE_INPUT);
-	//gpio_set_pull_mode(GPIO_NUM_35, GPIO_PULLUP_ONLY); // not needed since there are no pullups on 35, they are input only
 
 	oneshot_LED_timer_args = {
 				oneshot_LED_timer_callback,
@@ -72,6 +79,16 @@ void setup()
 				"one-shotLED"
 	};
 	esp_timer_create(&oneshot_LED_timer_args, &oneshot_LED_timer);
+
+	periodic_Second_timer_args = {
+				periodic_Second_timer_callback,
+				/* argument specified here will be passed to timer callback function */
+				(void*)0,
+				ESP_TIMER_TASK,
+				"second timer"
+	};
+	esp_timer_create(&periodic_Second_timer_args, &periodic_Second_timer);
+	esp_timer_start_periodic(periodic_Second_timer, 1000 * 1000);
 
 	//WiFi
 	WiFi.softAP(ssid, password);
@@ -90,39 +107,47 @@ void setup()
 	///////////////////////////// End of Request commands
 	server.begin();
 
-	int width = tft.width();
-	int height = tft.height();
-	ClearScreen();
-	tft.setFreeFont(&Dialog_bold_16);
-	tft.setTextSize(1);
-
-	if (nBootCount == 0) {
-		tft.setTextColor(SystemInfo.menuTextColor);
-		rainbow_fill();
-		tft.setTextColor(TFT_BLACK);
-		tft.setFreeFont(&Irish_Grover_Regular_24);
-		tft.drawRect(0, 0, width - 1, height - 1, SystemInfo.menuTextColor);
-		tft.drawString("Magic Image Wand", 5, 10);
-		tft.setFreeFont(&Dialog_bold_16);
-		tft.drawString(String("Version ") + myVersion, 20, 70);
-		tft.setTextSize(1);
-		tft.drawString(__DATE__, 20, 90);
-	}
-	else {
-		// see if we need to get the path back
-		if (strlen(sleepFolder))
-			currentFolder = sleepFolder;
-	}
+	String msg;
 	if (SaveLoadSettings(false, true, false, true)) {
 		if ((nBootCount == 0) && bAutoLoadSettings && gpio_get_level((gpio_num_t)DIAL_BTN)) {
 			SaveLoadSettings(false, false, false, true);
-			tft.drawString("Settings Loaded", 20, 110);
+			msg = "Settings Loaded";
 		}
 	}
 	else {
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
+	tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
+	tft.setFreeFont(&Dialog_bold_16);
+	tft.setTextSize(1);
+	tft.setTextPadding(tft.width());
+	ClearScreen();
+	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+
+	if (nBootCount == 0) {
+		tft.setTextColor(SystemInfo.menuTextColor);
+		rainbow_fill();
+		tft.setTextColor(TFT_BLACK);
+		tft.setFreeFont(&Irish_Grover_Regular_24);
+		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
+		tft.drawString("Magic Image Wand", 5, 10);
+		tft.setFreeFont(&Dialog_bold_16);
+		tft.drawString(String("Version ") + myVersion, 20, 70);
+		tft.setTextSize(1);
+		tft.drawString(__DATE__, 20, 90);
+		if (msg.length()) {
+			tft.drawString(msg, 20, 110);
+		}
+	}
+	else {
+		// see if we need to get the path back
+		if (strlen(sleepFolder))
+			currentFolder = sleepFolder;
+	}
+#if !HAS_BATTERY_LEVEL
+	SystemInfo.bShowBatteryLevel = false;
+#endif
 
 	GetFileNamesFromSDorBuiltins(currentFolder);
 	tft.setFreeFont(&Dialog_bold_16);
@@ -286,6 +311,16 @@ void setup()
 	// We could also fill with any colour as "transparent" and later specify that
 	// same colour when we push the Sprite onto the screen.
 	nBootCount = 0;
+	// load the sleep timer
+	sleepTimer = SystemInfo.nSleepTime * 60;
+}
+
+void ResetSleepAndDimTimers() {
+	sleepTimer = SystemInfo.nSleepTime * 60;
+	displayDimTimer = SystemInfo.nDisplayDimTime;
+	if (SystemInfo.nDisplayDimTime) {
+		SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+	}
 }
 
 // scroll the long menu lines
@@ -339,11 +374,18 @@ void loop()
 
 	MenuTextScrollSideways();
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
+	if (SystemInfo.nSleepTime && sleepTimer == 0) {
+		// go to sleep
+		Sleep(NULL);
+	}
 	if (bSettingsMode && !bLastSettingsMode) {
 		memcpy(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo));
 	}
 	if (!bSettingsMode && bLastSettingsMode) {
 		if (memcmp(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo))) {
+			// make sure that the lcd dim is less than the bright
+			if (SystemInfo.nDisplayDimValue > SystemInfo.nDisplayBrightness)
+				SystemInfo.nDisplayDimValue = SystemInfo.nDisplayBrightness;
 			SaveLoadSettings(true, false, true, true);
 		}
 	}
@@ -368,6 +410,7 @@ void loop()
 		// debounce
 		delay(30);
 		if (digitalRead(0) == 0) {
+			ResetSleepAndDimTimers();
 			ShowBmp(NULL);
 			// kill the cancel flag
 			bCancelRun = bCancelMacro = false;
@@ -885,6 +928,12 @@ void UpdateDisplayBrightness(MenuItem* menu, int flag)
 	SetDisplayBrightness(*(int*)menu->value);
 }
 
+void UpdateDisplayRotation(MenuItem* menu, int flag)
+{
+	tft.setRotation(*(bool*)menu->value ? 1 : 3);
+	tft.fillScreen(TFT_BLACK);
+}
+
 void SetDisplayBrightness(int val)
 {
 	ledcWrite(ledChannel, map(val, 0, 100, 0, 255));
@@ -1088,14 +1137,30 @@ enum CRotaryDialButton::Button ReadButton()
 		}
 	}
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
-	// read the next button, or NONE it none there
+	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
+	if (retValue != BTN_NONE) {
+		ResetSleepAndDimTimers();
+	}
+	else if (displayDimNow) {
+		for (int val = SystemInfo.nDisplayBrightness - 1; val >= SystemInfo.nDisplayDimValue; --val) {
+			SetDisplayBrightness(val);
+			if (CRotaryDialButton::getCount()) {
+				// if button pressed finish and get out of here
+				SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+				break;
+			}
+			delay(10);
+		}
+		displayDimNow = false;
+	}
 	return retValue;
 }
 
 // just check for longpress and cancel if it was there
 bool CheckCancel()
 {
+	ResetSleepAndDimTimers();
 	// if it has been set, just return true
 	if (bCancelRun || bCancelMacro)
 		return true;
@@ -1504,6 +1569,7 @@ void OppositeRunningDots()
 
 void Sleep(MenuItem* menu)
 {
+	esp_timer_stop(periodic_Second_timer);
 	++nBootCount;
 	//rtc_gpio_pullup_en(BTNPUSH);
 	// save the current folder
@@ -4270,6 +4336,8 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	uint16_t color;
 	uint16_t sbcolor = 0;
 	int height;
+	// reset the sleep timer
+	ResetSleepAndDimTimers();
 	// just send to the LEDs
 	if (scrBuf == nullptr && mode == 0) {
 		FastLED.show();

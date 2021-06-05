@@ -1,8 +1,10 @@
 #pragma once
+// ***** TODO *****
+// add color temp selections to lightbar
 
-char* myVersion = "1.19";
+char* myVersion = "1.20";
 
-// ***** Various switchs for options are set here *****
+// ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
@@ -219,6 +221,10 @@ struct SYSTEM_INFO {
     int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
+    int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
+    int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
+    int nDisplayDimValue = 10;                  // the value to dim to
+    bool bDisplayUpsideDown = false;            // rotates display 180
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
@@ -326,10 +332,20 @@ int recordingTime;                        // shows the time for each part
 bool bRunningMacro = false;               // set while running
 int nMacroRepeatsLeft = 1;                // set during macro running
 volatile int nTimerSeconds;
+
+// esp timers
 // set this to the delay time while we get the next frame, also used for delay timers
 volatile bool bStripWaiting = false;
 esp_timer_handle_t oneshot_LED_timer;
 esp_timer_create_args_t oneshot_LED_timer_args;
+// use this timer for seconds countdown
+volatile int sleepTimer = 0;
+// seconds before dimming the display
+volatile int displayDimTimer = 30;
+volatile bool displayDimNow = false;
+esp_timer_handle_t periodic_Second_timer;
+esp_timer_create_args_t periodic_Second_timer_args;
+
 #if USE_STANDARD_SD
 SDFile dataFile;
 #else
@@ -402,6 +418,7 @@ void GetIntegerValue(MenuItem*);
 void ToggleBool(MenuItem*);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
+void UpdateDisplayRotation(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
@@ -663,23 +680,55 @@ MenuItem SidewaysScrollMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-MenuItem SystemMenu[] = {
+MenuItem DialMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
-    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
-    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
-    {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
-    {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
-    {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
-    {eText,"Set Text Color",SetMenuColor},
-    {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
-    {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
-    {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
-    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eBool,"Dial: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
+    {eExit,"Previous Menu"},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem MenuMenu[] = {
+    {eExit,"Previous Menu"},
+    {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
+    {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
+    {eExit,"Previous Menu"},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem HomeScreenMenu[] = {
+    {eExit,"Previous Menu"},
+    {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
+    {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
+    {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
+    {eExit,"Previous Menu"},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem DisplayMenu[] = {
+    {eExit,"Previous Menu"},
+    {eBool,"Upside Down: %s",ToggleBool,&SystemInfo.bDisplayUpsideDown,0,0,0,"Yes","No",UpdateDisplayRotation},
+    {eText,"Text Color",SetMenuColor},
+    {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
+    {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
+    {eExit,"Previous Menu"},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem SystemMenu[] = {
+    {eExit,"Previous Menu"},
+    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
+    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
+    {eMenu,"Display Settings",{.menu = DisplayMenu}},
+    {eMenu,"Menu Settings",{.menu = MenuMenu}},
+    {eMenu,"Main Screen Settings",{.menu = HomeScreenMenu}},
+    {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
+    {eMenu,"Dial Settings",{.menu = DialMenu}},
+    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
+    {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
