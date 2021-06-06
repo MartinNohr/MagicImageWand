@@ -459,12 +459,13 @@ bool RunMenus(int button)
 			case eTextInt:
 			case eTextCurrentFile:
 			case eBool:
+			case eList:
 				bMenuChanged = true;
 				if (MenuStack.top()->menu[ix].function) {
 					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
 				}
 				break;
-			case eList:
+			case eMacroList:
 				bMenuChanged = true;
 				if (MenuStack.top()->menu[ix].function) {
 					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
@@ -484,8 +485,8 @@ bool RunMenus(int button)
 					MenuStack.top()->index = 0;
 					MenuStack.top()->offset = 0;
 					//Serial.println("change menu");
-					// check if the new menu is an eList and if it has a value, if it does, set the index to it
-					if (MenuStack.top()->menu->op == eList && MenuStack.top()->menu->value) {
+					// check if the new menu is an eMacroList and if it has a value, if it does, set the index to it
+					if (MenuStack.top()->menu->op == eMacroList && MenuStack.top()->menu->value) {
 						int ix = *(int*)MenuStack.top()->menu->value;
 						MenuStack.top()->index = ix;
 						// adjust offset if necessary
@@ -599,7 +600,7 @@ void ShowMenu(struct MenuItem* menu)
 			// next line
 			++y;
 			break;
-		case eList:
+		case eMacroList:
 			bMenuValid[menix] = true;
 			// the list of macro files
 			// min holds the macro number
@@ -610,14 +611,18 @@ void ShowMenu(struct MenuItem* menu)
 			// next line
 			++y;
 			break;
+		case eList:
+			bMenuValid[menix] = true;
+			val = *(int*)menu->value;
+			sprintf(line, menu->text, menu->nameList[val]);
+			// next line
+			++y;
+			break;
 		case eBool:
 			bMenuValid[menix] = true;
 			if (menu->value) {
-				// clean extra bits, just in case
 				bool* pb = (bool*)menu->value;
-				//*pb &= 1;
 				sprintf(line, menu->text, *pb ? menu->on : menu->off);
-				//Serial.println("bool line: " + String(line));
 			}
 			else {
 				strcpy(line, menu->text);
@@ -720,8 +725,15 @@ void ToggleBool(MenuItem* menu)
 		(*menu->change)(menu, -1);
 	}
 	ResetTextLines();
-	//Serial.println("autoload: " + String(bAutoLoadSettings));
-	//Serial.println("fixed time: " + String(bFixedTime));
+}
+
+// choose from one of the values, update the index and wrap around if past max
+void GetSelectChoice(MenuItem* menu)
+{
+	int* pVal = (int*)menu->value;
+	++* pVal;
+	*pVal %= menu->max + 1;
+	ResetTextLines();
 }
 
 // get integer values

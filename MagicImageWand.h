@@ -2,7 +2,7 @@
 // ***** TODO *****
 // add color temp selections to lightbar
 
-char* myVersion = "1.20";
+char* myVersion = "1.21";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -153,6 +153,7 @@ bool bAutoLoadSettings = false;
 CRGB* leds;
 // 0 feed from center, 1 serial from end, 2 from outsides
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
+char* StripsWiringText[] = { "Middle","Serial","Outside" };
 struct LED_INFO {
     bool bSecondController = false;
     int nLEDBrightness = 25;
@@ -367,7 +368,8 @@ enum eDisplayOperation {
     eEndif,             // ends an if block
     eBuiltinOptions,    // use an internal settings menu if available, see the internal name,function list below (BuiltInFiles[])
     eReboot,            // reboot the system
-    eList,              // used to make a selection from multiple choices
+    eMacroList,         // used to make a selection from the macro list
+    eList,              // used to rotate selection from a list of choices
 };
 
 // we need to have a pointer reference to this in the MenuItem, the full declaration follows later
@@ -388,7 +390,8 @@ struct MenuItem {
     char* on;                           // text for boolean true
     char* off;                          // text for boolean false
     // flag is 1 for first time, 0 for changes, and -1 for last call, bools only call this with -1
-    void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect
+    void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect, can be NULL
+    char** nameList;                    // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
 };
 typedef MenuItem MenuItem;
 
@@ -414,8 +417,9 @@ void LoadStartFile(MenuItem* menu);
 void SaveEepromSettings(MenuItem* menu);
 void LoadEepromSettings(MenuItem* menu);
 void ShowWhiteBalance(MenuItem* menu);
-void GetIntegerValue(MenuItem*);
-void ToggleBool(MenuItem*);
+void GetIntegerValue(MenuItem* menu);
+void GetSelectChoice(MenuItem* menu);
+void ToggleBool(MenuItem* menu);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void UpdateDisplayRotation(MenuItem* menu, int flag);
@@ -774,7 +778,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
-    {eTextInt,"LED Wiring Mode: %d",GetIntegerValue,&LedInfo.stripsMode,0,2,0,NULL,NULL,UpdateStripsMode},
+    {eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,2,0,NULL,NULL,NULL,StripsWiringText},
     {eBool,"Gamma Correction: %s",ToggleBool,&LedInfo.bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&LedInfo.whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&LedInfo.whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},
@@ -832,16 +836,16 @@ MenuItem EepromMenu[] = {
 };
 MenuItem MacroSelectMenu[] = {
     //{eExit,"Previous Menu"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
-    {eList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
     //{eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
