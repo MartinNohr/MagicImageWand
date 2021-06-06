@@ -426,7 +426,7 @@ void UpdateDisplayRotation(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
-void UpdateStripsMode(MenuItem* menu, int flag);
+void UpdateWiringMode(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -778,7 +778,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
-    {eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,2,0,NULL,NULL,NULL,StripsWiringText},
+    {eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,2,0,NULL,NULL,UpdateWiringMode,StripsWiringText},
     {eBool,"Gamma Correction: %s",ToggleBool,&LedInfo.bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&LedInfo.whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&LedInfo.whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},

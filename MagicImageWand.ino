@@ -368,6 +368,7 @@ void MenuTextScrollSideways()
 
 void loop()
 {
+	static LED_INFO LedInfoSaved;
 	static SYSTEM_INFO SystemInfoSaved;
 	static bool didsomething = false;
 	static bool bLastSettingsMode = false;
@@ -380,6 +381,7 @@ void loop()
 	}
 	if (bSettingsMode && !bLastSettingsMode) {
 		memcpy(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo));
+		memcpy(&LedInfoSaved, &LedInfo, sizeof(LedInfo));
 	}
 	if (!bSettingsMode && bLastSettingsMode) {
 		if (memcmp(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo))) {
@@ -391,9 +393,14 @@ void loop()
 	}
 	bLastSettingsMode = bSettingsMode;
 	if (!bSettingsMode && bControllerReboot) {
-		WriteMessage("Rebooting due to\nLED controller change", false, 2000);
-		SaveLoadSettings(true, false, true, true);
-		ESP.restart();
+		if (memcmp(&LedInfo, &LedInfoSaved, sizeof(LedInfo))) {
+			WriteMessage("Rebooting due to\nLED controller change", false, 2000);
+			SaveLoadSettings(true, false, true, true);
+			ESP.restart();
+		}
+		else {
+			bControllerReboot = false;
+		}
 	}
 	server.handleClient();
 	// wait for no keys
@@ -461,14 +468,26 @@ bool RunMenus(int button)
 			case eBool:
 			case eList:
 				bMenuChanged = true;
+				if (MenuStack.top()->menu[ix].change != NULL) {
+					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
+				}
 				if (MenuStack.top()->menu[ix].function) {
 					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
+				}
+				if (MenuStack.top()->menu[ix].change != NULL) {
+					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
 				}
 				break;
 			case eMacroList:
 				bMenuChanged = true;
+				if (MenuStack.top()->menu[ix].change != NULL) {
+					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
+				}
 				if (MenuStack.top()->menu[ix].function) {
 					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
+				}
+				if (MenuStack.top()->menu[ix].change != NULL) {
+					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
 				}
 				bExit = true;
 				// if there is a value, set the min value in it
@@ -733,7 +752,15 @@ void GetSelectChoice(MenuItem* menu)
 	int* pVal = (int*)menu->value;
 	++* pVal;
 	*pVal %= menu->max + 1;
+	if (menu->change != NULL) {
+		(*menu->change)(menu, 0);
+	}
 	ResetTextLines();
+}
+
+void UpdateWiringMode(MenuItem* menu, int flag)
+{
+	bControllerReboot = true;
 }
 
 // get integer values
@@ -754,9 +781,6 @@ void GetIntegerValue(MenuItem* menu)
 	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press to Accept", SystemInfo.menuTextColor);
 	int oldVal = *(int*)menu->value;
-	if (menu->change != NULL) {
-		(*menu->change)(menu, 1);
-	}
 	do {
 		//Serial.println("button: " + String(button));
 		switch (button) {
@@ -807,9 +831,6 @@ void GetIntegerValue(MenuItem* menu)
 			MenuTextScrollSideways();
 		}
 	} while (!done);
-	if (menu->change != NULL) {
-		(*menu->change)(menu, -1);
-	}
 }
 
 void UpdateStripBrightness(MenuItem* menu, int flag)
@@ -852,29 +873,13 @@ void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
 
 void UpdateControllers(MenuItem* menu, int flag)
 {
-	WriteMessage("Reboot needed\nto take effect", false, 1000);
-	bControllerReboot = true;
 	if (LedInfo.bSecondController)
 		LedInfo.nTotalLeds *= 2;
 	else
 		LedInfo.nTotalLeds /= 2;
-}
-
-void UpdateStripsMode(MenuItem* menu, int flag)
-{
-	static int lastmode;
-	switch (flag) {
-	case 1:		// first time
-		lastmode = LedInfo.stripsMode;
-		break;
-	case 0:		// every change
-		break;
-	case -1:	// last time, expand but don't shrink
-		if (lastmode != LedInfo.stripsMode) {
-			WriteMessage("Reboot needed\nto take effect", false, 1000);
-			bControllerReboot = true;
-		}
-		break;
+	if (flag == -1 && !bControllerReboot) {
+		//WriteMessage("Reboot needed\nto take effect", false, 1000);
+		bControllerReboot = true;
 	}
 }
 
@@ -888,8 +893,8 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 	case 0:		// every change
 		break;
 	case -1:	// last time, expand but don't shrink
-		if (LedInfo.nTotalLeds != lastcount) {
-			WriteMessage("Reboot needed\nto take effect", false, 1000);
+		if (LedInfo.nTotalLeds != lastcount && !bControllerReboot) {
+			//WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
 		break;
