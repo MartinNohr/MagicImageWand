@@ -822,7 +822,8 @@ void GetIntegerValue(MenuItem* menu)
 		DisplayLine(0, line, SystemInfo.menuTextColor);
 		sprintf(valstr, fmt, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
 		DisplayLine(3, String("Value: ") + valstr, SystemInfo.menuTextColor);
-		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "Step: " + String(stepSize) + " (Click +)", SystemInfo.menuTextColor);
+		sprintf(valstr, fmt, stepSize / (int)pow10(menu->decimals), stepSize % (int)pow10(menu->decimals));
+		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "Step: " + String(valstr) + " (Click +)", SystemInfo.menuTextColor);
 		if (menu->change != NULL && oldVal != *(int*)menu->value) {
 			(*menu->change)(menu, 0);
 			oldVal = *(int*)menu->value;
@@ -2980,6 +2981,10 @@ bool IsFolder(int index)
 // show the current file
 void DisplayCurrentFile(bool path)
 {
+	bool bShowFolder = SystemInfo.bShowFolder;
+	// always show the path for previous folder
+	if (FileNames[CurrentFileIndex][0] == PREVIOUS_FOLDER_CHAR || currentFolder == "/")
+		bShowFolder = true;
 	//String name = FileNames[CurrentFileIndex];
 	//String upper = name;
 	//upper.toUpperCase();
@@ -2996,11 +3001,12 @@ void DisplayCurrentFile(bool path)
 	}
 	else {
 		if (bSdCardValid) {
+			String name = ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : "");
 			if (SystemInfo.bHiLiteCurrentFile) {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), TFT_BLACK, SystemInfo.menuTextColor);
+				DisplayLine(0, name, TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(0, ((path && SystemInfo.bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : ""), SystemInfo.menuTextColor, TFT_BLACK);
+				DisplayLine(0, name, SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {

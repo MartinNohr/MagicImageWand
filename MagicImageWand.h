@@ -2,7 +2,7 @@
 // ***** TODO *****
 // add color temp selections to lightbar
 
-char* myVersion = "1.21";
+char* myVersion = "1.22";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -540,8 +540,8 @@ MenuItem BouncingBallsMenu[] = {
 MenuItem CheckerBoardMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Hold Frames: %d",GetIntegerValue,&BuiltinInfo.nCheckerboardHoldframes,1,100},
-    {eTextInt,"Black Width (pixels): %d",GetIntegerValue,&BuiltinInfo.nCheckboardBlackWidth,1,288},
-    {eTextInt,"White Width (pixels): %d",GetIntegerValue,&BuiltinInfo.nCheckboardWhiteWidth,1,288},
+    {eTextInt,"Black Width: %d pixels",GetIntegerValue,&BuiltinInfo.nCheckboardBlackWidth,1,288},
+    {eTextInt,"White Width: %d pixels",GetIntegerValue,&BuiltinInfo.nCheckboardWhiteWidth,1,288},
     {eTextInt,"Add Pixels per Cycle: %d",GetIntegerValue,&BuiltinInfo.nCheckerboardAddPixels,0,144},
     {eBool,"Alternate per Cycle: %s",ToggleBool,&BuiltinInfo.bCheckerBoardAlternate,0,0,0,"Yes","No"},
     {eExit,"Previous Menu"},
@@ -550,7 +550,7 @@ MenuItem CheckerBoardMenu[] = {
 };
 MenuItem RainbowMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Fade Time (S): %d.%d",GetIntegerValue,&BuiltinInfo.nRainbowFadeTime,0,100,1},
+    {eTextInt,"Fade Time: %d.%d S",GetIntegerValue,&BuiltinInfo.nRainbowFadeTime,0,100,1},
     {eTextInt,"Starting Hue: %d",GetIntegerValue,&BuiltinInfo.nRainbowInitialHue,0,255},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bRainbowCycleHue,0,0,0,"Yes","No"},
     {eTextInt,"Hue Delta Size: %d",GetIntegerValue,&BuiltinInfo.nRainbowHueDelta,1,255},
@@ -746,18 +746,18 @@ MenuItem ImageMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Timing Type: %s",ToggleBool,&ImgInfo.bFixedTime,0,0,0,"Image","Column"},
     {eIfEqual,"",NULL,&ImgInfo.bFixedTime,false},
-        {eTextInt,"Column Time (mS): %d",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
+        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
     {eElse},
-        {eTextInt,"Image Time (S): %d",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120},
+        {eTextInt,"Image Time: %d S",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120},
     {eEndif},
-    {eTextInt,"Start Delay (S): %d.%d",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
-    {eTextInt,"Fade I/O Columns : %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
+    {eTextInt,"Start Delay: %d.%d S",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
+    {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Walk: %s",ToggleBool,&ImgInfo.bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,"Play Mirror Image: %s",ToggleBool,&ImgInfo.bMirrorPlayImage,0,0,0,"Yes","No"},
         {eIfEqual,"",NULL,&ImgInfo.bMirrorPlayImage,true},
-            {eTextInt,"Mirror Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
+            {eTextInt,"Mirror Delay: %d.%d S",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
     {eEndif},
@@ -810,12 +810,12 @@ MenuItem StartFileMenu[] = {
 MenuItem RepeatMenu[] = {
     {eExit,"Previous Menu"},
     {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.repeatCount,1,100},
-    {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
+    {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Chain Files: %s",ToggleBool,&ImgInfo.bChainFiles,0,0,0,"On","Off"},
         {eIfEqual,"",NULL,&ImgInfo.bChainFiles,true},
             {eTextInt,"Chain Repeats: %d",GetIntegerValue,&ImgInfo.nChainRepeats,1,100},
-            {eTextInt,"Chain Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nChainDelay,0,100,1},
+            {eTextInt,"Chain Delay: %d.%d S",GetIntegerValue,&ImgInfo.nChainDelay,0,100,1},
             {eBool,"Chain Wait Key: %s",ToggleBool,&ImgInfo.bChainWaitKey,0,0,0,"Yes","No"},
         {eEndif},
     {eEndif},
@@ -863,8 +863,8 @@ MenuItem MacroMenu[] = {
     {eBool,"Record: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
     {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.nRepeatCountMacro,1,100},
-        {eTextInt,"Repeat Delay (S): %d.%d",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
-        {eTextInt,"Info: #%d",InfoMacro,&ImgInfo.nCurrentMacro},
+        {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
+        {eTextInt,"Information: #%d",InfoMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Load: #%d",LoadMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Save: #%d",SaveMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Delete: #%d",DeleteMacro,&ImgInfo.nCurrentMacro},
