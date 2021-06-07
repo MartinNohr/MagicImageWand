@@ -1,8 +1,6 @@
 #pragma once
-// ***** TODO *****
-// add color temp selections to lightbar
 
-char* myVersion = "1.22";
+char* myVersion = "1.23";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -229,6 +227,50 @@ struct SYSTEM_INFO {
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
+enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
+char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
+uint16_t LightBarColorList[] = {
+    Candle,
+    Tungsten40W,
+    Tungsten100W,
+    Halogen,
+    CarbonArc,
+    HighNoonSun,
+    DirectSunlight,
+    OvercastSky,
+    ClearBlueSky,
+    WarmFluorescent,
+    StandardFluorescent,
+    CoolWhiteFluorescent,
+    FullSpectrumFluorescent,
+    GrowLightFluorescent,
+    BlackLightFluorescent,
+    MercuryVapor,
+    SodiumVapor,
+    MetalHalide,
+    HighPressureSodium, 
+};
+char* LightBarColorKelvinText[] = {
+    "Candle-1900",
+    "Tungsten40W-2600",
+    "Tungsten100W-2850",
+    "Halogen-3200",
+    "CarbonArc-5200",
+    "HighNoonSun-5400",
+    "DirectSunlight-6000",
+    "OvercastSky-7000",
+    "ClearBlueSky-20000",
+    "WarmFluorescent",
+    "StandardFluorescent",
+    "CoolWhiteFluorescent",
+    "FullSpectrumFluorescent",
+    "GrowLightFluorescent",
+    "BlackLightFluorescent",
+    "MercuryVapor",
+    "SodiumVapor",
+    "MetalHalide",
+    "HighPressureSodium",
+};
 
 struct BUILTIN_INFO {
     // adjustment values for builtins
@@ -251,15 +293,16 @@ struct BUILTIN_INFO {
     int nMeteorRed = 255;
     int nMeteorGreen = 255;
     int nMeteorBlue = 255;
-    // display all color
+    // display all color, AKA lightbar
     bool bAllowRollover = true;       // lets 255->0 and 0->255
-    bool bDisplayAllRGB = false;    // true for RGB, else HSV
+    int nLightBarMode = LBMODE_HSV;
     int nDisplayAllRed = 255;
     int nDisplayAllGreen = 255;
     int nDisplayAllBlue = 255;
     int nDisplayAllHue = 0;
     int nDisplayAllSaturation = 255;
     int nDisplayAllBrightness = 255;
+    int nColorTemperature = 0;
     int nDisplayAllPixelCount = 288;
     bool bDisplayAllFromMiddle = true;
     // rainbow
@@ -363,7 +406,8 @@ enum eDisplayOperation {
     eBool,              // handle bool using %s and on/off values
     eMenu,              // load another menu
     eExit,              // closes this menu
-    eIfEqual,           // start skipping menu entries if match with data value
+    eIfEqual,           // start skipping menu entries if match with boolean data value
+    eIfIntEqual,        // start skipping menu entries if match with int data value
     eElse,              // toggles the skipping
     eEndif,             // ends an if block
     eBuiltinOptions,    // use an internal settings menu if available, see the internal name,function list below (BuiltInFiles[])
@@ -641,15 +685,19 @@ MenuItem MeteorMenu[] = {
 MenuItem LedLightBarMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Allow rollover: %s",ToggleBool,&BuiltinInfo.bAllowRollover,0,0,0,"Yes","No"},
-    {eBool,"Color Mode: %s",ToggleBool,&BuiltinInfo.bDisplayAllRGB,0,0,0,"RGB","HSL"},
-    {eIfEqual,"",NULL,&BuiltinInfo.bDisplayAllRGB,true},
+	{eList,"Color Mode: %s",GetSelectChoice,&BuiltinInfo.nLightBarMode,0,sizeof(LightBarModeText) / sizeof(*LightBarModeText) - 1,0,NULL,NULL,NULL,LightBarModeText},
+    {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_RGB},
         {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllRed,0,255},
         {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllGreen,0,255},
         {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
-    {eElse},
+    {eEndif},
+    {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_HSV},
         {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllHue,0,255},
         {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllSaturation,0,255},
         {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255},
+    {eEndif},
+    {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_KELVIN},
+		{eList,"Temp: %s",GetSelectChoice,&BuiltinInfo.nColorTemperature,0,sizeof(LightBarColorKelvinText) / sizeof(*LightBarColorKelvinText) - 1,0,NULL,NULL,NULL,LightBarColorKelvinText},
     {eEndif},
     {eTextInt,"Pixels: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllPixelCount,1,288},
     {eBool,"From: %s",ToggleBool,&BuiltinInfo.bDisplayAllFromMiddle,0,0,0,"Middle","End"},
@@ -778,7 +826,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
-    {eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,2,0,NULL,NULL,UpdateWiringMode,StripsWiringText},
+	{eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,sizeof(StripsWiringText) / sizeof(*StripsWiringText) - 1,0,NULL,NULL,UpdateWiringMode,StripsWiringText},
     {eBool,"Gamma Correction: %s",ToggleBool,&LedInfo.bGammaCorrection,0,0,0,"On","Off"},
     {eTextInt,"White Balance R: %3d",GetIntegerValue,&LedInfo.whiteBalance.r,0,255,0,NULL,NULL,UpdateStripWhiteBalanceR},
     {eTextInt,"White Balance G: %3d",GetIntegerValue,&LedInfo.whiteBalance.g,0,255,0,NULL,NULL,UpdateStripWhiteBalanceG},

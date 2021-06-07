@@ -572,9 +572,14 @@ void ShowMenu(struct MenuItem* menu)
 		bMenuValid[menix] = false;
 		switch ((menu->op)) {
 		case eIfEqual:
-			// skip the next one if match, only booleans are handled so far
+			// skip the next one if match, this is boolean only
 			skip = *(bool*)menu->value != (menu->min ? true : false);
 			//Serial.println("ifequal test: skip: " + String(skip));
+			break;
+		case eIfIntEqual:
+			// skip the next one if match, this is int values
+			skip = *(int*)menu->value != menu->min;
+			//Serial.println("ifIntequal test: skip: " + String(skip));
 			break;
 		case eElse:
 			skip = !skip;
@@ -1618,7 +1623,17 @@ void FillLightBar()
 		offset = LedInfo.nTotalLeds - BuiltinInfo.nDisplayAllPixelCount;
 	FastLED.clear();
 	for (int ix = 0; ix < BuiltinInfo.nDisplayAllPixelCount; ++ix) {
-		SetPixel(ix + offset, BuiltinInfo.bDisplayAllRGB ? CRGB(BuiltinInfo.nDisplayAllRed, BuiltinInfo.nDisplayAllGreen, BuiltinInfo.nDisplayAllBlue) : CHSV(BuiltinInfo.nDisplayAllHue, BuiltinInfo.nDisplayAllSaturation, BuiltinInfo.nDisplayAllBrightness));
+		switch (BuiltinInfo.nLightBarMode) {
+		LBMODE_HSV:
+			SetPixel(ix + offset, CHSV(BuiltinInfo.nDisplayAllHue, BuiltinInfo.nDisplayAllSaturation, BuiltinInfo.nDisplayAllBrightness));
+			break;
+		LBMODE_KELVIN:
+			SetPixel(ix + offset, LightBarColorList[BuiltinInfo.nColorTemperature]);
+			break;
+		LBMODE_RGB:
+			SetPixel(ix + offset, CRGB(BuiltinInfo.nDisplayAllRed, BuiltinInfo.nDisplayAllGreen, BuiltinInfo.nDisplayAllBlue));
+			break;
+		}
 	}
 	ShowLeds();
 	//FastLED.show();
@@ -1635,26 +1650,46 @@ void DisplayLedLightBar()
 	int increment = 10;
 	bool bChange = true;
 	while (true) {
+		MenuTextScrollSideways();
 		if (bChange) {
 			String line;
 			switch (what) {
 			case 0:
-				if (BuiltinInfo.bDisplayAllRGB)
-					line = "Red: " + String(BuiltinInfo.nDisplayAllRed);
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					line = "HUE: " + String(BuiltinInfo.nDisplayAllHue);
+					break;
+				case LBMODE_RGB:
+					line = "Red: " + String(BuiltinInfo.nDisplayAllRed);
+					break;
+				case LBMODE_KELVIN:
+					line = /*"Temp: " +*/ String(LightBarColorKelvinText[BuiltinInfo.nColorTemperature]);
+					break;
+				}
 				break;
 			case 1:
-				if (BuiltinInfo.bDisplayAllRGB)
-					line = "Green: " + String(BuiltinInfo.nDisplayAllGreen);
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					line = "Saturation: " + String(BuiltinInfo.nDisplayAllSaturation);
+					break;
+				case LBMODE_RGB:
+					line = "Green: " + String(BuiltinInfo.nDisplayAllGreen);
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 2:
-				if (BuiltinInfo.bDisplayAllRGB)
-					line = "Blue: " + String(BuiltinInfo.nDisplayAllBlue);
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					line = "Brightness: " + String(BuiltinInfo.nDisplayAllBrightness);
+					break;
+				case LBMODE_RGB:
+					line = "Blue: " + String(BuiltinInfo.nDisplayAllBlue);
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 3:
 				line = "Pixels: " + String(BuiltinInfo.nDisplayAllPixelCount);
@@ -1677,22 +1712,41 @@ void DisplayLedLightBar()
 		case BTN_RIGHT:
 			switch (what) {
 			case 0:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllRed += increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllHue += increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllRed += increment;
+					break;
+				case LBMODE_KELVIN:
+					++BuiltinInfo.nColorTemperature;
+					break;
+				}
 				break;
 			case 1:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllGreen += increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllSaturation += increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllGreen += increment;
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 2:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllBlue += increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllBrightness += increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllBlue += increment;
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 3:
 				BuiltinInfo.nDisplayAllPixelCount += increment;
@@ -1708,22 +1762,41 @@ void DisplayLedLightBar()
 		case BTN_LEFT:
 			switch (what) {
 			case 0:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllRed -= increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllHue -= increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllRed -= increment;
+					break;
+				case LBMODE_KELVIN:
+					--BuiltinInfo.nColorTemperature;
+					break;
+				}
 				break;
 			case 1:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllGreen -= increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllSaturation -= increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllGreen -= increment;
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 2:
-				if (BuiltinInfo.bDisplayAllRGB)
-					BuiltinInfo.nDisplayAllBlue -= increment;
-				else
+				switch (BuiltinInfo.nLightBarMode) {
+				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllBrightness -= increment;
+					break;
+				case LBMODE_RGB:
+					BuiltinInfo.nDisplayAllBlue -= increment;
+					break;
+				case LBMODE_KELVIN:
+					break;
+				}
 				break;
 			case 3:
 				BuiltinInfo.nDisplayAllPixelCount -= increment;
@@ -1739,6 +1812,13 @@ void DisplayLedLightBar()
 		case BTN_SELECT:
 			// switch to the next selection, wrapping around if necessary
 			what = ++what % 6;
+			// 1 and 2, and 5 are not valid with Kelvin
+			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN) {
+				if (what == 1 || what == 2)
+					what = 3;
+				if (what == 5)
+					what = 0;
+			}
 			break;
 		case BTN_LONG:
 			// put it back, we don't want it
@@ -1750,7 +1830,26 @@ void DisplayLedLightBar()
 		if (bChange) {
 			BuiltinInfo.nDisplayAllPixelCount = constrain(BuiltinInfo.nDisplayAllPixelCount, 1, LedInfo.nTotalLeds);
 			increment = constrain(increment, 1, 100);
-			if (BuiltinInfo.bDisplayAllRGB) {
+			switch (BuiltinInfo.nLightBarMode) {
+			case LBMODE_HSV:
+				if (BuiltinInfo.bAllowRollover) {
+					if (BuiltinInfo.nDisplayAllHue < 0)
+						BuiltinInfo.nDisplayAllHue = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllHue > 255)
+						BuiltinInfo.nDisplayAllHue = 0;
+					if (BuiltinInfo.nDisplayAllSaturation < 0)
+						BuiltinInfo.nDisplayAllSaturation = RollDownRollOver(increment);
+					if (BuiltinInfo.nDisplayAllSaturation > 255)
+						BuiltinInfo.nDisplayAllSaturation = 0;
+				}
+				else {
+					BuiltinInfo.nDisplayAllHue = constrain(BuiltinInfo.nDisplayAllHue, 0, 255);
+					BuiltinInfo.nDisplayAllSaturation = constrain(BuiltinInfo.nDisplayAllSaturation, 0, 255);
+				}
+				BuiltinInfo.nDisplayAllBrightness = constrain(BuiltinInfo.nDisplayAllBrightness, 0, 255);
+				FillLightBar();
+				break;
+			case LBMODE_RGB:
 				if (BuiltinInfo.bAllowRollover) {
 					if (BuiltinInfo.nDisplayAllRed < 0)
 						BuiltinInfo.nDisplayAllRed = RollDownRollOver(increment);
@@ -1771,24 +1870,11 @@ void DisplayLedLightBar()
 					BuiltinInfo.nDisplayAllBlue = constrain(BuiltinInfo.nDisplayAllBlue, 0, 255);
 				}
 				FillLightBar();
-			}
-			else {
-				if (BuiltinInfo.bAllowRollover) {
-					if (BuiltinInfo.nDisplayAllHue < 0)
-						BuiltinInfo.nDisplayAllHue = RollDownRollOver(increment);
-					if (BuiltinInfo.nDisplayAllHue > 255)
-						BuiltinInfo.nDisplayAllHue = 0;
-					if (BuiltinInfo.nDisplayAllSaturation < 0)
-						BuiltinInfo.nDisplayAllSaturation = RollDownRollOver(increment);
-					if (BuiltinInfo.nDisplayAllSaturation > 255)
-						BuiltinInfo.nDisplayAllSaturation = 0;
-				}
-				else {
-					BuiltinInfo.nDisplayAllHue = constrain(BuiltinInfo.nDisplayAllHue, 0, 255);
-					BuiltinInfo.nDisplayAllSaturation = constrain(BuiltinInfo.nDisplayAllSaturation, 0, 255);
-				}
-				BuiltinInfo.nDisplayAllBrightness = constrain(BuiltinInfo.nDisplayAllBrightness, 0, 255);
+				break;
+			case LBMODE_KELVIN:
+				BuiltinInfo.nColorTemperature %= sizeof(LightBarColorList) / sizeof(*LightBarColorList);
 				FillLightBar();
+				break;
 			}
 		}
 		delay(10);
