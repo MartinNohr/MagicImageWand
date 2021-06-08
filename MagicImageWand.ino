@@ -1818,12 +1818,9 @@ void DisplayLedLightBar()
 		case BTN_SELECT:
 			// switch to the next selection, wrapping around if necessary
 			what = ++what % 6;
-			// 1 and 5 are not valid with Kelvin
-			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN) {
-				if (what == 1)
-					what = 2;
-				if (what == 5)
-					what = 0;
+			// 1 is valid with Kelvin
+			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN && what == 1) {
+				what = 2;
 			}
 			break;
 		case BTN_LONG:
