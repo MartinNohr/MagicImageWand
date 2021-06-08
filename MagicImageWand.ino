@@ -1635,6 +1635,10 @@ void FillLightBar()
 			break;
 		}
 	}
+	if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN) {
+		// set the brightness
+		FastLED.setBrightness(BuiltinInfo.nDisplayAllBrightness);
+	}
 	ShowLeds();
 }
 
@@ -1687,6 +1691,7 @@ void DisplayLedLightBar()
 					line = "Blue: " + String(BuiltinInfo.nDisplayAllBlue);
 					break;
 				case LBMODE_KELVIN:
+					line = "Brightness: " + String(BuiltinInfo.nDisplayAllBrightness);
 					break;
 				}
 				break;
@@ -1744,6 +1749,7 @@ void DisplayLedLightBar()
 					BuiltinInfo.nDisplayAllBlue += increment;
 					break;
 				case LBMODE_KELVIN:
+					BuiltinInfo.nDisplayAllBrightness += increment;
 					break;
 				}
 				break;
@@ -1794,6 +1800,7 @@ void DisplayLedLightBar()
 					BuiltinInfo.nDisplayAllBlue -= increment;
 					break;
 				case LBMODE_KELVIN:
+					BuiltinInfo.nDisplayAllBrightness -= increment;
 					break;
 				}
 				break;
@@ -1811,10 +1818,10 @@ void DisplayLedLightBar()
 		case BTN_SELECT:
 			// switch to the next selection, wrapping around if necessary
 			what = ++what % 6;
-			// 1 and 2, and 5 are not valid with Kelvin
+			// 1 and 5 are not valid with Kelvin
 			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN) {
-				if (what == 1 || what == 2)
-					what = 3;
+				if (what == 1)
+					what = 2;
 				if (what == 5)
 					what = 0;
 			}
@@ -1872,6 +1879,7 @@ void DisplayLedLightBar()
 				break;
 			case LBMODE_KELVIN:
 				BuiltinInfo.nColorTemperature %= sizeof(LightBarColorList) / sizeof(*LightBarColorList);
+				BuiltinInfo.nDisplayAllBrightness = constrain(BuiltinInfo.nDisplayAllBrightness, 0, 255);
 				FillLightBar();
 				break;
 			}
