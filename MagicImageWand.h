@@ -229,7 +229,7 @@ typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
 enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
 char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
-uint16_t LightBarColorList[] = {
+uint32_t LightBarColorList[] = {
     Candle,
     Tungsten40W,
     Tungsten100W,

@@ -1624,19 +1624,18 @@ void FillLightBar()
 	FastLED.clear();
 	for (int ix = 0; ix < BuiltinInfo.nDisplayAllPixelCount; ++ix) {
 		switch (BuiltinInfo.nLightBarMode) {
-		LBMODE_HSV:
+		case LBMODE_HSV:
 			SetPixel(ix + offset, CHSV(BuiltinInfo.nDisplayAllHue, BuiltinInfo.nDisplayAllSaturation, BuiltinInfo.nDisplayAllBrightness));
 			break;
-		LBMODE_KELVIN:
-			SetPixel(ix + offset, LightBarColorList[BuiltinInfo.nColorTemperature]);
+		case LBMODE_KELVIN:
+			SetPixel(ix + offset, (ColorTemperature)(LightBarColorList[BuiltinInfo.nColorTemperature]));
 			break;
-		LBMODE_RGB:
+		case LBMODE_RGB:
 			SetPixel(ix + offset, CRGB(BuiltinInfo.nDisplayAllRed, BuiltinInfo.nDisplayAllGreen, BuiltinInfo.nDisplayAllBlue));
 			break;
 		}
 	}
 	ShowLeds();
-	//FastLED.show();
 }
 
 // Used LEDs as a light bar
