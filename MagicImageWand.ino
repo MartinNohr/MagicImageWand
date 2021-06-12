@@ -417,22 +417,37 @@ void loop()
 		// debounce
 		delay(30);
 		if (digitalRead(0) == 0) {
-			ResetSleepAndDimTimers();
-			ShowBmp(NULL);
-			// kill the cancel flag
-			bCancelRun = bCancelMacro = false;
-			bButton0 = true;
+			bool bIsLong = false;
+			unsigned long startPressTime = millis();
 			// wait for release
-			while (digitalRead(0) == 0)
-				;
-			// restore the screen to what it was doing before the bmp display
+			while (digitalRead(0) == 0) {
+				ResetSleepAndDimTimers();
+				if (millis() > (startPressTime + SystemInfo.DialSettings.m_nLongPressTimerValue * 10)) {
+					bIsLong = true;
+					break;
+				}
+			}
+			// check if this was a long press
+			// the timer is in 10 mS values
+			if (bIsLong) {
+				SystemInfo.bDisplayUpsideDown = !SystemInfo.bDisplayUpsideDown;
+				tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
+				ImgInfo.bUpsideDown = !ImgInfo.bUpsideDown;
+			}
+			else {
+				ShowBmp(NULL);
+				// kill the cancel flag
+				bCancelRun = bCancelMacro = false;
+			}
+			// restore the screen to what it was doing before
+			ClearScreen();
 			if (bSettingsMode) {
 				ShowMenu(MenuStack.top()->menu);
 			}
 			else {
-				ClearScreen();
 				DisplayCurrentFile(SystemInfo.bShowFolder);
 			}
+			bButton0 = true;
 		}
 	}
 	// show battery level if on

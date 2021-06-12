@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.24";
+char* myVersion = "1.25";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -762,18 +762,18 @@ MenuItem HomeScreenMenu[] = {
 MenuItem DisplayMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Upside Down: %s",ToggleBool,&SystemInfo.bDisplayUpsideDown,0,0,0,"Yes","No",UpdateDisplayRotation},
-    {eText,"Text Color",SetMenuColor},
     {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
     {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
+    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
+    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
+    {eText,"Text Color",SetMenuColor},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
 };
 MenuItem SystemMenu[] = {
     {eExit,"Previous Menu"},
-    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
-    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Menu Settings",{.menu = MenuMenu}},
     {eMenu,"Main Screen Settings",{.menu = HomeScreenMenu}},
