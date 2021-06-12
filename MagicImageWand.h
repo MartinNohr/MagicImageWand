@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.25";
+char* myVersion = "1.26";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -767,6 +767,7 @@ MenuItem DisplayMenu[] = {
     {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
     {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
+    {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eText,"Text Color",SetMenuColor},
     {eExit,"Previous Menu"},
     // make sure this one is last
@@ -777,7 +778,6 @@ MenuItem SystemMenu[] = {
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Menu Settings",{.menu = MenuMenu}},
     {eMenu,"Main Screen Settings",{.menu = HomeScreenMenu}},
-    {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eMenu,"Dial Settings",{.menu = DialMenu}},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
