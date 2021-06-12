@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.27";
+char* myVersion = "1.28";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -752,9 +752,11 @@ MenuItem MenuMenu[] = {
 };
 MenuItem HomeScreenMenu[] = {
     {eExit,"Previous Menu"},
+    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
+    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -765,8 +767,6 @@ MenuItem DisplayMenu[] = {
     {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
     {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
-    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
-    {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eText,"Text Color",SetMenuColor},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
@@ -778,7 +778,7 @@ MenuItem SystemMenu[] = {
     {eExit,"Previous Menu"},
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Menu Settings",{.menu = MenuMenu}},
-    {eMenu,"Main Screen Settings",{.menu = HomeScreenMenu}},
+    {eMenu,"Run Screen Settings",{.menu = HomeScreenMenu}},
     {eMenu,"Dial Settings",{.menu = DialMenu}},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
 #if HAS_BATTERY_LEVEL
