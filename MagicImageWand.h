@@ -1,16 +1,16 @@
 #pragma once
 
-char* myVersion = "1.28";
+char* myVersion = "1.29";
 
 // ***** Various switches for options are set here *****
-#define HAS_BATTERY_LEVEL 0
+#define HAS_BATTERY_LEVEL 1
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB, 0 for older PCB
-#define LATEST_PCB 0
+#define LATEST_PCB 1
 #if LATEST_PCB
     #define DIAL_A 12
     #define DIAL_B 13
@@ -201,6 +201,10 @@ RTC_DATA_ATTR IMG_INFO ImgInfo;
 
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 
+// functions that btn0 long press can map to
+enum BTN0LONG_FUNCTIONS { BTN0LONG_UPSIDEDOWN = 0, BTN0LONG_LIGHTBAR };
+char* Btn0LongText[] = { "UpsideDown","LightBar" };
+
 struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
@@ -224,6 +228,7 @@ struct SYSTEM_INFO {
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
     bool bDisplayUpsideDown = false;            // rotates display 180
+    int nBtn0LongFunction = BTN0LONG_UPSIDEDOWN;    // function that long btn0 performs
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
@@ -738,6 +743,7 @@ MenuItem DialMenu[] = {
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
+	{eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(Btn0LongText) / sizeof(*Btn0LongText) - 1,0,NULL,NULL,NULL,Btn0LongText},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -779,7 +785,7 @@ MenuItem SystemMenu[] = {
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Menu Settings",{.menu = MenuMenu}},
     {eMenu,"Run Screen Settings",{.menu = HomeScreenMenu}},
-    {eMenu,"Dial Settings",{.menu = DialMenu}},
+    {eMenu,"Dial & Button Settings",{.menu = DialMenu}},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},

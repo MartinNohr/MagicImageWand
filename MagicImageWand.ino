@@ -366,6 +366,22 @@ void MenuTextScrollSideways()
 	}
 }
 
+// call the current setting for btn0
+void CallBtn0Function()
+{
+	switch (SystemInfo.nBtn0LongFunction) {
+	case BTN0LONG_UPSIDEDOWN:
+		SystemInfo.bDisplayUpsideDown = !SystemInfo.bDisplayUpsideDown;
+		tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
+		ImgInfo.bUpsideDown = !ImgInfo.bUpsideDown;
+		break;
+	case BTN0LONG_LIGHTBAR:
+		LightBar(NULL);
+		break;
+	}
+}
+
+
 void loop()
 {
 	static LED_INFO LedInfoSaved;
@@ -430,9 +446,7 @@ void loop()
 			// check if this was a long press
 			// the timer is in 10 mS values
 			if (bIsLong) {
-				SystemInfo.bDisplayUpsideDown = !SystemInfo.bDisplayUpsideDown;
-				tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
-				ImgInfo.bUpsideDown = !ImgInfo.bUpsideDown;
+				CallBtn0Function();
 			}
 			else {
 				ShowBmp(NULL);
