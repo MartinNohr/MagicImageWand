@@ -88,12 +88,15 @@ char* prefsDialReverse = "dialreverse";
 // the display
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
-#define BTN_SELECT  CRotaryDialButton::BTN_CLICK
-#define BTN_NONE    CRotaryDialButton::BTN_NONE
-#define BTN_LEFT    CRotaryDialButton::BTN_LEFT
-#define BTN_RIGHT   CRotaryDialButton::BTN_RIGHT
-#define BTN_LONG    CRotaryDialButton::BTN_LONGPRESS
-
+#define BTN_SELECT      CRotaryDialButton::BTN_CLICK
+#define BTN_NONE        CRotaryDialButton::BTN_NONE
+#define BTN_LEFT        CRotaryDialButton::BTN_LEFT
+#define BTN_RIGHT       CRotaryDialButton::BTN_RIGHT
+#define BTN_LONG        CRotaryDialButton::BTN_LONGPRESS
+#define BTN_B0_CLICK    CRotaryDialButton::BTN0_CLICK
+#define BTN_B0_LONG     CRotaryDialButton::BTN0_LONGPRESS
+#define BTN_B1_CLICK    CRotaryDialButton::BTN1_CLICK
+#define BTN_B1_LONG     CRotaryDialButton::BTN1_LONGPRESS
 
 // functions
 void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);
@@ -202,8 +205,8 @@ RTC_DATA_ATTR IMG_INFO ImgInfo;
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 
 // functions that btn0 long press can map to
-enum BTN0LONG_FUNCTIONS { BTN0LONG_UPSIDEDOWN = 0, BTN0LONG_LIGHTBAR };
-char* Btn0LongText[] = { "UpsideDown","LightBar" };
+enum BTN_LONG_FUNCTIONS { BTN_LONG_UPSIDEDOWN = 0, BTN_LONG_LIGHTBAR };
+char* BtnLongText[] = { "UpsideDown","LightBar" };
 
 struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
@@ -228,7 +231,8 @@ struct SYSTEM_INFO {
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
     bool bDisplayUpsideDown = false;            // rotates display 180
-    int nBtn0LongFunction = BTN0LONG_UPSIDEDOWN;    // function that long btn0 performs
+    int nBtn0LongFunction = BTN_LONG_UPSIDEDOWN;    // function that long btn0 performs
+    int nBtn1LongFunction = BTN_LONG_LIGHTBAR;    // function that long btn1 performs
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
@@ -743,7 +747,8 @@ MenuItem DialMenu[] = {
     {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSensitivity,1,5},
     {eTextInt,"Dial Speed: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
-	{eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(Btn0LongText) / sizeof(*Btn0LongText) - 1,0,NULL,NULL,NULL,Btn0LongText},
+    {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
+    {eList,"Btn1 Long: %s",GetSelectChoice,&SystemInfo.nBtn1LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}

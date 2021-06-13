@@ -60,7 +60,7 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, &SystemInfo.DialSettings);
+	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, 0, 35, &SystemInfo.DialSettings);
 	setupSDcard();
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
@@ -366,21 +366,20 @@ void MenuTextScrollSideways()
 	}
 }
 
-// call the current setting for btn0
-void CallBtn0Function()
+// call the current setting for btn0 long press
+void CallBtnLongFunction(int which)
 {
-	switch (SystemInfo.nBtn0LongFunction) {
-	case BTN0LONG_UPSIDEDOWN:
+	switch (which) {
+	case BTN_LONG_UPSIDEDOWN:
 		SystemInfo.bDisplayUpsideDown = !SystemInfo.bDisplayUpsideDown;
 		tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
 		ImgInfo.bUpsideDown = !ImgInfo.bUpsideDown;
 		break;
-	case BTN0LONG_LIGHTBAR:
+	case BTN_LONG_LIGHTBAR:
 		LightBar(NULL);
 		break;
 	}
 }
-
 
 void loop()
 {
@@ -423,46 +422,6 @@ void loop()
 	if (didsomething) {
 		didsomething = false;
 		delay(1);
-	}
-	static bool bButton0 = false;
-	// check preview button
-	if (bButton0 && digitalRead(0)) {
-		bButton0 = false;
-	}
-	if (!bButton0 && digitalRead(0) == 0) {
-		// debounce
-		delay(30);
-		if (digitalRead(0) == 0) {
-			bool bIsLong = false;
-			unsigned long startPressTime = millis();
-			// wait for release
-			while (digitalRead(0) == 0) {
-				ResetSleepAndDimTimers();
-				if (millis() > (startPressTime + SystemInfo.DialSettings.m_nLongPressTimerValue * 10)) {
-					bIsLong = true;
-					break;
-				}
-			}
-			// check if this was a long press
-			// the timer is in 10 mS values
-			if (bIsLong) {
-				CallBtn0Function();
-			}
-			else {
-				ShowBmp(NULL);
-				// kill the cancel flag
-				bCancelRun = bCancelMacro = false;
-			}
-			// restore the screen to what it was doing before
-			ClearScreen();
-			if (bSettingsMode) {
-				ShowMenu(MenuStack.top()->menu);
-			}
-			else {
-				DisplayCurrentFile(SystemInfo.bShowFolder);
-			}
-			bButton0 = true;
-		}
 	}
 	// show battery level if on
 	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
@@ -1132,6 +1091,7 @@ bool HandleMenus()
 // handle keys in run mode
 bool HandleRunMode()
 {
+	bool bRedraw = false;
 	bool didsomething = true;
 	int oldFileIndex = CurrentFileIndex;
 	switch (ReadButton()) {
@@ -1164,9 +1124,27 @@ bool HandleRunMode()
 		ClearScreen();
 		bSettingsMode = true;
 		break;
+	case BTN_B0_CLICK:
+		ShowBmp(NULL);
+		bRedraw = true;
+		break;
+	case BTN_B0_LONG:
+		CallBtnLongFunction(SystemInfo.nBtn0LongFunction);
+		bRedraw = true;
+		break;
+	case BTN_B1_CLICK:
+		break;
+	case BTN_B1_LONG:
+		CallBtnLongFunction(SystemInfo.nBtn1LongFunction);
+		bRedraw = true;
+		break;
 	default:
 		didsomething = false;
 		break;
+	}
+	if (bRedraw) {
+		ClearScreen();
+		DisplayCurrentFile(SystemInfo.bShowFolder);
 	}
 	return didsomething;
 }
@@ -1174,23 +1152,12 @@ bool HandleRunMode()
 // check buttons and return if one pressed
 enum CRotaryDialButton::Button ReadButton()
 {
-	// check for the on board button 35
-	static bool bButton35 = false;
-	// check enter button, like longpress
-	if (bButton35 && digitalRead(35)) {
-		bButton35 = false;
-	}
-	if (!bButton35 && digitalRead(35) == 0) {
-		// debounce
-		delay(30);
-		if (digitalRead(35) == 0) {
-			bButton35 = true;
-			CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
-		}
-	}
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
+	// turn the b1 button into a dial long click
+	if (retValue == BTN_B1_CLICK)
+		retValue = BTN_LONG;
 	if (retValue != BTN_NONE) {
 		ResetSleepAndDimTimers();
 	}
@@ -2772,7 +2739,6 @@ void ShowBmp(MenuItem*)
 	if (tmp.compareTo("bmp")) {
 		return;
 	}
-	bool bSawButton0 = !digitalRead(0);
 	uint16_t* scrBuf;
 	scrBuf = (uint16_t*)calloc(240 * 135, sizeof(uint16_t));
 	if (scrBuf == NULL) {
@@ -2879,29 +2845,24 @@ void ShowBmp(MenuItem*)
 			while (ReadButton() != BTN_NONE)
 				;
 		}
-		if (bSawButton0) {
-			while (digitalRead(0) == 0)
-				;
-			bSawButton0 = false;
-			delay(30);
-		}
 		switch (ReadButton()) {
-		case CRotaryDialButton::BTN_RIGHT:
+		case BTN_RIGHT:
 			if (allowScroll) {
 				imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = max(0, imgOffset);
 			}
 			break;
-		case CRotaryDialButton::BTN_LEFT:
+		case BTN_LEFT:
 			if (allowScroll) {
 				imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
 			}
 			break;
-		case CRotaryDialButton::BTN_LONGPRESS:
+		case BTN_B0_CLICK:
+		case BTN_LONG:
 			done = true;
 			break;
-		case CRotaryDialButton::BTN_CLICK:
+		case BTN_SELECT:
 			if (bShowingSize) {
 				bShowingSize = false;
 				redraw = true;
@@ -2924,12 +2885,6 @@ void ShowBmp(MenuItem*)
 		if (oldImgOffset != imgOffset) {
 			redraw = true;
 		}
-		// check the 0 button
-		if (digitalRead(0) == 0) {
-			// debounce, don't want this seen again in the main loop
-			delay(30);
-			done = true;
-		}
 		delay(2);
 	}
 	// all done
@@ -2938,6 +2893,8 @@ void ShowBmp(MenuItem*)
 	readByte(true);
 	LedInfo.bGammaCorrection = bOldGamma;
 	ClearScreen();
+	// kill the cancel flag
+	bCancelRun = bCancelMacro = false;
 }
 
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
