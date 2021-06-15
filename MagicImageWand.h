@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.29";
+char* myVersion = "1.30";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -172,6 +172,9 @@ struct LED_INFO {
 typedef LED_INFO LED_INFO;
 LED_INFO LedInfo;
 
+enum DIAL_IMG_FUNCTIONS { DIAL_IMG_NONE = 0, DIAL_IMG_BRIGHTNESS, DIAL_IMB_SPEED };
+char* DialImgText[] = { "None","Brightness","Speed" };
+
 // image settings
 struct IMG_INFO {
     int nFrameHold = 10;                      // default for the frame delay
@@ -198,6 +201,8 @@ struct IMG_INFO {
     int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
     int nRepeatCountMacro = 1;                // repeat count for macros
     bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
+    int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
+    int nDialDuringImgInc = 1;                // how much to change by during image display
 };
 typedef IMG_INFO IMG_INFO;
 RTC_DATA_ATTR IMG_INFO ImgInfo;
@@ -812,6 +817,11 @@ MenuItem ImageMenu[] = {
     {eTextInt,"Start Delay: %d.%d S",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
     {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
+    {eList,"Running Dial: %s",GetSelectChoice,&ImgInfo.nDialDuringImgAction,0,sizeof(DialImgText) / sizeof(*DialImgText) - 1,0,NULL,NULL,NULL,DialImgText},
+	{eIfIntEqual,"",NULL,&ImgInfo.nDialDuringImgAction,DIAL_IMG_NONE},
+    {eElse},
+        {eTextInt,"Image Dial Step: %d",GetIntegerValue,&ImgInfo.nDialDuringImgInc,1,255},
+    {eEndif},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eBool,"Walk: %s",ToggleBool,&ImgInfo.bReverseImage,0,0,0,"Left-Right","Right-Left"},
         {eBool,"Play Mirror Image: %s",ToggleBool,&ImgInfo.bMirrorPlayImage,0,0,0,"Yes","No"},

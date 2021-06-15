@@ -1150,6 +1150,7 @@ bool HandleRunMode()
 }
 
 // check buttons and return if one pressed
+// check the rotation buttons during running
 enum CRotaryDialButton::Button ReadButton()
 {
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
@@ -1172,6 +1173,32 @@ enum CRotaryDialButton::Button ReadButton()
 			delay(10);
 		}
 		displayDimNow = false;
+	}
+	if (bIsRunning) {
+		int amt = 0, newval = 0;
+		switch (retValue) {
+		case BTN_LEFT:
+			amt = -ImgInfo.nDialDuringImgInc;
+			break;
+		case BTN_RIGHT:
+			amt = ImgInfo.nDialDuringImgInc;
+			break;
+		}
+		switch (ImgInfo.nDialDuringImgAction) {
+		case DIAL_IMG_NONE:
+			break;
+		case DIAL_IMG_BRIGHTNESS:
+			LedInfo.nLEDBrightness += amt;
+			LedInfo.nLEDBrightness = constrain(LedInfo.nLEDBrightness, 1, 255);
+			FastLED.setBrightness(LedInfo.nLEDBrightness);
+			DisplayLine(MENU_LINES - 1, "Brightness: " + String(LedInfo.nLEDBrightness), SystemInfo.menuTextColor);
+			break;
+		case DIAL_IMB_SPEED:
+			ImgInfo.nFrameHold += amt;
+			ImgInfo.nFrameHold = constrain(ImgInfo.nFrameHold, 0, 500);
+			DisplayLine(MENU_LINES - 1, "Frame Time: " + String(ImgInfo.nFrameHold) + " mS", SystemInfo.menuTextColor);
+			break;
+		}
 	}
 	return retValue;
 }
