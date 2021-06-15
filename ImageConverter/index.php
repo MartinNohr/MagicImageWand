@@ -94,10 +94,11 @@ div.upload-box input[type=file]{
 <div class="dir-box">
 <label for="dir">Direction</label>
 <select name="dir" id="dir" form="dir">
-  <option value="270">clockwise</option>
-  <option value="90">counterclockwise</option>
+  <!-- depending on the ImageMagick Version installed, it might be needed to switch cw and ccw -->
+  <option value="270">counterclockwise</option>
+  <option value="90">clockwise</option>
   <option value="0">no rotation</option>
-</select>  
+</select>
 </div>
 
 <div class="upload-box">
