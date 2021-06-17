@@ -958,6 +958,7 @@ MenuItem MainMenu[] = {
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
             {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
         {eEndif},
+        {eText,"Sleep",Sleep},
     {eElse},
         {eMenu,"Image Settings",{.menu = ImageMenu}},
         {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
