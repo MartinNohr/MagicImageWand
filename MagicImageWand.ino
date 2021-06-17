@@ -550,7 +550,12 @@ void ShowMenu(struct MenuItem* menu)
 	int y = 0;
 	int x = 0;
 	char line[50]{};
-	bool skip = false;
+	// load with a false to start with
+	std::stack<bool> skipStack;
+	skipStack.push(false);
+	// this is the active stack level, I.E. which level should be processed
+	int skipLevel = 1;
+	bool bSkipping = false;
 	// loop through the menu
 	for (int menix = 0; menu->op != eTerminate; ++menu, ++menix) {
 		// make sure menu valid vector is big enough
@@ -561,24 +566,36 @@ void ShowMenu(struct MenuItem* menu)
 		switch ((menu->op)) {
 		case eIfEqual:
 			// skip the next one if match, this is boolean only
-			skip = *(bool*)menu->value != (menu->min ? true : false);
+			skipStack.push(*(bool*)menu->value != (menu->min ? true : false));
 			//Serial.println("ifequal test: skip: " + String(skip));
+			if (!bSkipping) {
+				++skipLevel;
+				bSkipping = skipStack.top();
+			}
 			break;
 		case eIfIntEqual:
 			// skip the next one if match, this is int values
-			skip = *(int*)menu->value != menu->min;
+			skipStack.push(*(int*)menu->value != menu->min);
 			//Serial.println("ifIntequal test: skip: " + String(skip));
+			if (!bSkipping) {
+				++skipLevel;
+				bSkipping = skipStack.top();
+			}
 			break;
 		case eElse:
-			skip = !skip;
+			skipStack.top() = !skipStack.top();
 			break;
 		case eEndif:
-			skip = false;
+			skipStack.pop();
+			if (!bSkipping || skipLevel > skipStack.size()) {
+				--skipLevel;
+			}
 			break;
 		default:
 			break;
 		}
-		if (skip) {
+		bSkipping = skipLevel < skipStack.size() ? true : skipStack.top();
+		if (bSkipping) {
 			bMenuValid[menix] = false;
 			continue;
 		}

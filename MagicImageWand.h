@@ -1,16 +1,16 @@
 #pragma once
 
-char* myVersion = "1.30";
+char* myVersion = "1.31";
 
 // ***** Various switches for options are set here *****
-#define HAS_BATTERY_LEVEL 1
+#define HAS_BATTERY_LEVEL 0
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
 // reverse A and B for some PCB or wired versions, this is set for the new PCB, 0 for older PCB
-#define LATEST_PCB 1
+#define LATEST_PCB 0
 #if LATEST_PCB
     #define DIAL_A 12
     #define DIAL_B 13
@@ -238,6 +238,7 @@ struct SYSTEM_INFO {
     bool bDisplayUpsideDown = false;            // rotates display 180
     int nBtn0LongFunction = BTN_LONG_UPSIDEDOWN;    // function that long btn0 performs
     int nBtn1LongFunction = BTN_LONG_LIGHTBAR;    // function that long btn1 performs
+    bool bSimpleMenu = false;                   // full or simple menu
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 SYSTEM_INFO SystemInfo;
@@ -943,28 +944,38 @@ MenuItem MacroMenu[] = {
     {eTerminate}
 };
 MenuItem MainMenu[] = {
-    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
-        {eBool,"Switch to SD Card",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
-    {eElse},
-        {eBool,"Switch to Built-ins",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"On","Off"},
-        {eText,"Preview BMP",ShowBmp},
+    {eBool,"Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full"},
+    {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-In","SD Card BMP"},
+    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
+        {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,false},
+            {eText,"Preview BMP",ShowBmp},
+        {eEndif},
     {eEndif},
-    {eMenu,"File Image Settings",{.menu = ImageMenu}},
-    {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
-    {eMenu,"LED Strip Settings",{.menu = StripMenu}},
-    {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
-        {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
+    {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,true},
+        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
+        {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+        {eMenu,"Macros: #%d",{.menu = MacroMenu},&ImgInfo.nCurrentMacro},
+        {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
+            {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
+        {eEndif},
     {eElse},
-        {eMenu,"MIW File Operations",{.menu = StartFileMenu}},
+        {eMenu,"Image Settings",{.menu = ImageMenu}},
+        {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
+        {eMenu,"LED Strip Settings",{.menu = StripMenu}},
+        {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
+            {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
+        {eElse},
+            {eMenu,"MIW File Operations",{.menu = StartFileMenu}},
+        {eEndif},
+        {eMenu,"Macros: #%d",{.menu = MacroMenu},&ImgInfo.nCurrentMacro},
+        {eMenu,"Saved Settings",{.menu = EepromMenu}},
+        {eMenu,"System Settings",{.menu = SystemMenu}},
+        {eText,"Light Bar",LightBar},
+        {eMenu,"Light Bar Settings",{.menu = LedLightBarMenu}},
+        {eReboot,"Reboot"},
+        {eText,"Sleep",Sleep},
     {eEndif},
-    {eMenu,"Macros: #%d",{.menu = MacroMenu},&ImgInfo.nCurrentMacro},
-    {eMenu,"Saved Settings",{.menu = EepromMenu}},
-    {eMenu,"System Settings",{.menu = SystemMenu}},
-    {eText,"Light Bar",LightBar},
-    {eMenu,"Light Bar Settings",{.menu = LedLightBarMenu}},
-    {eReboot,"Reboot"},
-    {eText,"Sleep",Sleep},
-    // make sure this one is last
+        // make sure this one is last
     {eTerminate}
 };
 
