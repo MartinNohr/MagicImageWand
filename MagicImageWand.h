@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.34";
+char* myVersion = "1.35";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -665,7 +665,7 @@ MenuItem SineMenu[] = {
     {eTerminate}
 };
 MenuItem BpmMenu[] = {
-    {eExit,"BPM"},
+    {eExit,"Beats"},
     {eTextInt,"Beats per minute: %d",GetIntegerValue,&BuiltinInfo.nBpmBeatsPerMinute,1,300},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bBpmCycleHue,0,0,0,"Yes","No"},
     {eExit,PreviousMenu},
@@ -779,7 +779,10 @@ MenuItem DisplayMenu[] = {
     {eBool,"Upside Down: %s",ToggleBool,&SystemInfo.bDisplayUpsideDown,0,0,0,"Yes","No",UpdateDisplayRotation},
     {eTextInt,"Display Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
+    {eIfIntEqual,"",NULL,&SystemInfo.nDisplayDimTime,0},
+    {eElse},
     {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
+    {eEndif},
     {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eText,"Text Color",SetMenuColor},
@@ -842,7 +845,7 @@ MenuItem ImageMenu[] = {
 MenuItem StripMenu[] = {
     {eExit,"LED Strip Settings"},
     {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-    {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
+    {eTextInt,"Max Current: %d mA",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
 	{eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,sizeof(StripsWiringText) / sizeof(*StripsWiringText) - 1,0,NULL,NULL,UpdateWiringMode,StripsWiringText},
@@ -875,7 +878,7 @@ MenuItem StartFileMenu[] = {
     {eTerminate}
 };
 MenuItem RepeatMenu[] = {
-    {eExit,"Repeat Settings"},
+    {eExit,"Repeat/Chain Settings"},
     {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.repeatCount,1,100},
     {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
