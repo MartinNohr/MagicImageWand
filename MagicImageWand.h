@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.31";
+char* myVersion = "1.33";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -231,6 +231,7 @@ struct SYSTEM_INFO {
     int nBatteryFullLevel = 3150;               // 100% battery
     int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
+    int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
     int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
@@ -481,6 +482,7 @@ void GetSelectChoice(MenuItem* menu);
 void ToggleBool(MenuItem* menu);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
+void UpdateBatteries(MenuItem* menu, int flag);
 void UpdateDisplayRotation(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
@@ -734,6 +736,7 @@ MenuItem BatteryMenu[] = {
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,2000,4000},
     {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,1000,3000},
+    {eTextInt,"Battery Count: %d",GetIntegerValue,&SystemInfo.nBatteries,1,4,0,NULL,NULL,UpdateBatteries},
     {eExit,"Previous Menu"},
     // make sure this one is last
     {eTerminate}
@@ -781,7 +784,7 @@ MenuItem HomeScreenMenu[] = {
 MenuItem DisplayMenu[] = {
     {eExit,"Previous Menu"},
     {eBool,"Upside Down: %s",ToggleBool,&SystemInfo.bDisplayUpsideDown,0,0,0,"Yes","No",UpdateDisplayRotation},
-    {eTextInt,"Display Bright: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eTextInt,"Display Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
     {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
     {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
@@ -844,7 +847,7 @@ MenuItem ImageMenu[] = {
 };
 MenuItem StripMenu[] = {
     {eExit,"Previous Menu"},
-    {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+    {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
     {eTextInt,"Max mAmp: %d",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
@@ -953,8 +956,9 @@ MenuItem MainMenu[] = {
     {eEndif},
     {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,true},
         {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
-        {eTextInt,"Strip Bright: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-        {eMenu,"Macros: #%d",{.menu = MacroMenu},&ImgInfo.nCurrentMacro},
+        {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+        {eTextInt,"Run: #%d",RunMacro,&ImgInfo.nCurrentMacro},
+        {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
             {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
         {eEndif},

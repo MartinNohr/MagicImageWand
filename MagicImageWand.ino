@@ -103,6 +103,8 @@ void setup()
 	server.on("/download", File_Download);
 	server.on("/upload", File_Upload);
 	server.on("/settings", ShowSettings);
+	server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
+	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	///////////////////////////// End of Request commands
 	server.begin();
@@ -946,6 +948,23 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 		break;
 	case -1:	// last time
 		FastLED.clear(true);
+		break;
+	}
+}
+
+// update the batterie default settings
+void UpdateBatteries(MenuItem* menu, int flag)
+{
+	int batLo[4] = { 700, 1000,2000,3000 };
+	int batHi[4] = { 1000, 1500,2500,3200 };
+	switch (flag) {
+	case 1:		// first time
+		break;
+	case 0:		// every change
+		break;
+	case -1:	// last time, load the defaults
+		SystemInfo.nBatteryEmptyLevel = batLo[SystemInfo.nBatteries - menu->min];
+		SystemInfo.nBatteryFullLevel = batHi[SystemInfo.nBatteries - menu->min];
 		break;
 	}
 }
@@ -4410,28 +4429,117 @@ void ReportSDNotPresent(){
   SendHTML_Stop();
 }
 
-void SD_file_download(String filename){
-  if (bSdCardValid) { 
-    FsFile download = SD.open("/"+filename);
-    if (download) {
-      server.sendHeader("Content-Type", "text/text");
-      server.sendHeader("Content-Disposition", "attachment; filename="+filename);
-      server.sendHeader("Connection", "close");
-	  //server.streamFile(download, "application/octet-stream");
-	  server.streamFile(download, "image/bmp");
-      download.close();
-    } else ReportFileNotPresent("download"); 
-  } else ReportSDNotPresent();
+void SD_file_download(String filename)
+{
+	if (bSdCardValid) {
+		FsFile download = SD.open("/" + filename);
+		if (download) {
+			server.sendHeader("Content-Type", "text/text");
+			server.sendHeader("Content-Disposition", "attachment; filename=" + filename);
+			server.sendHeader("Connection", "close");
+			//server.streamFile(download, "application/octet-stream");
+			server.streamFile(download, "image/bmp");
+			download.close();
+		}
+		else ReportFileNotPresent("download");
+	}
+	else ReportSDNotPresent();
 }
 
 void IncreaseRepeatButton(){
   // This can be for sure made into a universal function like IncreaseButton(Setting, Value)
-  webpage += String("&nbsp;<a href='/settings/increpeat'><strong>&#8679;</strong></a>");
+	//webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>&#8679;</strong></a>");
+	webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>+;</strong></a>");
 }
 
 void DecreaseRepeatButton(){
   // This can be for sure made into a universal function like DecreaseButton(Setting, Value)
   webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
+}
+
+void IncRepeat()
+{
+	String str = server.uri();
+	Serial.println("uri: " + str);
+}
+
+// display settings form
+void FormSettings()
+{
+#if 0
+	form method = "get" enctype = "application/x-www-form-urlencoded" action = "/html/codes/html_form_handler.cfm" >
+
+		<p>
+		<label>Name
+		<input type = "text" name = "customer_name" required>
+		< / label>
+		< / p>
+
+		<p>
+		<label>Phone
+		<input type = "tel" name = "phone_number">
+		< / label>
+		< / p>
+
+		<p>
+		<label>Email
+		<input type = "email" name = "email_address">
+		< / label>
+		< / p>
+
+		<fieldset>
+		<legend>Which taxi do you require ? < / legend>
+		<p><label> <input type = "radio" name = "taxi" required value = "car"> Car < / label>< / p>
+		<p><label> <input type = "radio" name = "taxi" required value = "van"> Van < / label>< / p>
+		<p><label> <input type = "radio" name = "taxi" required value = "tuktuk"> Tuk Tuk < / label>< / p>
+		< / fieldset>
+
+		<fieldset>
+		<legend>Extras< / legend>
+		<p><label> <input type = "checkbox" name = "extras" value = "baby"> Baby Seat < / label>< / p>
+		<p><label> <input type = "checkbox" name = "extras" value = "wheelchair"> Wheelchair Access < / label>< / p>
+		<p><label> <input type = "checkbox" name = "extras" value = "tip"> Stock Tip < / label>< / p>
+		< / fieldset>
+
+		<p>
+		<label>Pickup Date / Time
+		<input type = "datetime-local" name = "pickup_time" required>
+		< / label>
+		< / p>
+
+		<p>
+		<label>Pickup Place
+		<select id = "pickup_place" name = "pickup_place">
+		<option value = "" selected = "selected">Select One< / option>
+		<option value = "office" >Taxi Office< / option>
+		<option value = "town_hall" >Town Hall< / option>
+		<option value = "telepathy" >We'll Guess!</option>
+		< / select >
+		< / label>
+		< / p>
+
+		<p>
+		<label>Dropoff Place
+		<input type = "text" name = "dropoff_place" required list = "destinations">
+		< / label>
+
+		<datalist id = "destinations">
+		<option value = "Airport">
+		<option value = "Beach">
+		<option value = "Fred Flinstone's House">
+		< / datalist>
+		< / p>
+
+		<p>
+		<label>Special Instructions
+		<textarea name = "comments" maxlength = "500">< / textarea>
+		< / label>
+		< / p>
+
+		<p><button>Submit Booking< / button>< / p>
+
+		< / form>
+#endif
 }
 
 void ShowSettings() {
