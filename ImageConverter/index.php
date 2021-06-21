@@ -49,6 +49,26 @@ div.dir-box select{
     border-radius: 4px;
 }
 
+div.inv-box label{
+    text-align: center;
+    padding: 10px;
+    box-sizing: border-box;
+    display: inline-block;
+    border-radius: 4px;
+    width: 300px;
+    overflow: auto;
+}
+
+div.inv-box{
+    width: 300px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+div.inv-box select{
+    border-radius: 4px;
+}
+
 div.upload-box{
     width: 300px;
     margin: 0 auto;
@@ -68,6 +88,7 @@ div.upload-box label{
     width: 300px;
     overflow: auto;
 }
+
 div.upload-box input[type=file]{
     display: none;
 }
@@ -101,6 +122,14 @@ div.upload-box input[type=file]{
 </select>
 </div>
 
+<div class="inv-box">
+<label for="inv">Invert Colors</label>
+<select name="inv" id="inv" form="inv">
+  <option value="no">no</option>
+  <option value="yes">yes</option>
+</select>
+</div>
+
 <div class="upload-box">
         <label for="image-file">Upload file</label>
 	<input type="file" name="image-file" id="image-file" accept="image/*" />
@@ -123,7 +152,8 @@ $("#image-file").change(function(){
 			var fsize = oFile.size; //get file size
 			var ftype = oFile.type; // get file type
 			var osize = document.getElementById("size").value;;	
-			var odir = document.getElementById("dir").value;;	
+			var odir = document.getElementById("dir").value;;
+            var oinv = document.getElementById("inv").value;;	
 			if(fsize > max_file_size){
 				$('#loader-icon').hide();
 				alert("File size can not be more than (" + max_file_size +") 22MB" );
@@ -141,6 +171,7 @@ $("#image-file").change(function(){
 			mdata.append('image_data', oFile);
 			mdata.append('size', osize);
 			mdata.append('dir', odir);
+            mdata.append('inv', oinv);
 				
 			jQuery.ajax({
 				type: "POST", // HTTP method POST
