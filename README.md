@@ -4,7 +4,7 @@ This is a collaboration project with dirkessl (and likely others) on a new and i
 This is a similar device to the commercial PixelStick. It displays bmp files and built-in patterns in the air to be captured with time exposures.
 The images are displayed using one or two 144 LED RGB pixel arrays.
 The processor is currently the TTGO with the TFT display. T-Display.
-It has a nice menu system and single button for control.
+It has a nice menu system and single rotary dial button for control.
 This device can also be used as a simple light wand with color, saturation, and brightness controls.
 It has optional exFat reading to support SD cards >32GB. This is enabled with a switch in the .h file, USE_STANDARD_SD, set to 0. 1 Uses the basic SD library.
 <p>For exFat support this library must be included: https://github.com/greiman/SdFat
