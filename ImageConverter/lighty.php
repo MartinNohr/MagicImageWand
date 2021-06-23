@@ -34,6 +34,11 @@ if($image_info){
 
 //ImageMagick
 $image = new Imagick($_FILES['image_data']['tmp_name']);
+
+if ($_POST["inv"] == "yes"){
+	$image->negateImage('true');
+}
+
 $image->rotateImage(new ImagickPixel(), $_POST["dir"]);
 $image->thumbnailImage($_POST["size"], 0);
 $image->setImageFormat('BMP3');
