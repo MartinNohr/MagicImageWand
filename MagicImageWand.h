@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.36";
+char* myVersion = "1.37";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0

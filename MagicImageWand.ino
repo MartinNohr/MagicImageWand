@@ -4778,7 +4778,7 @@ void SetFilter(MenuItem* menu)
 			int y = nLetterIndex / partA;
 			y = constrain(y, 0, 2);
 			int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
-			tft.drawChar(x, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, SystemInfo.menuTextColor, 1);
+			tft.drawChar(x+1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, SystemInfo.menuTextColor, 1);
 			while (!done && (button = ReadButton()) == BTN_NONE) {
 				MenuTextScrollSideways();
 			}
