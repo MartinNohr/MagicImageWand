@@ -3408,6 +3408,33 @@ int MacroTime(String filepath, int* files)
 	return retval;
 }
 
+bool MatchNameFilter(String name, String pattern)
+{
+	// split the patterns and handle each in turn
+	String match;
+	int ix = pattern.indexOf('|');
+	do {
+		Serial.println("pattern:" + pattern + " match:" + match);
+		if (ix == -1)
+			match = pattern;
+		else {
+			match = pattern.substring(0);
+			//  remove this part
+			pattern = pattern.substring(ix + 1);
+			int ixend = match.indexOf('|');
+			if (ixend != -1)
+				match = match.substring(0, ixend);
+			Serial.println("  pattern:" + pattern + " match:" + match);
+		}
+		if (name.indexOf(match) != -1) {
+			Serial.println("true");
+			return true;
+		}
+	} while (pattern.length() && ix != -1);
+	Serial.println("false");
+	return false;
+}
+
 // read the files from the card or list the built-ins
 // look for start.MIW, and process it, but don't add it to the list
 // the valid card flag is set here
@@ -3469,7 +3496,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 						String uppername = CurrentFilename;
 						uppername.toUpperCase();
 						//find files with our extension only
-						if (uppername.endsWith(".BMP") && (!bnameFilter || uppername.indexOf(nameFilter) != -1)) {
+						if (uppername.endsWith(".BMP") && (!bnameFilter || MatchNameFilter(uppername,nameFilter))) {
 							//Serial.println("name: " + CurrentFilename);
 							FileNames.push_back(CurrentFilename);
 						}
@@ -4733,9 +4760,10 @@ void SetFilter(MenuItem* menu)
 	*(bool*)menu->value = !*(bool*)menu->value;
 	if (*(bool*)menu->value) {
 		ClearScreen();
-		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_@#$%^&";
+		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_@#$%^&|";
 		CRotaryDialButton::Button button = BTN_NONE;
 		bool done = false;
+		DisplayLine(4, "Click adds char, | = OR", SystemInfo.menuTextColor);
 		DisplayLine(5, "BTN0 delete last char", SystemInfo.menuTextColor);
 		DisplayLine(6, "Long press Dial to exit", SystemInfo.menuTextColor);
 		int nLetterIndex = 0;
