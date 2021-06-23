@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.35";
+char* myVersion = "1.36";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -9,9 +9,9 @@ char* myVersion = "1.35";
 // *****
 #define DIAL_BTN 15
 #define FRAMEBUTTON 22
-// reverse A and B for some PCB or wired versions, this is set for the new PCB, 0 for older PCB
-#define LATEST_PCB 0
-#if LATEST_PCB
+// reverse A and B for some PCB or wired versions, this is set for rev 2 PCB, 0 for older PCB, and 0 for rev 3 pcb
+#define PCB_REV2 0
+#if PCB_REV2
     #define DIAL_A 12
     #define DIAL_B 13
 #else
@@ -383,6 +383,8 @@ RTC_DATA_ATTR char sleepFolder[50];     // a place to save the folder during sle
 int lastFileIndex = 0;                  // save between switching of internal and SD
 String lastFolder = "/";
 std::vector<String> FileNames;
+String nameFilter;
+bool bnameFilter = false;                   // set this true to enable the filters set in nameFilter
 bool bSettingsMode = false;               // set true when settings are displayed
 bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
@@ -503,6 +505,8 @@ void Sleep(MenuItem* menu);
 void ReadBattery(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
 void ShowBattery(MenuItem* menu);
+void SetFilter(MenuItem* menu);
+//void UpdateFilter(MenuItem* menu, int flag);
 
 // SD details
 #define SDcsPin    33  // GPIO33
@@ -959,6 +963,7 @@ MenuItem MainMenu[] = {
         {eEndif},
         {eText,"Sleep",Sleep},
     {eElse},
+        {eBool,"Name Filter: %s",SetFilter,&bnameFilter,0,0,0,"Enabled","Disabled"/*,UpdateFilter*/},
         {eMenu,"Image Settings",{.menu = ImageMenu}},
         {eMenu,"Repeat/Chain Settings",{.menu = RepeatMenu}},
         {eMenu,"LED Strip Settings",{.menu = StripMenu}},

@@ -3468,7 +3468,8 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 					else {
 						String uppername = CurrentFilename;
 						uppername.toUpperCase();
-						if (uppername.endsWith(".BMP")) { //find files with our extension only
+						//find files with our extension only
+						if (uppername.endsWith(".BMP") && (!bnameFilter || uppername.indexOf(nameFilter) != -1)) {
 							//Serial.println("name: " + CurrentFilename);
 							FileNames.push_back(CurrentFilename);
 						}
@@ -4387,21 +4388,19 @@ void HomePage(){
   SendHTML_Stop();
 }
 
-
-void SelectInput(String heading1, String command, String arg_calling_name){
-  SendHTML_Header();
-  webpage += F("<h3>"); webpage += heading1 + "</h3>"; 
-  for (String var : FileNames)
-  {
-	  webpage += String("<p>") + var;
-  }
-  webpage += F("<FORM action='/"); webpage += command + "' method='post'>";
-  webpage += F("<input type='text' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
-  webpage += F("<type='submit' name='"); webpage += arg_calling_name; webpage += F("' value=''><br>");
-  webpage += F("<a href='/'>[Back]</a>");
-  append_page_footer();
-  SendHTML_Content();
-  SendHTML_Stop();
+void SelectInput(String heading1, String command, String arg_calling_name) {
+	SendHTML_Header();
+	webpage += "<h3>" + heading1 + "</h3>";
+	for (String var : FileNames) {
+		webpage += String("<p>") + var;
+	}
+	webpage += "<FORM action='/" + command + "' method='post'>" + "<input type='text' name='" + arg_calling_name;
+	webpage += "' value=''><br>";
+	webpage += "<type='submit' name='" + arg_calling_name + "' value=''><br>";
+	webpage += "<a href='/'>[Back]</a>";
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
 }
 
 void File_Download(){ // This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
@@ -4727,3 +4726,63 @@ void ShowBattery(MenuItem* menu)
 			break;
 	}
 }
+
+// load the filename filter
+void SetFilter(MenuItem* menu)
+{
+	*(bool*)menu->value = !*(bool*)menu->value;
+	if (*(bool*)menu->value) {
+		ClearScreen();
+		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_@#$%^&";
+		CRotaryDialButton::Button button = BTN_NONE;
+		bool done = false;
+		DisplayLine(5, "BTN0 delete last char", SystemInfo.menuTextColor);
+		DisplayLine(6, "Long press Dial to exit", SystemInfo.menuTextColor);
+		int nLetterIndex = 0;
+		const int partA = 13;	// half the alphabet
+		do {
+			DisplayLine(0, nameFilter, SystemInfo.menuTextColor);
+			// draw the text
+			DisplayLine(1, letters.substring(0, partA), SystemInfo.menuTextColor);
+			DisplayLine(2, letters.substring(partA, partA * 2), SystemInfo.menuTextColor);
+			DisplayLine(3, letters.substring(partA * 2), SystemInfo.menuTextColor);
+			// figure out which letter to hilite
+			int y = nLetterIndex / partA;
+			y = constrain(y, 0, 2);
+			int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
+			tft.drawChar(x, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, SystemInfo.menuTextColor, 1);
+			while (!done && (button = ReadButton()) == BTN_NONE) {
+				MenuTextScrollSideways();
+			}
+			switch (button) {
+			case BTN_LEFT:
+				if (nLetterIndex)
+					--nLetterIndex;
+				else
+					nLetterIndex = letters.length() - 1;
+				break;
+			case BTN_RIGHT:
+				if (nLetterIndex < letters.length() - 1)
+					++nLetterIndex;
+				else
+					nLetterIndex = 0;
+				break;
+			case BTN_SELECT:
+				nameFilter += letters[nLetterIndex];
+				break;
+			case BTN_B0_CLICK:
+				if (nameFilter.length())
+					nameFilter = nameFilter.substring(0, nameFilter.length() - 1);
+				break;
+			case BTN_LONG:
+				done = true;
+				break;
+			}
+		} while (!done);
+	}
+	GetFileNamesFromSDorBuiltins(currentFolder);
+}
+
+//void UpdateFilter(MenuItem* menu, int flag)
+//{
+//}
