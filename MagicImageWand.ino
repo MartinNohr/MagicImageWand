@@ -4763,9 +4763,8 @@ void SetFilter(MenuItem* menu)
 		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_@#$%^&|";
 		CRotaryDialButton::Button button = BTN_NONE;
 		bool done = false;
-		DisplayLine(4, "Click adds char, | = OR", SystemInfo.menuTextColor);
-		DisplayLine(5, "BTN0 delete last char", SystemInfo.menuTextColor);
-		DisplayLine(6, "Long press Dial to exit", SystemInfo.menuTextColor);
+		DisplayLine(5, "Rotate dial to select, Click adds char, '|' separates OR fields", SystemInfo.menuTextColor);
+		DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears filter", SystemInfo.menuTextColor);
 		int nLetterIndex = 0;
 		const int partA = 13;	// half the alphabet
 		do {
