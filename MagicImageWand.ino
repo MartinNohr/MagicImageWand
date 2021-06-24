@@ -4778,7 +4778,18 @@ void SetFilter(MenuItem* menu)
 			int y = nLetterIndex / partA;
 			y = constrain(y, 0, 2);
 			int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
-			tft.drawChar(x+1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, SystemInfo.menuTextColor, 1);
+			char ch[2] = { 0 };
+			ch[0] = letters[nLetterIndex];
+			// the width calculation for ' ' is 0, so we use something close
+			if (ch[0] == ' ')
+				ch[0] = '|';
+			if (SystemInfo.bMenuStar) {
+				tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, TFT_BLACK, 1);
+			}
+			else {
+				tft.fillRect(x + 1, tft.fontHeight() * (y + 1) - 4, tft.textWidth(ch), (y + 2) + tft.fontHeight(), SystemInfo.menuTextColor);
+				tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_BLACK, TFT_BLACK, 1);
+			}
 			while (!done && (button = ReadButton()) == BTN_NONE) {
 				MenuTextScrollSideways();
 			}
@@ -4801,6 +4812,9 @@ void SetFilter(MenuItem* menu)
 			case BTN_B0_CLICK:
 				if (nameFilter.length())
 					nameFilter = nameFilter.substring(0, nameFilter.length() - 1);
+				break;
+			case BTN_B0_LONG:
+				nameFilter.clear();
 				break;
 			case BTN_LONG:
 				done = true;
