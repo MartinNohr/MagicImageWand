@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.38";
+char* myVersion = "1.39";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 0
@@ -155,6 +155,7 @@ CRGB* leds;
 // 0 feed from center, 1 serial from end, 2 from outsides
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
 char* StripsWiringText[] = { "Middle","Serial","Outside" };
+char* DisplayRotationText[] = { "90","180","270","0" };
 struct LED_INFO {
     bool bSecondController = false;
     int nLEDBrightness = 25;
@@ -210,8 +211,8 @@ RTC_DATA_ATTR IMG_INFO ImgInfo;
 RTC_DATA_ATTR int CurrentFileIndex = 0;
 
 // functions that btn0 long press can map to
-enum BTN_LONG_FUNCTIONS { BTN_LONG_UPSIDEDOWN = 0, BTN_LONG_LIGHTBAR };
-char* BtnLongText[] = { "UpsideDown","LightBar" };
+enum BTN_LONG_FUNCTIONS { BTN_LONG_ROTATION = 0, BTN_LONG_LIGHTBAR };
+char* BtnLongText[] = { "DisplayRotate","LightBar" };
 
 struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
@@ -236,9 +237,9 @@ struct SYSTEM_INFO {
     int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
-    bool bDisplayUpsideDown = false;            // rotates display 180
-    int nBtn0LongFunction = BTN_LONG_UPSIDEDOWN;    // function that long btn0 performs
-    int nBtn1LongFunction = BTN_LONG_LIGHTBAR;    // function that long btn1 performs
+    int nDisplayRotation = 1;                   // rotates display 0, 180, 90, 270
+    int nBtn0LongFunction = BTN_LONG_ROTATION;// function that long btn0 performs
+    int nBtn1LongFunction = BTN_LONG_LIGHTBAR;  // function that long btn1 performs
     bool bSimpleMenu = false;                   // full or simple menu
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
@@ -502,7 +503,7 @@ void SaveMacro(MenuItem* menu);
 void DeleteMacro(MenuItem* menu);
 void LightBar(MenuItem* menu);
 void Sleep(MenuItem* menu);
-void ReadBattery(MenuItem* menu);
+//void ReadBattery(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
 void ShowBattery(MenuItem* menu);
 void SetFilter(MenuItem* menu);
@@ -780,7 +781,7 @@ MenuItem HomeScreenMenu[] = {
 };
 MenuItem DisplayMenu[] = {
     {eExit,"Display Settings"},
-    {eBool,"Upside Down: %s",ToggleBool,&SystemInfo.bDisplayUpsideDown,0,0,0,"Yes","No",UpdateDisplayRotation},
+    {eList, "Display Rotation: %s", GetSelectChoice, &SystemInfo.nDisplayRotation, 0, sizeof(DisplayRotationText) / sizeof(*DisplayRotationText) - 1, 0, NULL, NULL, UpdateDisplayRotation, DisplayRotationText},
     {eTextInt,"Display Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
     {eIfIntEqual,"",NULL,&SystemInfo.nDisplayDimTime,0},
@@ -1066,7 +1067,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };
 
-#define MENU_LINES 7
+int nMenuLineCount = 7;
 
 // keep the display lines in here so we can scroll sideways if necessary
 struct TEXTLINES {
@@ -1080,4 +1081,4 @@ struct TEXTLINES {
     // whether we are going up or down
     int nRollDirection;
 };
-struct TEXTLINES TextLines[MENU_LINES];
+std::vector<struct TEXTLINES> TextLines;

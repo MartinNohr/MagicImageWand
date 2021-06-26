@@ -120,10 +120,11 @@ void setup()
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
-	tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
 	tft.setFreeFont(&Dialog_bold_16);
+	SystemInfo.nDisplayRotation = 3;
 	tft.setTextSize(1);
 	tft.setTextPadding(tft.width());
+	SetScreenRotation(SystemInfo.nDisplayRotation);
 	ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 
@@ -285,9 +286,6 @@ void setup()
 		;
 	// clear the button buffer
 	CRotaryDialButton::clear();
-	//if (!bSdCardValid) {
-	//	ToggleFilesBuiltin(NULL);
-	//}
 	DisplayCurrentFile();
 	/*
 		analogSetCycles(8);                   // Set number of cycles per sample, default is 8 and provides an optimal result, range is 1 - 255
@@ -332,7 +330,7 @@ void MenuTextScrollSideways()
 	static unsigned long menuUpdateTime = 0;
 	if (millis() > menuUpdateTime + SystemInfo.nSidewayScrollSpeed) {
 		menuUpdateTime = millis();
-		for (int ix = 0; ix < MENU_LINES; ++ix) {
+		for (int ix = 0; ix < nMenuLineCount; ++ix) {
 			int offset = TextLines[ix].nRollOffset;
 			if (TextLines[ix].nRollLength) {
 				if (TextLines[ix].nRollOffset == 0 && TextLines[ix].nRollDirection == 0) {
@@ -372,10 +370,10 @@ void MenuTextScrollSideways()
 void CallBtnLongFunction(int which)
 {
 	switch (which) {
-	case BTN_LONG_UPSIDEDOWN:
-		SystemInfo.bDisplayUpsideDown = !SystemInfo.bDisplayUpsideDown;
-		tft.setRotation(SystemInfo.bDisplayUpsideDown ? 1 : 3);
-		ImgInfo.bUpsideDown = !ImgInfo.bUpsideDown;
+	case BTN_LONG_ROTATION:
+		SetScreenRotation(-1);
+		// make the LED's upside down for mode 1.
+		ImgInfo.bUpsideDown = SystemInfo.nDisplayRotation == 1;
 		break;
 	case BTN_LONG_LIGHTBAR:
 		LightBar(NULL);
@@ -695,7 +693,7 @@ void ShowMenu(struct MenuItem* menu)
 	}
 	MenuStack.top()->menucount = y;
 	// blank the rest of the lines
-	for (int ix = y; ix < MENU_LINES; ++ix) {
+	for (int ix = y; ix < nMenuLineCount; ++ix) {
 		DisplayLine(ix, "");
 	}
 	// show line if menu has been scrolled
@@ -703,7 +701,7 @@ void ShowMenu(struct MenuItem* menu)
 		tft.fillTriangle(0, 0, 2, 0, 0, tft.fontHeight() / 3, TFT_DARKGREY);
 		//tft.drawLine(0, 0, 5, 0, menuLineActiveColor);TFT_DARKGREY
 	// show bottom line if last line is showing
-	if (MenuStack.top()->offset + (MENU_LINES - 1) < MenuStack.top()->menucount - 1) {
+	if (MenuStack.top()->offset + (nMenuLineCount - 1) < MenuStack.top()->menucount - 1) {
 		int ypos = tft.height() - 2 - tft.fontHeight() / 3;
 		tft.fillTriangle(0, ypos, 2, ypos, 0, ypos - tft.fontHeight() / 3, TFT_DARKGREY);
 	}
@@ -712,9 +710,9 @@ void ShowMenu(struct MenuItem* menu)
 	//else
 	//	tft.drawLine(0, tft.height() - 1, 5, tft.height() - 1, TFT_BLACK);
 	// see if we need to clean up the end, like when the menu shrank due to a choice
-	int extra = MenuStack.top()->menucount - MenuStack.top()->offset - MENU_LINES;
+	int extra = MenuStack.top()->menucount - MenuStack.top()->offset - nMenuLineCount;
 	while (extra < 0) {
-		DisplayLine(MENU_LINES + extra, "");
+		DisplayLine(nMenuLineCount + extra, "");
 		++extra;
 	}
 }
@@ -977,7 +975,7 @@ void UpdateDisplayBrightness(MenuItem* menu, int flag)
 
 void UpdateDisplayRotation(MenuItem* menu, int flag)
 {
-	tft.setRotation(*(bool*)menu->value ? 1 : 3);
+	SetScreenRotation(SystemInfo.nDisplayRotation);
 	tft.fillScreen(TFT_BLACK);
 }
 
@@ -1080,8 +1078,8 @@ bool HandleMenus()
 			MenuStack.top()->offset = 0;
 		}
 		// see if we need to scroll the menu
-		if (MenuStack.top()->index - MenuStack.top()->offset > (MENU_LINES - 1)) {
-			if (MenuStack.top()->offset < MenuStack.top()->menucount - MENU_LINES) {
+		if (MenuStack.top()->index - MenuStack.top()->offset > (nMenuLineCount - 1)) {
+			if (MenuStack.top()->offset < MenuStack.top()->menucount - nMenuLineCount) {
 				++MenuStack.top()->offset;
 			}
 		}
@@ -1093,7 +1091,7 @@ bool HandleMenus()
 		if (MenuStack.top()->index < 0) {
 			MenuStack.top()->index = MenuStack.top()->menucount - 1;
 			bMenuChanged = true;
-			MenuStack.top()->offset = MenuStack.top()->menucount - MENU_LINES;
+			MenuStack.top()->offset = MenuStack.top()->menucount - nMenuLineCount;
 		}
 		// see if we need to adjust the offset
 		if (MenuStack.top()->offset && MenuStack.top()->index < MenuStack.top()->offset) {
@@ -1227,12 +1225,12 @@ enum CRotaryDialButton::Button ReadButton()
 			LedInfo.nLEDBrightness += amt;
 			LedInfo.nLEDBrightness = constrain(LedInfo.nLEDBrightness, 1, 255);
 			FastLED.setBrightness(LedInfo.nLEDBrightness);
-			DisplayLine(MENU_LINES - 1, "Brightness: " + String(LedInfo.nLEDBrightness), SystemInfo.menuTextColor);
+			DisplayLine(nMenuLineCount - 1, "Brightness: " + String(LedInfo.nLEDBrightness), SystemInfo.menuTextColor);
 			break;
 		case DIAL_IMB_SPEED:
 			ImgInfo.nFrameHold += amt;
 			ImgInfo.nFrameHold = constrain(ImgInfo.nFrameHold, 0, 500);
-			DisplayLine(MENU_LINES - 1, "Frame Time: " + String(ImgInfo.nFrameHold) + " mS", SystemInfo.menuTextColor);
+			DisplayLine(nMenuLineCount - 1, "Frame Time: " + String(ImgInfo.nFrameHold) + " mS", SystemInfo.menuTextColor);
 			break;
 		}
 	}
@@ -2361,7 +2359,7 @@ void ProcessFileOrTest()
 	}
 	bIsRunning = true;
 	// clear the rest of the lines
-	for (int ix = 1; ix < MENU_LINES; ++ix)
+	for (int ix = 1; ix < nMenuLineCount; ++ix)
 		DisplayLine(ix, "");
 	//DisplayCurrentFile();
 	if (ImgInfo.startDelay) {
@@ -2962,7 +2960,7 @@ void ShowBmp(MenuItem*)
 
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
-	if (line >= 0 && line < MENU_LINES) {
+	if (line >= 0 && line < nMenuLineCount) {
 		// don't show if running and displaying file on LCD
 		if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
 			if (TextLines[line].Line != text || TextLines[line].backColor != backColor || TextLines[line].foreColor != color) {
@@ -2996,7 +2994,7 @@ void ClearScreen()
 
 void ResetTextLines()
 {
-	for (int ix = 0; ix < MENU_LINES; ++ix) {
+	for (int ix = 0; ix < nMenuLineCount; ++ix) {
 		TextLines[ix].Line.clear();
 		TextLines[ix].nRollOffset = 0;
 		TextLines[ix].nRollLength = 0;
@@ -3011,7 +3009,7 @@ void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
 	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
-	if (displine >= 0 && displine < MENU_LINES) {
+	if (displine >= 0 && displine < nMenuLineCount) {
 		//Serial.println("displine: " + String(displine) + " line: " + String(line));
 			//Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
 		if (SystemInfo.bMenuStar) {
@@ -3157,7 +3155,7 @@ void DisplayCurrentFile(bool path)
 		}
 	}
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
-		for (int ix = 1; ix < MENU_LINES - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
+		for (int ix = 1; ix < nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
 			if (ix + CurrentFileIndex >= FileNames.size()) {
 				DisplayLine(ix, "", SystemInfo.menuTextColor);
 			}
@@ -3971,70 +3969,70 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		leds[ix2] = pixel;
 }
 
-#define Fbattery    3700  //The default battery is 3700mv when the battery is fully charged.
-
-float XS = 0.00225;      //The returned reading is multiplied by this XS to get the battery voltage.
-uint16_t MUL = 1000;
-uint16_t MMUL = 100;
-// read and display the battery voltage
-void ReadBattery(MenuItem* menu)
-{
-	//tft.clear();
-	uint16_t bat = analogRead(A4);
-	Serial.println("bat: " + String(bat));
-	DisplayLine(0, "Battery: " + String(bat));
-	delay(1000);
-	//uint16_t c = analogRead(13) * XS * MUL;
-	////uint16_t d  =  (analogRead(13)*XS*MUL*MMUL)/Fbattery;
-	//Serial.println(analogRead(13));
-	////Serial.println((String)d);
- //  // Serial.printf("%x",analogRead(13));
-	//Heltec.display->drawString(0, 0, "Remaining battery still has:");
-	//Heltec.display->drawString(0, 10, "VBAT:");
-	//Heltec.display->drawString(35, 10, (String)c);
-	//Heltec.display->drawString(60, 10, "(mV)");
-	//// Heltec.display->drawString(90, 10, (String)d);
-	//// Heltec.display->drawString(98, 10, ".";
-	//// Heltec.display->drawString(107, 10, "%");
-	//Heltec.display->display();
-	//delay(2000);
-	//Heltec.display->clear();
- //Battery voltage read pin changed from GPIO13 to GPI37
-	////adcStart(37);
-	////while (adcBusy(37))
-	////	;
-	////Serial.printf("Battery power in GPIO 37: ");
-	////Serial.println(analogRead(37));
-	////uint16_t c1 = analogRead(37) * XS * MUL;
-	////adcEnd(37);
-	////Serial.println("Vbat: " + String(c1));
-
-	////delay(100);
-
-	//adcStart(36);
-	//while (adcBusy(36));
-	//Serial.printf("voltage input on GPIO 36: ");
-	//Serial.println(analogRead(36));
-	//uint16_t c2 = analogRead(36) * 0.769 + 150;
-	//adcEnd(36);
-	//Serial.println("-------------");
-	// uint16_t c  =  analogRead(13)*XS*MUL;
-	// Serial.println(analogRead(13));
-	////Heltec.display->drawString(0, 0, "Vbat = ");
-	////Heltec.display->drawString(33, 0, (String)c1);
-	////Heltec.display->drawString(60, 0, "(mV)");
-
-	//Heltec.display->drawString(0, 10, "Vin   = ");
-	//Heltec.display->drawString(33, 10, (String)c2);
-	//Heltec.display->drawString(60, 10, "(mV)");
-
-	// Heltec.display->drawString(0, 0, "Remaining battery still has:");
-	// Heltec.display->drawString(0, 10, "VBAT:");
-	// Heltec.display->drawString(35, 10, (String)c);
-	// Heltec.display->drawString(60, 10, "(mV)");
-	////Heltec.display->display();
-	////delay(2000);
-}
+//#define Fbattery    3700  //The default battery is 3700mv when the battery is fully charged.
+//
+//float XS = 0.00225;      //The returned reading is multiplied by this XS to get the battery voltage.
+//uint16_t MUL = 1000;
+//uint16_t MMUL = 100;
+//// read and display the battery voltage
+//void ReadBattery(MenuItem* menu)
+//{
+//	//tft.clear();
+//	uint16_t bat = analogRead(A4);
+//	Serial.println("bat: " + String(bat));
+//	DisplayLine(0, "Battery: " + String(bat));
+//	delay(1000);
+//	//uint16_t c = analogRead(13) * XS * MUL;
+//	////uint16_t d  =  (analogRead(13)*XS*MUL*MMUL)/Fbattery;
+//	//Serial.println(analogRead(13));
+//	////Serial.println((String)d);
+// //  // Serial.printf("%x",analogRead(13));
+//	//Heltec.display->drawString(0, 0, "Remaining battery still has:");
+//	//Heltec.display->drawString(0, 10, "VBAT:");
+//	//Heltec.display->drawString(35, 10, (String)c);
+//	//Heltec.display->drawString(60, 10, "(mV)");
+//	//// Heltec.display->drawString(90, 10, (String)d);
+//	//// Heltec.display->drawString(98, 10, ".";
+//	//// Heltec.display->drawString(107, 10, "%");
+//	//Heltec.display->display();
+//	//delay(2000);
+//	//Heltec.display->clear();
+// //Battery voltage read pin changed from GPIO13 to GPI37
+//	////adcStart(37);
+//	////while (adcBusy(37))
+//	////	;
+//	////Serial.printf("Battery power in GPIO 37: ");
+//	////Serial.println(analogRead(37));
+//	////uint16_t c1 = analogRead(37) * XS * MUL;
+//	////adcEnd(37);
+//	////Serial.println("Vbat: " + String(c1));
+//
+//	////delay(100);
+//
+//	//adcStart(36);
+//	//while (adcBusy(36));
+//	//Serial.printf("voltage input on GPIO 36: ");
+//	//Serial.println(analogRead(36));
+//	//uint16_t c2 = analogRead(36) * 0.769 + 150;
+//	//adcEnd(36);
+//	//Serial.println("-------------");
+//	// uint16_t c  =  analogRead(13)*XS*MUL;
+//	// Serial.println(analogRead(13));
+//	////Heltec.display->drawString(0, 0, "Vbat = ");
+//	////Heltec.display->drawString(33, 0, (String)c1);
+//	////Heltec.display->drawString(60, 0, "(mV)");
+//
+//	//Heltec.display->drawString(0, 10, "Vin   = ");
+//	//Heltec.display->drawString(33, 10, (String)c2);
+//	//Heltec.display->drawString(60, 10, "(mV)");
+//
+//	// Heltec.display->drawString(0, 0, "Remaining battery still has:");
+//	// Heltec.display->drawString(0, 10, "VBAT:");
+//	// Heltec.display->drawString(35, 10, (String)c);
+//	// Heltec.display->drawString(60, 10, "(mV)");
+//	////Heltec.display->display();
+//	////delay(2000);
+//}
 
 // grow and shrink a rainbow type pattern
 #define PI_SCALE 2
@@ -4689,7 +4687,7 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	}
 }
 
-// read the battery level
+// read the battery level, LiIon cells are 4.2 fully charged and should not be discharged below 2.75
 int ReadBattery(int* raw)
 {
 #define BATTERY_SAMPLES 10
@@ -4822,6 +4820,22 @@ void SetFilter(MenuItem* menu)
 		} while (!done);
 	}
 	GetFileNamesFromSDorBuiltins(currentFolder);
+}
+
+// set the screen rotation to the correct value, 0-3, allocate the screen memory
+// -1 goes to the next one
+void SetScreenRotation(int rot)
+{
+	if (rot == -1) {
+		++SystemInfo.nDisplayRotation;
+	}
+	else {
+		SystemInfo.nDisplayRotation = rot;
+	}
+	SystemInfo.nDisplayRotation %= 4;
+	tft.setRotation(SystemInfo.nDisplayRotation);
+	nMenuLineCount = tft.height() / tft.fontHeight();
+	TextLines.resize(nMenuLineCount);
 }
 
 //void UpdateFilter(MenuItem* menu, int flag)
