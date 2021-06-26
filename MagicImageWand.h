@@ -1067,7 +1067,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };
 
-int nMenuLineCount = 7;
+RTC_DATA_ATTR int nMenuLineCount = 7;
 
 // keep the display lines in here so we can scroll sideways if necessary
 struct TEXTLINES {

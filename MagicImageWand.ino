@@ -4735,7 +4735,7 @@ void ShowBattery(MenuItem* menu)
 				DisplayLine(3, "Long Press to Cancel", SystemInfo.menuTextColor);
 			}
 			else {
-				int x = tft.width() * 70 / 100;
+				int x = tft.width() - 64;
 				int y = tft.height() - 20;
 				tft.drawRoundRect(x, y, 64, 17, 8, SystemInfo.menuTextColor);
 				tft.fillRoundRect(x + 1, y + 1, 62, 15, 8, TFT_BLACK);
