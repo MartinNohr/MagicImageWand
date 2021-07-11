@@ -1,9 +1,12 @@
 #pragma once
+// **** TODO ****
+// add slow transitions to hue etc changes in the lightbar
+//
 
-char* myVersion = "1.39";
+char* myVersion = "1.40";
 
 // ***** Various switches for options are set here *****
-#define HAS_BATTERY_LEVEL 0
+#define HAS_BATTERY_LEVEL 1
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
@@ -229,8 +232,8 @@ struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
-    int nBatteryFullLevel = 3150;               // 100% battery
-    int nBatteryEmptyLevel = 2210;              // 0% battery, should cause a shutdown to save the batteries
+    int nBatteryFullLevel = 2260;               // 100% battery
+    int nBatteryEmptyLevel = 1185;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
@@ -322,6 +325,7 @@ struct BUILTIN_INFO {
     int nColorTemperature = 0;
     int nDisplayAllPixelCount = 288;
     bool bDisplayAllFromMiddle = true;
+    int nDisplayAllChangeTime = 0;   // mS when changing steps between HUE, etc
     // rainbow
     int nRainbowHueDelta = 4;
     int nRainbowInitialHue = 0;
@@ -706,9 +710,10 @@ MenuItem MeteorMenu[] = {
     {eTerminate}
 };
 MenuItem LedLightBarMenu[] = {
-    {eExit,"Light Bar"},
+    {eExit,"Light Bar Settings"},
     {eBool,"Allow rollover: %s",ToggleBool,&BuiltinInfo.bAllowRollover,0,0,0,"Yes","No"},
-	{eList,"Color Mode: %s",GetSelectChoice,&BuiltinInfo.nLightBarMode,0,sizeof(LightBarModeText) / sizeof(*LightBarModeText) - 1,0,NULL,NULL,NULL,LightBarModeText},
+    {eTextInt,"Change Delay: %d mS",GetIntegerValue,&BuiltinInfo.nDisplayAllChangeTime,0,1000},
+    {eList,"Color Mode: %s",GetSelectChoice,&BuiltinInfo.nLightBarMode,0,sizeof(LightBarModeText) / sizeof(*LightBarModeText) - 1,0,NULL,NULL,NULL,LightBarModeText},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_RGB},
         {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllRed,0,255},
         {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllGreen,0,255},

@@ -950,11 +950,11 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 	}
 }
 
-// update the batterie default settings
+// update the batterie default settings, 1-4 batteries
 void UpdateBatteries(MenuItem* menu, int flag)
 {
-	int batLo[4] = { 700, 1000,2000,3000 };
-	int batHi[4] = { 1000, 1500,2500,3200 };
+	int batLo[4] = {  700, 1185, 2000, 3000 };
+	int batHi[4] = { 1000, 2260, 2500, 3200 };
 	switch (flag) {
 	case 1:		// first time
 		break;
@@ -1663,9 +1663,9 @@ void LightBar(MenuItem* menu)
 {
 	ClearScreen();
 	DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
-	DisplayLine(3, "Rotate Dial to Change", SystemInfo.menuTextColor);
-	DisplayLine(4, "Click to Set Operation", SystemInfo.menuTextColor);
-	DisplayLine(5, "Long Press for Exit", SystemInfo.menuTextColor);
+	DisplayLine(4, "B0-Inc  B0/1Long-Delay", SystemInfo.menuTextColor);
+	DisplayLine(5, "Click/Rotate Dial", SystemInfo.menuTextColor);
+	DisplayLine(6, "Long Press Exit", SystemInfo.menuTextColor);
 	DisplayLedLightBar();
 	FastLED.clear(true);
 	// these were set by CheckCancel() in DisplayAllColor() and need to be cleared
@@ -1702,13 +1702,21 @@ void FillLightBar()
 // Used LEDs as a light bar
 void DisplayLedLightBar()
 {
-	DisplayLine(1, "");
+	unsigned int incIx = 1;
+	int incList[] = { 1,10,100,256 };
+	// these are used to handle the slow transition mode
+	// it works by saving the increment, setting it to 1, and then saving the number in count
+	CRotaryDialButton::Button btnSlowChange;
+	int savedIncrement;
+	int nSlowChangeCount = 0;
+
 	FillLightBar();
 	// show until cancelled, but check for rotations of the knob
 	CRotaryDialButton::Button btn;
-	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for increment
-	int increment = 10;
+	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for Kelvin, 5 for stepsize
+	int increment = incList[incIx];
 	bool bChange = true;
+	DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(increment), SystemInfo.menuTextColor);
 	while (true) {
 		MenuTextScrollSideways();
 		if (bChange) {
@@ -1762,11 +1770,39 @@ void DisplayLedLightBar()
 				line = " (step size: " + String(increment) + ")";
 				break;
 			}
-			DisplayLine(2, line, SystemInfo.menuTextColor);
+			DisplayLine(1, line, SystemInfo.menuTextColor);
+		}
+		// see if there is a slow change going on
+		if (nSlowChangeCount > 0) {
+			DisplayLine(0, "LED Light Bar - Running", SystemInfo.menuTextColor);
+			delay(BuiltinInfo.nDisplayAllChangeTime);
+			if (--nSlowChangeCount) {
+				// push the button, we're still running
+				CRotaryDialButton::pushButton(btnSlowChange);
+			}
+			else {
+				// we're all done now
+				increment = savedIncrement;
+				DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
+			}
 		}
 		btn = ReadButton();
 		bChange = true;
 		switch (btn) {
+		case BTN_B0_CLICK:	// change the inc
+			++incIx;
+			incIx %= sizeof(incList) / sizeof(*incList);
+			increment = incList[incIx];
+			break;
+		case BTN_B0_LONG:	// increment delay
+			BuiltinInfo.nDisplayAllChangeTime += increment;
+			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);
+			break;
+		case BTN_B1_LONG:
+			//ShowMenu(LedLightBarMenu);
+			BuiltinInfo.nDisplayAllChangeTime -= increment;
+			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);
+			break;
 		case BTN_NONE:
 			bChange = false;
 			break;
@@ -1775,7 +1811,19 @@ void DisplayLedLightBar()
 			case 0:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllHue += increment;
+					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
+						btnSlowChange = btn;
+						savedIncrement = increment;
+						// set how many to do, add one since we're starting over
+						nSlowChangeCount = increment + 1;
+						// only do one at a time during slow transition
+						increment = 1;
+						// go back and handle this new key
+						continue;
+					}
+					else {
+						BuiltinInfo.nDisplayAllHue += increment;
+					}
 					break;
 				case LBMODE_RGB:
 					BuiltinInfo.nDisplayAllRed += increment;
@@ -1817,7 +1865,9 @@ void DisplayLedLightBar()
 				BuiltinInfo.bDisplayAllFromMiddle = true;
 				break;
 			case 5:
-				increment *= 10;
+				++incIx;
+				incIx %= sizeof(incList) / sizeof(*incList);
+				increment = incList[incIx];
 				break;
 			}
 			break;
@@ -1826,7 +1876,19 @@ void DisplayLedLightBar()
 			case 0:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllHue -= increment;
+					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
+						btnSlowChange = btn;
+						savedIncrement = increment;
+						// set how many to do, add one since we're starting over
+						nSlowChangeCount = increment + 1;
+						// only do one at a time during slow transition
+						increment = 1;
+						// go back and handle this new key
+						continue;
+					}
+					else {
+						BuiltinInfo.nDisplayAllHue -= increment;
+					}
 					break;
 				case LBMODE_RGB:
 					BuiltinInfo.nDisplayAllRed -= increment;
@@ -1868,7 +1930,9 @@ void DisplayLedLightBar()
 				BuiltinInfo.bDisplayAllFromMiddle = false;
 				break;
 			case 5:
-				increment /= 10;
+				--incIx;
+				incIx %= sizeof(incList) / sizeof(*incList);
+				increment = incList[incIx];
 				break;
 			}
 			break;
@@ -1888,8 +1952,9 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
+			DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(increment), SystemInfo.menuTextColor);
 			BuiltinInfo.nDisplayAllPixelCount = constrain(BuiltinInfo.nDisplayAllPixelCount, 1, LedInfo.nTotalLeds);
-			increment = constrain(increment, 1, 100);
+			//increment = constrain(increment, 1, 256);
 			switch (BuiltinInfo.nLightBarMode) {
 			case LBMODE_HSV:
 				if (BuiltinInfo.bAllowRollover) {
