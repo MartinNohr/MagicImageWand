@@ -1,9 +1,6 @@
 #pragma once
-// **** TODO ****
-// add slow transitions to hue etc changes in the lightbar
-//
 
-char* myVersion = "1.40";
+char* myVersion = "1.41";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -114,6 +111,7 @@ void TestBouncingBalls();
 void CheckerBoard();
 void RandomBars();
 void RunningDot();
+void RandomDot();
 void OppositeRunningDots();
 void TestTwinkle();
 void TestMeteor();
@@ -1004,6 +1002,7 @@ BuiltInItem BuiltInFiles[] = {
     {"Rainbow",TestRainbow,RainbowMenu},
     {"Rainbow Pulse",RainbowPulse,RainbowPulseMenu},
     {"Random Bars",RandomBars,RandomBarsMenu},
+    {"Random Motion Dot",RandomDot},
     {"Sine Trails",TestSine,SineMenu},
     {"Solid Color",DisplayLedLightBar,LedLightBarMenu},
     {"Stripes",TestStripes},

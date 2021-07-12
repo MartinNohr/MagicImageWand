@@ -1580,7 +1580,6 @@ void RunningDot()
 			break;
 		}
 		fixRGBwithGamma(&r, &g, &b);
-		char line[10]{};
 		for (int ix = 0; ix < LedInfo.nTotalLeds; ++ix) {
 			if (CheckCancel()) {
 				break;
@@ -1598,6 +1597,36 @@ void RunningDot()
 		ShowLeds();
 		//FastLED.show();
 	}
+	FastLED.clear(true);
+}
+
+// random dot, moves back and forth with random timing
+void RandomDot()
+{
+	// RGBW
+	byte r, g, b;
+	r = 255;
+	g = 0;
+	b = 0;
+	long delayTime;
+	fixRGBwithGamma(&r, &g, &b);
+	for (int ix = 0; ix < LedInfo.nTotalLeds; ++ix) {
+		if (CheckCancel()) {
+			break;
+		}
+		if (ix > 0) {
+			SetPixel(ix - 1, CRGB::Black);
+		}
+		SetPixel(ix, CRGB(r, g, b));
+		ShowLeds();
+		if ((ix % 10) == 0)
+			delayTime = random(0, ImgInfo.nFrameHold) * 2;
+		delay(delayTime);
+	}
+	// remember the last one, turn it off
+	SetPixel(LedInfo.nTotalLeds - 1, CRGB::Black);
+	ShowLeds();
+	//FastLED.show();
 	FastLED.clear(true);
 }
 
@@ -1662,7 +1691,7 @@ void Sleep(MenuItem* menu)
 void LightBar(MenuItem* menu)
 {
 	ClearScreen();
-	DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
+	DisplayLightBarTitle(false);
 	DisplayLine(4, "B0-Inc  B0/1Long-Delay", SystemInfo.menuTextColor);
 	DisplayLine(5, "Click/Rotate Dial", SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press Exit", SystemInfo.menuTextColor);
@@ -1672,6 +1701,12 @@ void LightBar(MenuItem* menu)
 	bCancelMacro = bCancelRun = false;
 }
 
+// display the top line of the iightbar
+void DisplayLightBarTitle(bool bRun)
+{
+	DisplayLine(0, String(LightBarModeText[BuiltinInfo.nLightBarMode]) + " LED Light Bar" + (bRun ? " - Running" : ""), SystemInfo.menuTextColor);
+}
+
 // utility for DisplayLedLightBar()
 void FillLightBar()
 {
@@ -1679,22 +1714,21 @@ void FillLightBar()
 	if (!BuiltinInfo.bDisplayAllFromMiddle && ImgInfo.bUpsideDown)
 		offset = LedInfo.nTotalLeds - BuiltinInfo.nDisplayAllPixelCount;
 	FastLED.clear();
+	CRGB color;
 	for (int ix = 0; ix < BuiltinInfo.nDisplayAllPixelCount; ++ix) {
 		switch (BuiltinInfo.nLightBarMode) {
 		case LBMODE_HSV:
 			SetPixel(ix + offset, CHSV(BuiltinInfo.nDisplayAllHue, BuiltinInfo.nDisplayAllSaturation, BuiltinInfo.nDisplayAllBrightness));
 			break;
-		case LBMODE_KELVIN:
-			SetPixel(ix + offset, (ColorTemperature)(LightBarColorList[BuiltinInfo.nColorTemperature]));
-			break;
 		case LBMODE_RGB:
 			SetPixel(ix + offset, CRGB(BuiltinInfo.nDisplayAllRed, BuiltinInfo.nDisplayAllGreen, BuiltinInfo.nDisplayAllBlue));
 			break;
+		case LBMODE_KELVIN:
+			color = CRGB((ColorTemperature)LightBarColorList[BuiltinInfo.nColorTemperature]);
+			color.nscale8(BuiltinInfo.nDisplayAllBrightness);
+			SetPixel(ix + offset, color);
+			break;
 		}
-	}
-	if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN) {
-		// set the brightness
-		FastLED.setBrightness(BuiltinInfo.nDisplayAllBrightness);
 	}
 	ShowLeds();
 }
@@ -1713,7 +1747,8 @@ void DisplayLedLightBar()
 	FillLightBar();
 	// show until cancelled, but check for rotations of the knob
 	CRotaryDialButton::Button btn;
-	int what = 0;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for Kelvin, 5 for stepsize
+	enum DAWHAT { DAWHAT_HRK = 0, DAWHAT_SGK, DAWHAT_BBB, DAWHAT_PIXELS, DAWHAT_FROM, DAWHAT_MAX };
+	enum DAWHAT what = DAWHAT_HRK;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for Kelvin
 	int increment = incList[incIx];
 	bool bChange = true;
 	DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(increment), SystemInfo.menuTextColor);
@@ -1722,7 +1757,7 @@ void DisplayLedLightBar()
 		if (bChange) {
 			String line;
 			switch (what) {
-			case 0:
+			case DAWHAT_HRK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					line = "HUE: " + String(BuiltinInfo.nDisplayAllHue);
@@ -1735,7 +1770,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 1:
+			case DAWHAT_SGK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					line = "Saturation: " + String(BuiltinInfo.nDisplayAllSaturation);
@@ -1747,7 +1782,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 2:
+			case DAWHAT_BBB:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					line = "Brightness: " + String(BuiltinInfo.nDisplayAllBrightness);
@@ -1760,21 +1795,20 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 3:
+			case DAWHAT_PIXELS:
 				line = "Pixels: " + String(BuiltinInfo.nDisplayAllPixelCount);
 				break;
-			case 4:
+			case DAWHAT_FROM:
 				line = "From: " + String((BuiltinInfo.bDisplayAllFromMiddle ? "Middle" : "End"));
 				break;
-			case 5:
-				line = " (step size: " + String(increment) + ")";
+			case DAWHAT_MAX:	// keep the compiler happy
 				break;
 			}
 			DisplayLine(1, line, SystemInfo.menuTextColor);
 		}
 		// see if there is a slow change going on
 		if (nSlowChangeCount > 0) {
-			DisplayLine(0, "LED Light Bar - Running", SystemInfo.menuTextColor);
+			DisplayLightBarTitle(true);
 			delay(BuiltinInfo.nDisplayAllChangeTime);
 			if (--nSlowChangeCount) {
 				// push the button, we're still running
@@ -1783,7 +1817,7 @@ void DisplayLedLightBar()
 			else {
 				// we're all done now
 				increment = savedIncrement;
-				DisplayLine(0, "LED Light Bar", SystemInfo.menuTextColor);
+				DisplayLightBarTitle(false);
 			}
 		}
 		btn = ReadButton();
@@ -1808,7 +1842,7 @@ void DisplayLedLightBar()
 			break;
 		case BTN_RIGHT:
 			switch (what) {
-			case 0:
+			case DAWHAT_HRK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
@@ -1833,7 +1867,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 1:
+			case DAWHAT_SGK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllSaturation += increment;
@@ -1845,7 +1879,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 2:
+			case DAWHAT_BBB:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllBrightness += increment;
@@ -1858,22 +1892,17 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 3:
+			case DAWHAT_PIXELS:
 				BuiltinInfo.nDisplayAllPixelCount += increment;
 				break;
-			case 4:
+			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = true;
-				break;
-			case 5:
-				++incIx;
-				incIx %= sizeof(incList) / sizeof(*incList);
-				increment = incList[incIx];
 				break;
 			}
 			break;
 		case BTN_LEFT:
 			switch (what) {
-			case 0:
+			case DAWHAT_HRK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
@@ -1898,7 +1927,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 1:
+			case DAWHAT_SGK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllSaturation -= increment;
@@ -1910,7 +1939,7 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 2:
+			case DAWHAT_BBB:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
 					BuiltinInfo.nDisplayAllBrightness -= increment;
@@ -1923,25 +1952,22 @@ void DisplayLedLightBar()
 					break;
 				}
 				break;
-			case 3:
+			case DAWHAT_PIXELS:
 				BuiltinInfo.nDisplayAllPixelCount -= increment;
 				break;
-			case 4:
+			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = false;
 				break;
-			case 5:
-				--incIx;
-				incIx %= sizeof(incList) / sizeof(*incList);
-				increment = incList[incIx];
+			case DAWHAT_MAX:	// keep the compiler happy
 				break;
 			}
 			break;
 		case BTN_SELECT:
 			// switch to the next selection, wrapping around if necessary
-			what = ++what % 6;
-			// 1 is valid with Kelvin
-			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN && what == 1) {
-				what = 2;
+			what = (enum DAWHAT)((what + 1) % (DAWHAT_MAX - 1));
+			// DAWHAT_SGK is not valid with Kelvin
+			if (BuiltinInfo.nLightBarMode == LBMODE_KELVIN && what == DAWHAT_SGK) {
+				what = DAWHAT_BBB;
 			}
 			break;
 		case BTN_LONG:
