@@ -97,6 +97,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 #define BTN_B0_LONG     CRotaryDialButton::BTN0_LONGPRESS
 #define BTN_B1_CLICK    CRotaryDialButton::BTN1_CLICK
 #define BTN_B1_LONG     CRotaryDialButton::BTN1_LONGPRESS
+#define BTN_B2_LONG     CRotaryDialButton::BTN2_LONGPRESS
 
 // functions
 void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);

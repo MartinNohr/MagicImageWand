@@ -1823,6 +1823,13 @@ void DisplayLedLightBar()
 		btn = ReadButton();
 		bChange = true;
 		switch (btn) {
+		case BTN_B2_LONG:
+			// next mode
+			++BuiltinInfo.nLightBarMode;
+			// wrap
+			BuiltinInfo.nLightBarMode %= sizeof(LightBarModeText) / sizeof(*LightBarModeText);
+			DisplayLightBarTitle(false);
+			break;
 		case BTN_B0_CLICK:	// change the inc
 			++incIx;
 			incIx %= sizeof(incList) / sizeof(*incList);
@@ -3251,7 +3258,7 @@ void DisplayCurrentFile(bool path)
 				DisplayLine(ix, "", SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(ix, "   " + FileNames[CurrentFileIndex + ix], SystemInfo.menuTextColor);
+				DisplayLine(ix, "  " + FileNames[CurrentFileIndex + ix], SystemInfo.menuTextColor);
 			}
 		}
 	}

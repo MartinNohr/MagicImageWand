@@ -2,7 +2,7 @@
 #include <queue>
 class CRotaryDialButton {
 public:
-	enum Button { BTN_NONE, BTN_LEFT, BTN_RIGHT, BTN_CLICK, BTN_LONGPRESS, BTN0_CLICK, BTN1_CLICK, BTN0_LONGPRESS, BTN1_LONGPRESS };
+	enum Button { BTN_NONE, BTN_LEFT, BTN_RIGHT, BTN_CLICK, BTN_LONGPRESS, BTN0_CLICK, BTN1_CLICK, BTN0_LONGPRESS, BTN1_LONGPRESS, BTN2_LONGPRESS };
     struct ROTARY_DIAL_SETTINGS {
         int m_nLongPressTimerValue;
         int m_nDialSensitivity;
@@ -38,6 +38,8 @@ private:
         // if the timer counter has finished, it must be a long press
 		if (m_nLongPressTimer == 0) {
             btn = longpressBtnArray[whichButton];
+			if ((whichButton == 1 && !digitalRead(gpioNums[2])) || (whichButton == 2 && !digitalRead(gpioNums[1])))
+                btn = BTN2_LONGPRESS;
 			btnBuf.push(btn);
 			// set it so we ignore the button interrupt for one more timer time
 			m_nLongPressTimer = -1;
