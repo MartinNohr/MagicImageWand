@@ -953,8 +953,8 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 // update the batterie default settings, 1-4 batteries
 void UpdateBatteries(MenuItem* menu, int flag)
 {
-	int batLo[4] = {  700, 1185, 2000, 3000 };
-	int batHi[4] = { 1000, 2260, 2500, 3200 };
+	int batLo[4] = {  672, 1345, 2018, 2690 };
+	int batHi[4] = { 1130, 2260, 3390, 4520 };
 	switch (flag) {
 	case 1:		// first time
 		break;
