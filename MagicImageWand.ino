@@ -1701,10 +1701,11 @@ void LightBar(MenuItem* menu)
 	bCancelMacro = bCancelRun = false;
 }
 
-// display the top line of the iightbar
+// display the top line and the delay and inc settings of the iightbar
 void DisplayLightBarTitle(bool bRun)
 {
-	DisplayLine(0, String(LightBarModeText[BuiltinInfo.nLightBarMode]) + " LED Light Bar" + (bRun ? " - Running" : ""), SystemInfo.menuTextColor);
+	DisplayLine(0, String(LightBarModeText[BuiltinInfo.nLightBarMode]) + " Light Bar" + (bRun ? " - Running" : ""), SystemInfo.menuTextColor);
+	DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(BuiltinInfo.nDisplayAllIncrement), SystemInfo.menuTextColor);
 }
 
 // utility for DisplayLedLightBar()
@@ -1749,9 +1750,9 @@ void DisplayLedLightBar()
 	CRotaryDialButton::Button btn;
 	enum DAWHAT { DAWHAT_HRK = 0, DAWHAT_SGK, DAWHAT_BBB, DAWHAT_PIXELS, DAWHAT_FROM, DAWHAT_MAX };
 	enum DAWHAT what = DAWHAT_HRK;	// 0 for hue, 1 for saturation, 2 for brightness, 3 for pixels, 4 for Kelvin
-	int increment = incList[incIx];
+	BuiltinInfo.nDisplayAllIncrement = incList[incIx];
 	bool bChange = true;
-	DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(increment), SystemInfo.menuTextColor);
+
 	while (true) {
 		MenuTextScrollSideways();
 		if (bChange) {
@@ -1816,7 +1817,7 @@ void DisplayLedLightBar()
 			}
 			else {
 				// we're all done now
-				increment = savedIncrement;
+				BuiltinInfo.nDisplayAllIncrement = savedIncrement;
 				DisplayLightBarTitle(false);
 			}
 		}
@@ -1833,15 +1834,15 @@ void DisplayLedLightBar()
 		case BTN_B0_CLICK:	// change the inc
 			++incIx;
 			incIx %= sizeof(incList) / sizeof(*incList);
-			increment = incList[incIx];
+			BuiltinInfo.nDisplayAllIncrement = incList[incIx];
 			break;
 		case BTN_B0_LONG:	// increment delay
-			BuiltinInfo.nDisplayAllChangeTime += increment;
+			BuiltinInfo.nDisplayAllChangeTime += BuiltinInfo.nDisplayAllIncrement;
 			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);
 			break;
 		case BTN_B1_LONG:
 			//ShowMenu(LedLightBarMenu);
-			BuiltinInfo.nDisplayAllChangeTime -= increment;
+			BuiltinInfo.nDisplayAllChangeTime -= BuiltinInfo.nDisplayAllIncrement;
 			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);
 			break;
 		case BTN_NONE:
@@ -1854,20 +1855,20 @@ void DisplayLedLightBar()
 				case LBMODE_HSV:
 					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
 						btnSlowChange = btn;
-						savedIncrement = increment;
+						savedIncrement = BuiltinInfo.nDisplayAllIncrement;
 						// set how many to do, add one since we're starting over
-						nSlowChangeCount = increment + 1;
+						nSlowChangeCount = BuiltinInfo.nDisplayAllIncrement + 1;
 						// only do one at a time during slow transition
-						increment = 1;
+						BuiltinInfo.nDisplayAllIncrement = 1;
 						// go back and handle this new key
 						continue;
 					}
 					else {
-						BuiltinInfo.nDisplayAllHue += increment;
+						BuiltinInfo.nDisplayAllHue += BuiltinInfo.nDisplayAllIncrement;
 					}
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllRed += increment;
+					BuiltinInfo.nDisplayAllRed += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
 					++BuiltinInfo.nColorTemperature;
@@ -1877,10 +1878,10 @@ void DisplayLedLightBar()
 			case DAWHAT_SGK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllSaturation += increment;
+					BuiltinInfo.nDisplayAllSaturation += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllGreen += increment;
+					BuiltinInfo.nDisplayAllGreen += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
 					break;
@@ -1889,18 +1890,18 @@ void DisplayLedLightBar()
 			case DAWHAT_BBB:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllBrightness += increment;
+					BuiltinInfo.nDisplayAllBrightness += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllBlue += increment;
+					BuiltinInfo.nDisplayAllBlue += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
-					BuiltinInfo.nDisplayAllBrightness += increment;
+					BuiltinInfo.nDisplayAllBrightness += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				}
 				break;
 			case DAWHAT_PIXELS:
-				BuiltinInfo.nDisplayAllPixelCount += increment;
+				BuiltinInfo.nDisplayAllPixelCount += BuiltinInfo.nDisplayAllIncrement;
 				break;
 			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = true;
@@ -1914,20 +1915,20 @@ void DisplayLedLightBar()
 				case LBMODE_HSV:
 					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
 						btnSlowChange = btn;
-						savedIncrement = increment;
+						savedIncrement = BuiltinInfo.nDisplayAllIncrement;
 						// set how many to do, add one since we're starting over
-						nSlowChangeCount = increment + 1;
+						nSlowChangeCount = BuiltinInfo.nDisplayAllIncrement + 1;
 						// only do one at a time during slow transition
-						increment = 1;
+						BuiltinInfo.nDisplayAllIncrement = 1;
 						// go back and handle this new key
 						continue;
 					}
 					else {
-						BuiltinInfo.nDisplayAllHue -= increment;
+						BuiltinInfo.nDisplayAllHue -= BuiltinInfo.nDisplayAllIncrement;
 					}
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllRed -= increment;
+					BuiltinInfo.nDisplayAllRed -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
 					--BuiltinInfo.nColorTemperature;
@@ -1937,10 +1938,10 @@ void DisplayLedLightBar()
 			case DAWHAT_SGK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllSaturation -= increment;
+					BuiltinInfo.nDisplayAllSaturation -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllGreen -= increment;
+					BuiltinInfo.nDisplayAllGreen -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
 					break;
@@ -1949,18 +1950,18 @@ void DisplayLedLightBar()
 			case DAWHAT_BBB:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					BuiltinInfo.nDisplayAllBrightness -= increment;
+					BuiltinInfo.nDisplayAllBrightness -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
-					BuiltinInfo.nDisplayAllBlue -= increment;
+					BuiltinInfo.nDisplayAllBlue -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_KELVIN:
-					BuiltinInfo.nDisplayAllBrightness -= increment;
+					BuiltinInfo.nDisplayAllBrightness -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				}
 				break;
 			case DAWHAT_PIXELS:
-				BuiltinInfo.nDisplayAllPixelCount -= increment;
+				BuiltinInfo.nDisplayAllPixelCount -= BuiltinInfo.nDisplayAllIncrement;
 				break;
 			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = false;
@@ -1985,18 +1986,18 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
-			DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(increment), SystemInfo.menuTextColor);
+			DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(BuiltinInfo.nDisplayAllIncrement), SystemInfo.menuTextColor);
 			BuiltinInfo.nDisplayAllPixelCount = constrain(BuiltinInfo.nDisplayAllPixelCount, 1, LedInfo.nTotalLeds);
 			//increment = constrain(increment, 1, 256);
 			switch (BuiltinInfo.nLightBarMode) {
 			case LBMODE_HSV:
 				if (BuiltinInfo.bAllowRollover) {
 					if (BuiltinInfo.nDisplayAllHue < 0)
-						BuiltinInfo.nDisplayAllHue = RollDownRollOver(increment);
+						BuiltinInfo.nDisplayAllHue = RollDownRollOver(BuiltinInfo.nDisplayAllIncrement);
 					if (BuiltinInfo.nDisplayAllHue > 255)
 						BuiltinInfo.nDisplayAllHue = 0;
 					if (BuiltinInfo.nDisplayAllSaturation < 0)
-						BuiltinInfo.nDisplayAllSaturation = RollDownRollOver(increment);
+						BuiltinInfo.nDisplayAllSaturation = RollDownRollOver(BuiltinInfo.nDisplayAllIncrement);
 					if (BuiltinInfo.nDisplayAllSaturation > 255)
 						BuiltinInfo.nDisplayAllSaturation = 0;
 				}
@@ -2010,15 +2011,15 @@ void DisplayLedLightBar()
 			case LBMODE_RGB:
 				if (BuiltinInfo.bAllowRollover) {
 					if (BuiltinInfo.nDisplayAllRed < 0)
-						BuiltinInfo.nDisplayAllRed = RollDownRollOver(increment);
+						BuiltinInfo.nDisplayAllRed = RollDownRollOver(BuiltinInfo.nDisplayAllIncrement);
 					if (BuiltinInfo.nDisplayAllRed > 255)
 						BuiltinInfo.nDisplayAllRed = 0;
 					if (BuiltinInfo.nDisplayAllGreen < 0)
-						BuiltinInfo.nDisplayAllGreen = RollDownRollOver(increment);
+						BuiltinInfo.nDisplayAllGreen = RollDownRollOver(BuiltinInfo.nDisplayAllIncrement);
 					if (BuiltinInfo.nDisplayAllGreen > 255)
 						BuiltinInfo.nDisplayAllGreen = 0;
 					if (BuiltinInfo.nDisplayAllBlue < 0)
-						BuiltinInfo.nDisplayAllBlue = RollDownRollOver(increment);
+						BuiltinInfo.nDisplayAllBlue = RollDownRollOver(BuiltinInfo.nDisplayAllIncrement);
 					if (BuiltinInfo.nDisplayAllBlue > 255)
 						BuiltinInfo.nDisplayAllBlue = 0;
 				}

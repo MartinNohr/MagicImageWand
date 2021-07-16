@@ -325,6 +325,7 @@ struct BUILTIN_INFO {
     int nDisplayAllPixelCount = 288;
     bool bDisplayAllFromMiddle = true;
     int nDisplayAllChangeTime = 0;   // mS when changing steps between HUE, etc
+    int nDisplayAllIncrement = 10;
     // rainbow
     int nRainbowHueDelta = 4;
     int nRainbowInitialHue = 0;
