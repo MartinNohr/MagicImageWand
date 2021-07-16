@@ -1823,6 +1823,27 @@ void DisplayLedLightBar()
 		}
 		btn = ReadButton();
 		bChange = true;
+		// first check for the slow mode cases
+		switch (btn) {
+		case BTN_RIGHT:
+		case BTN_LEFT:
+			// now check for HSV, so far the only ones allowed to do slow transitions
+			switch (BuiltinInfo.nLightBarMode) {
+			case LBMODE_HSV:
+				if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
+					btnSlowChange = btn;
+					savedIncrement = BuiltinInfo.nDisplayAllIncrement;
+					// set how many to do, add one since we're starting over
+					nSlowChangeCount = BuiltinInfo.nDisplayAllIncrement + 1;
+					// only do one at a time during slow transition
+					BuiltinInfo.nDisplayAllIncrement = 1;
+					// go back and handle this new key
+					continue;
+				}
+				break;
+			}
+			break;
+		}
 		switch (btn) {
 		case BTN_B2_LONG:
 			// next mode
@@ -1853,19 +1874,7 @@ void DisplayLedLightBar()
 			case DAWHAT_HRK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
-						btnSlowChange = btn;
-						savedIncrement = BuiltinInfo.nDisplayAllIncrement;
-						// set how many to do, add one since we're starting over
-						nSlowChangeCount = BuiltinInfo.nDisplayAllIncrement + 1;
-						// only do one at a time during slow transition
-						BuiltinInfo.nDisplayAllIncrement = 1;
-						// go back and handle this new key
-						continue;
-					}
-					else {
-						BuiltinInfo.nDisplayAllHue += BuiltinInfo.nDisplayAllIncrement;
-					}
+					BuiltinInfo.nDisplayAllHue += BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
 					BuiltinInfo.nDisplayAllRed += BuiltinInfo.nDisplayAllIncrement;
@@ -1902,6 +1911,9 @@ void DisplayLedLightBar()
 				break;
 			case DAWHAT_PIXELS:
 				BuiltinInfo.nDisplayAllPixelCount += BuiltinInfo.nDisplayAllIncrement;
+				if (BuiltinInfo.bAllowRollover && BuiltinInfo.nDisplayAllPixelCount > LedInfo.nTotalLeds) {
+					BuiltinInfo.nDisplayAllPixelCount = 0;
+				}
 				break;
 			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = true;
@@ -1913,19 +1925,7 @@ void DisplayLedLightBar()
 			case DAWHAT_HRK:
 				switch (BuiltinInfo.nLightBarMode) {
 				case LBMODE_HSV:
-					if (nSlowChangeCount == 0 && BuiltinInfo.nDisplayAllChangeTime) {
-						btnSlowChange = btn;
-						savedIncrement = BuiltinInfo.nDisplayAllIncrement;
-						// set how many to do, add one since we're starting over
-						nSlowChangeCount = BuiltinInfo.nDisplayAllIncrement + 1;
-						// only do one at a time during slow transition
-						BuiltinInfo.nDisplayAllIncrement = 1;
-						// go back and handle this new key
-						continue;
-					}
-					else {
-						BuiltinInfo.nDisplayAllHue -= BuiltinInfo.nDisplayAllIncrement;
-					}
+					BuiltinInfo.nDisplayAllHue -= BuiltinInfo.nDisplayAllIncrement;
 					break;
 				case LBMODE_RGB:
 					BuiltinInfo.nDisplayAllRed -= BuiltinInfo.nDisplayAllIncrement;
@@ -1962,6 +1962,9 @@ void DisplayLedLightBar()
 				break;
 			case DAWHAT_PIXELS:
 				BuiltinInfo.nDisplayAllPixelCount -= BuiltinInfo.nDisplayAllIncrement;
+				if (BuiltinInfo.bAllowRollover && BuiltinInfo.nDisplayAllPixelCount < 0) {
+					BuiltinInfo.nDisplayAllPixelCount = LedInfo.nTotalLeds;
+				}
 				break;
 			case DAWHAT_FROM:
 				BuiltinInfo.bDisplayAllFromMiddle = false;
@@ -1986,7 +1989,7 @@ void DisplayLedLightBar()
 		if (CheckCancel())
 			return;
 		if (bChange) {
-			DisplayLine(3, "Delay: " + String(BuiltinInfo.nDisplayAllChangeTime) + " mS" + "  Inc: " + String(BuiltinInfo.nDisplayAllIncrement), SystemInfo.menuTextColor);
+			DisplayLightBarTitle(nSlowChangeCount > 0);
 			BuiltinInfo.nDisplayAllPixelCount = constrain(BuiltinInfo.nDisplayAllPixelCount, 1, LedInfo.nTotalLeds);
 			//increment = constrain(increment, 1, 256);
 			switch (BuiltinInfo.nLightBarMode) {
