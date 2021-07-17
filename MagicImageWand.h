@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.42";
+char* myVersion = "1.43";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -145,7 +145,7 @@ void IncreaseRepeatButton();
 void DecreaseRepeatButton();
 bool SaveLoadSettings(bool save = false, bool autoloadonly = false, bool ledonly = false, bool nodisplay = false);
 CRotaryDialButton::Button ReadButton();
-bool CheckCancel();
+bool CheckCancel(bool bLeaveButton = false);
 
 bool bAutoLoadSettings = false;
 

@@ -1238,17 +1238,20 @@ enum CRotaryDialButton::Button ReadButton()
 }
 
 // just check for longpress and cancel if it was there
-bool CheckCancel()
+bool CheckCancel(bool bLeaveButton)
 {
 	ResetSleepAndDimTimers();
 	// if it has been set, just return true
 	if (bCancelRun || bCancelMacro)
 		return true;
-	int button = ReadButton();
+	CRotaryDialButton::Button button = ReadButton();
 	if (button) {
 		if (button == BTN_LONG) {
 			bCancelMacro = bCancelRun = true;
 			return true;
+		}
+		else if (bLeaveButton) {
+			CRotaryDialButton::pushButton(button);
 		}
 	}
 	return false;
@@ -1962,7 +1965,7 @@ void DisplayLedLightBar()
 				break;
 			case DAWHAT_PIXELS:
 				BuiltinInfo.nDisplayAllPixelCount -= BuiltinInfo.nDisplayAllIncrement;
-				if (BuiltinInfo.bAllowRollover && BuiltinInfo.nDisplayAllPixelCount < 0) {
+				if (BuiltinInfo.bAllowRollover && BuiltinInfo.nDisplayAllPixelCount <= 0) {
 					BuiltinInfo.nDisplayAllPixelCount = LedInfo.nTotalLeds;
 				}
 				break;
@@ -1986,7 +1989,7 @@ void DisplayLedLightBar()
 			CRotaryDialButton::pushButton(btn);
 			break;
 		}
-		if (CheckCancel())
+		if (CheckCancel(true))
 			return;
 		if (bChange) {
 			DisplayLightBarTitle(nSlowChangeCount > 0);
