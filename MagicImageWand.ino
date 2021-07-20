@@ -2437,6 +2437,8 @@ int PopFileIndex()
 // run file or built-in
 void ProcessFileOrTest()
 {
+	// clear the cancel flag
+	bCancelRun = false;
 	time_t recordingTimeStart;                // holds the start time for the current recording part
 	String line;
 	// let's see if this is a folder command
@@ -2897,6 +2899,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 void ShowBmp(MenuItem*)
 {
 	if (ImgInfo.bShowBuiltInTests) {
+		bCancelMacro = bCancelRun = false;
 		if (BuiltInFiles[CurrentFileIndex].function) {
 			ShowLeds(1);    // get ready for preview
 			(*BuiltInFiles[CurrentFileIndex].function)();
