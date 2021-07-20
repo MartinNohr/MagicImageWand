@@ -1741,7 +1741,13 @@ void FillLightBar()
 void DisplayLedLightBar()
 {
 	unsigned int incIx = 1;
-	int incList[] = { 1,10,100,256 };
+	int incList[] = { 1,10,100,256,256 };
+	if (LedInfo.nTotalLeds > 256) {
+		incList[4] = LedInfo.nTotalLeds;
+	}
+	else {
+		incList[3] = LedInfo.nTotalLeds;
+	}
 	// these are used to handle the slow transition mode
 	// it works by saving the increment, setting it to 1, and then saving the number in count
 	CRotaryDialButton::Button btnSlowChange;
