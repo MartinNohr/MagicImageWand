@@ -954,7 +954,7 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 void UpdateBatteries(MenuItem* menu, int flag)
 {
 	int batLo[4] = {  672, 1345, 2018, 2690 };
-	int batHi[4] = { 1130, 2260, 3390, 4520 };
+	int batHi[4] = { 1130, 2420, 3390, 4520 };
 	switch (flag) {
 	case 1:		// first time
 		break;
@@ -2902,6 +2902,7 @@ void ShowBmp(MenuItem*)
 			(*BuiltInFiles[CurrentFileIndex].function)();
 			ShowLeds(2);    // go back to normal
 		}
+		bCancelMacro = bCancelRun = false;
 		return;
 	}
 	String fn = currentFolder + FileNames[CurrentFileIndex];
