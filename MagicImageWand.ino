@@ -2556,7 +2556,7 @@ void ProcessFileOrTest()
 							delay(100);
 							--nTimerSeconds;
 						}
-						//DisplayLine(3, "");
+						DisplayLine(2, "");
 					}
 				}
 			}
