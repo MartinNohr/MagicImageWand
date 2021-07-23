@@ -16,8 +16,8 @@ private:
     static volatile int m_nLongPressTimer;
     static esp_timer_handle_t periodic_LONGPRESS_timer;
     static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
-    static gpio_num_t gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
-    static gpio_num_t gpioNums[3]; // only the clicks, not the rotation AB ones
+    static int gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
+    static int gpioNums[3]; // only the clicks, not the rotation AB ones
     // int for which one caused the interrupt
     static int whichButton;
     // click array for buttons
@@ -31,16 +31,14 @@ private:
     // the timer callback for handling long presses
     static void periodic_LONGPRESS_timer_callback(void* arg)
     {
-        if (whichButton == -1)
-            return;
         noInterrupts();
         Button btn;
-		bool level = gpio_get_level(gpioNums[whichButton]);
+		bool level = digitalRead(gpioNums[whichButton]);
         --m_nLongPressTimer;
         // if the timer counter has finished, it must be a long press
 		if (m_nLongPressTimer == 0) {
             btn = longpressBtnArray[whichButton];
-			if ((whichButton == 1 && !gpio_get_level(gpioNums[2])) || (whichButton == 2 && !gpio_get_level(gpioNums[1])))
+			if ((whichButton == 1 && !digitalRead(gpioNums[2])) || (whichButton == 2 && !digitalRead(gpioNums[1])))
                 btn = BTN2_LONGPRESS;
 			btnBuf.push(btn);
 			// set it so we ignore the button interrupt for one more timer time
@@ -64,15 +62,14 @@ private:
     static void clickHandler() {
         noInterrupts();
         // figure out who this was
-        whichButton = -1;
 		for (int ix = 0; ix < sizeof(gpioNums) / sizeof(*gpioNums); ++ix) {
-            if (gpio_get_level(gpioNums[ix]) == 0) {
+            if (digitalRead(gpioNums[ix]) == 0) {
                 whichButton = ix;
                 break;
             }
         }
         // went low, if timer not started, start it
-		if (whichButton >= 0 && m_nLongPressTimer == 0) {
+        if (m_nLongPressTimer == 0) {
             m_nLongPressTimer = pSettings->m_nLongPressTimerValue;
             esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
             esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
@@ -92,8 +89,8 @@ private:
         static Button pendingBtn = BTN_NONE;
         static unsigned long lastTime = 0;
         static bool lastValA = true;
-        bool valA = gpio_get_level(gpioA);
-        bool valB = gpio_get_level(gpioB);
+        bool valA = digitalRead(gpioA);
+        bool valB = digitalRead(gpioB);
         Button btnToPush = BTN_NONE;
         // ignore until the time has expired
         unsigned long millisNow = millis();
@@ -138,7 +135,7 @@ private:
 
     // public things
 public:
-	static void begin(gpio_num_t a, gpio_num_t b, gpio_num_t c, gpio_num_t btn0, gpio_num_t btn1, ROTARY_DIAL_SETTINGS* ps) {
+	static void begin(int a, int b, int c, int btn0, int btn1, ROTARY_DIAL_SETTINGS* ps) {
         // first time, set things up
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
@@ -163,6 +160,7 @@ public:
                 "one-shotLONGPRESS"
         };
         esp_timer_create(&periodic_LONGPRESS_timer_args, &periodic_LONGPRESS_timer);
+        // pinMode() doesn't work on Heltec for pin14, strange
         // load the buttons, A and B are the dial, and C is the click
         // btn0/1 are the two buttons on the TTGO, use -1 to ignore
         gpio_set_direction((gpio_num_t)a, GPIO_MODE_INPUT);
@@ -231,10 +229,10 @@ std::queue<enum CRotaryDialButton::Button> CRotaryDialButton::btnBuf;
 volatile int CRotaryDialButton::m_nLongPressTimer;
 esp_timer_handle_t CRotaryDialButton::periodic_LONGPRESS_timer;
 esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
-gpio_num_t CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
-gpio_num_t CRotaryDialButton::gpioBtn0, CRotaryDialButton::gpioBtn1;
+int CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
+int CRotaryDialButton::gpioBtn0, CRotaryDialButton::gpioBtn1;
 CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };
-gpio_num_t CRotaryDialButton::gpioNums[3] = { GPIO_NUM_0 };
+int CRotaryDialButton::gpioNums[3] = { 0 };
 int CRotaryDialButton::whichButton;
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[3] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[3] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
