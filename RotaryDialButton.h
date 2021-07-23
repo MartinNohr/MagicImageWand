@@ -17,7 +17,8 @@ private:
     static esp_timer_handle_t periodic_LONGPRESS_timer;
     static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
     static int gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
-    static int gpioNums[3]; // only the clicks, not the rotation AB ones
+#define GPIO_NUMS_COUNT 3
+    static int gpioNums[GPIO_NUMS_COUNT]; // only the clicks, not the rotation AB ones
     // int for which one caused the interrupt
     static int whichButton;
     // click array for buttons
@@ -31,6 +32,8 @@ private:
     // the timer callback for handling long presses
     static void periodic_LONGPRESS_timer_callback(void* arg)
     {
+        if (whichButton == -1)
+            return;
         noInterrupts();
         Button btn;
 		bool level = digitalRead(gpioNums[whichButton]);
@@ -38,6 +41,7 @@ private:
         // if the timer counter has finished, it must be a long press
 		if (m_nLongPressTimer == 0) {
             btn = longpressBtnArray[whichButton];
+            // check for both btn's on PCB down
 			if ((whichButton == 1 && !digitalRead(gpioNums[2])) || (whichButton == 2 && !digitalRead(gpioNums[1])))
                 btn = BTN2_LONGPRESS;
 			btnBuf.push(btn);
@@ -62,14 +66,16 @@ private:
     static void clickHandler() {
         noInterrupts();
         // figure out who this was
-		for (int ix = 0; ix < sizeof(gpioNums) / sizeof(*gpioNums); ++ix) {
+		if (m_nLongPressTimer == 0)
+			whichButton = -1;   // indicate this wasn't our interrupt
+		for (int ix = 0; ix < GPIO_NUMS_COUNT; ++ix) {
             if (digitalRead(gpioNums[ix]) == 0) {
                 whichButton = ix;
                 break;
             }
         }
-        // went low, if timer not started, start it
-        if (m_nLongPressTimer == 0) {
+        // our interrupt went low, if timer not started, start it
+		if (whichButton != -1 && m_nLongPressTimer == 0) {
             m_nLongPressTimer = pSettings->m_nLongPressTimerValue;
             esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
             esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
@@ -232,7 +238,7 @@ esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
 int CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
 int CRotaryDialButton::gpioBtn0, CRotaryDialButton::gpioBtn1;
 CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };
-int CRotaryDialButton::gpioNums[3] = { 0 };
+int CRotaryDialButton::gpioNums[GPIO_NUMS_COUNT] = { 0 };
 int CRotaryDialButton::whichButton;
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[3] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[3] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
