@@ -60,7 +60,7 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, 0, 35, &SystemInfo.DialSettings);
+	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, GPIO_NUM_0, GPIO_NUM_35, &SystemInfo.DialSettings);
 	setupSDcard();
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
