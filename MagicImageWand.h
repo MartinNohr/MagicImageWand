@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.47";
+char* myVersion = "1.48";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -231,8 +231,8 @@ struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
-    int nBatteryFullLevel = 2420;               // 100% battery
-    int nBatteryEmptyLevel = 1345;              // 0% battery, should cause a shutdown to save the batteries
+    int nBatteryFullLevel = 1800;               // 100% battery
+    int nBatteryEmptyLevel = 1160;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
@@ -745,8 +745,8 @@ MenuItem BatteryMenu[] = {
     {eExit,"Battery"},
     {eBool,"Show Battery: %s",ToggleBool,&SystemInfo.bShowBatteryLevel,0,0,0,"Yes","No"},
     {eText,"Read Battery",ShowBattery},
-    {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,2000,4000},
-    {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,1000,3000},
+    {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,900,4200},
+    {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,500,3000},
     {eTextInt,"Battery Count: %d",GetIntegerValue,&SystemInfo.nBatteries,1,4,0,NULL,NULL,UpdateBatteries},
     {eExit,PreviousMenu},
     // make sure this one is last

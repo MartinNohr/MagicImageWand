@@ -953,8 +953,8 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 // update the batterie default settings, 1-4 batteries
 void UpdateBatteries(MenuItem* menu, int flag)
 {
-	int batLo[4] = {  672, 1345, 2018, 2690 };
-	int batHi[4] = { 1130, 2420, 3390, 4520 };
+	int batLo[4] = {  600, 1160, 1800, 2460 };
+	int batHi[4] = { 900, 1800, 2780, 4100 };
 	switch (flag) {
 	case 1:		// first time
 		break;
@@ -4803,35 +4803,29 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 }
 
 // read the battery level, LiIon cells are 4.2 fully charged and should not be discharged below 2.75
+// smoothing of the reading is done using an exponential moving average
 int ReadBattery(int* raw)
 {
-#define BATTERY_SAMPLES 10
-	static int levelvals[BATTERY_SAMPLES]{ 0 };
-	static int index = 0;
-	static int percent;
-	int level;
-	level = analogRead(36);
-	// add to samples and get average
-	levelvals[index++] = level;
-	index %= BATTERY_SAMPLES;
-	level = 0;
-	for (auto& lvl : levelvals) {
-		level += lvl;
-	}
-	level /= BATTERY_SAMPLES;
-	// display when 0
-	if (!index) {
+	const float alpha = 0.9;
+	static float eSmooth = 0.0;
+	int percent;
+	float nextLevel;
+	for (int tries = 0; tries < 10; ++tries) {
+		nextLevel = (float)analogRead(36);
+		// calculate the next value
+		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
 		// calculate the %
-		if (level >= SystemInfo.nBatteryFullLevel)
+		if (eSmooth >= SystemInfo.nBatteryFullLevel)
 			percent = 100;
-		else if (level <= SystemInfo.nBatteryEmptyLevel)
+		else if (eSmooth <= SystemInfo.nBatteryEmptyLevel)
 			percent = 0;
 		else {
-			percent = (level - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
+			percent = (eSmooth - SystemInfo.nBatteryEmptyLevel) * 100 / (SystemInfo.nBatteryFullLevel - SystemInfo.nBatteryEmptyLevel);
 		}
+		delay(2);
 	}
 	if (raw)
-		*raw = level;
+		*raw = (int)eSmooth;
 	return percent;
 }
 
