@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.48";
+char* myVersion = "1.49";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -170,7 +170,7 @@ struct LED_INFO {
         int g;
         int b;
     } whiteBalance = { 255,255,255 };
-    int nStripMaxCurrent = 2000;              // maximum milliamps to allow
+    int nStripMaxCurrent = 1000;              // maximum milliamps to allow
 };
 typedef LED_INFO LED_INFO;
 LED_INFO LedInfo;
@@ -233,7 +233,8 @@ struct SYSTEM_INFO {
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
     int nBatteryFullLevel = 1800;               // 100% battery
     int nBatteryEmptyLevel = 1160;              // 0% battery, should cause a shutdown to save the batteries
-    int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
+    //int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
+    int bShowBatteryLevel = 0;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
     int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
