@@ -16,3 +16,4 @@ It has optional exFat reading to support SD cards >32GB. This is enabled with a 
 <br>//#include &ltUser_Setup.h&gt
 
 A more detailed setup Instruction for Arduino IDE is available in the Wiki https://github.com/MartinNohr/MagicImageWand/wiki/9.-Compiling-from-source
+NOTE: TTGO Magic Image Wand Remote.pdf is used for a remote control camera shutter release designed by dirkessl. It is not part of the MIW project. Support for this concept will be added in the future. It will be possible then to have the MIW actually control the camera shutter.
