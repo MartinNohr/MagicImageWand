@@ -1,0 +1,3 @@
+These are the files for the MIW using a 5Amp 5V regulator.
+Amazon part: https://www.amazon.com/dp/B088H4J6HB?psc=1&ref=ppx_yo2_dt_b_product_details
+Other details are similar to the smaller voltage regulator described in the folder PCBSTL.
