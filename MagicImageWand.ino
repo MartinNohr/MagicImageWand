@@ -172,10 +172,12 @@ void setup()
 
 	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
 	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
+	//FastLED.addLeds<SK6812, DATA_PIN1, GRB>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
 	// create the second led controller
 	if (LedInfo.bSecondController) {
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
+		//FastLED.addLeds<SK6812, DATA_PIN2, GRB>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 		SetPixel(144, CRGB::Red);
 		SetPixel(145, CRGB::Red);
 		SetPixel(146, CRGB::Red);

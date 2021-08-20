@@ -8,7 +8,7 @@ char* myVersion = "1.50";
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
-#define FRAMEBUTTON 22
+#define FRAMEBUTTON 32
 // reverse A and B for some PCB or wired versions, this is set for rev 2 PCB, 0 for older PCB, and 0 for rev 3 pcb
 #define PCB_REV2 0
 #if PCB_REV2
