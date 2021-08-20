@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.50";
+char* myVersion = "1.51";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -765,7 +765,7 @@ MenuItem SidewaysScrollMenu[] = {
 MenuItem DialMenu[] = {
     {eExit,"Rotary Dial Settings"},
     {eBool,"Dial: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
-    {eTextInt,"Dial Sensitivity: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSensitivity,1,5},
+    {eTextInt,"Dial Pulse Count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseCount,1,5},
     {eTextInt,"Dial Speed: %d mS",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,5,500},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
     {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},

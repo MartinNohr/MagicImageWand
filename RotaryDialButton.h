@@ -4,10 +4,10 @@ class CRotaryDialButton {
 public:
 	enum Button { BTN_NONE, BTN_LEFT, BTN_RIGHT, BTN_CLICK, BTN_LONGPRESS, BTN0_CLICK, BTN1_CLICK, BTN0_LONGPRESS, BTN1_LONGPRESS, BTN2_LONGPRESS };
     struct ROTARY_DIAL_SETTINGS {
-        int m_nLongPressTimerValue;
-        int m_nDialSensitivity;
-        int m_nDialSpeed;
-        bool m_bReverseDial;
+        int m_nLongPressTimerValue; // mS for long press
+        int m_nDialPulseCount;      // how many pulse to equal one rotation click
+        int m_nDialSpeed;           // pause after each dial click
+        bool m_bReverseDial;        // direction swapping
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
@@ -116,11 +116,11 @@ private:
 		if (countLeft && countRight)
 			countLeft = countRight = 0;
 		// see if we have enough
-		if (countLeft >= pSettings->m_nDialSensitivity) {
+		if (countLeft >= pSettings->m_nDialPulseCount) {
 			btnToPush = BTN_LEFT;
 			countLeft = 0;
 		}
-		else if (countRight >= pSettings->m_nDialSensitivity) {
+		else if (countRight >= pSettings->m_nDialPulseCount) {
 			btnToPush = BTN_RIGHT;
 			countRight = 0;
 		}
@@ -134,7 +134,7 @@ public:
         // first time, set things up
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
-        pSettings->m_nDialSensitivity = 1;
+        pSettings->m_nDialPulseCount = 1;
         pSettings->m_nDialSpeed = 10;
         pSettings->m_bReverseDial = false;
         gpioA = a;
