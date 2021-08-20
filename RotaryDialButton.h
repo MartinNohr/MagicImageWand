@@ -82,60 +82,49 @@ private:
         }
         interrupts();
     }
-    // interrupt routines for the A and B rotary switches
-    // the pendingBtn is used to hold the right rotation until A goes up, this makes
-    // the left and right rotation happen at the same apparent time when rotating the dial,
-    // unlike without that where the right rotation was faster, I.E. it moved before the
-    // click of the button happened.
+    // interrupt routines for the A and B rotary switche contacts
+    // basically it gets interrupts from the A side and then looks at B to see which direction it was going
+    // there is also a counter that will require 1 or more pulses before the rotation is queued
+    // Some switches pulse closed and then back to open while others just switch state, this code
+    // should work with both kinds
+    // the dialspeed is how many mS to go deaf after the interrupt, this handles switch bounce as well as
+    // slowing down the max rotation speed of the dial
     static void rotateHandler() {
         noInterrupts();
+        static long lastTime = 0;
+        // ignore pushes if too soon since the last int
+        if (millis() < lastTime + pSettings->m_nDialSpeed) {
+            return;
+        }
+        lastTime = millis();
         // count of buttons for when the sensitivity is reduced from nButtonSensitivity
         static unsigned int countRight = 0;
         static unsigned int countLeft = 0;
-        static Button pendingBtn = BTN_NONE;
-        static unsigned long lastTime = 0;
-        static bool lastValA = true;
+        // let the switch settle down
+        delayMicroseconds(1000);
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
         Button btnToPush = BTN_NONE;
-        // ignore until the time has expired
-        unsigned long millisNow = millis();
-        if (millisNow - lastTime > pSettings->m_nDialSpeed) {
-            // been too long, reset the counts
-            countRight = countLeft = 0;
-            // and the pending one
-            pendingBtn = BTN_NONE;
-        }
-        if (lastValA != valA && millisNow > lastTime + 3) {
-            if (pendingBtn != BTN_NONE) {
-                btnToPush = pendingBtn;
-                pendingBtn = BTN_NONE;
-            }
-            else if (lastValA && !valA) {
-                Button btn = (pSettings->m_bReverseDial ? !valB : valB) ? BTN_RIGHT : BTN_LEFT;
-                if (btn == BTN_RIGHT) {
-                    pendingBtn = btn;
-                }
-                else {
-                    btnToPush = btn;
-                }
-            }
-            lastValA = valA;
-            // push a button?
-            if (btnToPush != BTN_NONE) {
-                // check sensitivity counts
-                if (btnToPush == BTN_RIGHT)
-                    ++countRight;
-                else
-                    ++countLeft;
-                if (countRight >= pSettings->m_nDialSensitivity || countLeft >= pSettings->m_nDialSensitivity) {
-                    btnBuf.push(btnToPush);
-                    countRight = countLeft = 0;
-                }
-            }
-            // remember when we were here last time
-            lastTime = millisNow;
-        }
+        bool cmpBtn = pSettings->m_bReverseDial ? (valA == valB) : (valA != valB);
+        Button btn = cmpBtn ? BTN_RIGHT : BTN_LEFT;
+		// see if we are counting pulses, increment the correct one
+		if (btn == BTN_RIGHT)
+			++countRight;
+		else if (btn == BTN_LEFT)
+			++countLeft;
+		// if both have a value, clear
+		if (countLeft && countRight)
+			countLeft = countRight = 0;
+		// see if we have enough
+		if (countLeft >= pSettings->m_nDialSensitivity) {
+			btnToPush = BTN_LEFT;
+			countLeft = 0;
+		}
+		else if (countRight >= pSettings->m_nDialSensitivity) {
+			btnToPush = BTN_RIGHT;
+			countRight = 0;
+		}
+        btnBuf.push(btnToPush);
         interrupts();
     }
 
@@ -146,7 +135,7 @@ public:
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
         pSettings->m_nDialSensitivity = 1;
-        pSettings->m_nDialSpeed = 300;
+        pSettings->m_nDialSpeed = 10;
         pSettings->m_bReverseDial = false;
         gpioA = a;
         gpioB = b;

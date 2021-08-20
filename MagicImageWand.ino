@@ -52,6 +52,8 @@ void setup()
 {
 	Serial.begin(115200);
 	delay(10);
+	Serial.print("setup() is running on core ");
+	Serial.println(xPortGetCoreID());
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
 	// configure LCD PWM functionalitites
