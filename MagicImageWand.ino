@@ -2898,6 +2898,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	}
 }
 
+// get some file information from the BMP, namely the width and height
 void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
 {
 #if USE_STANDARD_SD
@@ -2936,15 +2937,6 @@ void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
 	// return the sizes, remember the bmp file has been rotated
 	*width = bmpHeader.imgHeight;
 	*height = bmpHeader.imgWidth;
-}
-
-uint32_t FixLong(char* bytes)
-{
-	uint32_t retval = bytes[2];
-	retval += bytes[3] << 8;
-	retval += bytes[0] << 16;
-	retval += bytes[1] << 24;
-	return retval;
 }
 
 // put the current file on the display
@@ -3987,6 +3979,8 @@ void InfoMacro(MenuItem* menu)
 	DisplayLine(1, "Files: " + String(files), SystemInfo.menuTextColor);
 	DisplayLine(2, "Time: " + String(seconds) + " Sec", SystemInfo.menuTextColor);
 	DisplayLine(3, "Pixels: " + String(width) + " Pixels", SystemInfo.menuTextColor);
+	float walk = (float)width / (float)LedInfo.nTotalLeds;
+	DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 	while (ReadButton() == BTN_NONE)
 		;
 }
