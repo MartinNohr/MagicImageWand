@@ -2898,6 +2898,55 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	}
 }
 
+void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
+{
+#if USE_STANDARD_SD
+	SDFile bmpFile;
+#else
+	FsFile bmpFile;
+#endif
+	bmpFile = SD.open(fileName);
+	// if the file is available send it to the LED's
+	if (!bmpFile.available()) {
+		WriteMessage("failed to open: " + fileName, true);
+		return;
+	}
+#pragma pack(1)
+	struct {
+		uint16_t bmpType;
+		uint32_t bmpSize;
+		uint16_t bmpReserved1;
+		uint16_t bmpReserved2;
+		uint32_t bmpOffBits;
+		uint32_t imgSize;
+		uint32_t imgWidth;
+		uint32_t imgHeight;
+		uint16_t imgPlanes;
+		uint16_t imgBitCount;
+		uint32_t imgCompression;
+		uint32_t imgSizeImage;
+		uint32_t imgXPelsPerMeter;
+		uint32_t imgYPelsPerMeter;
+		uint32_t imgClrUsed;
+		uint32_t imgClrImportant;
+	} bmpHeader = { 0 };
+#pragma pack()
+	bmpFile.readBytes((char*)&bmpHeader, sizeof(bmpHeader));
+	bmpFile.close();
+	// return the sizes, remember the bmp file has been rotated
+	*width = bmpHeader.imgHeight;
+	*height = bmpHeader.imgWidth;
+}
+
+uint32_t FixLong(char* bytes)
+{
+	uint32_t retval = bytes[2];
+	retval += bytes[3] << 8;
+	retval += bytes[0] << 16;
+	retval += bytes[1] << 24;
+	return retval;
+}
+
 // put the current file on the display
 // Note that menu is not used, it is called with NULL sometimes
 void ShowBmp(MenuItem*)
@@ -3472,10 +3521,11 @@ bool ProcessConfigFile(String filename)
 }
 
 // return the total time from the macro file
-int MacroTime(String filepath, int* files)
+int MacroTime(String filepath, int* files, int* width)
 {
 	int retval = 0;
 	int count = 0;
+	int pixels = 0;
 #if USE_STANDARD_SD
 	SDFile rdfile;
 #else
@@ -3484,6 +3534,7 @@ int MacroTime(String filepath, int* files)
 	rdfile = SD.open(filepath);
 	if (rdfile.available()) {
 		String line, command, args;
+		uint32_t width, height;
 		while (line = rdfile.readStringUntil('\n'), line.length()) {
 			// read the lines and do what they say
 			int ix = line.indexOf('=', 0);
@@ -3497,10 +3548,13 @@ int MacroTime(String filepath, int* files)
 				for (int which = 0; which < sizeof(SettingsVarList) / sizeof(*SettingsVarList); ++which) {
 					if (command.compareTo(SettingsVarList[which].name) == 0) {
 						switch (SettingsVarList[which].type) {
+						case vtShowFile:
+							GetBmpSize(args, &width, &height);
+							pixels += width;
+							break;
 						case vtInt:
 						case vtBool:
 						case vtBuiltIn:
-						case vtShowFile:
 						case vtRGB:
 							break;
 						case vtMacroTime:
@@ -3522,6 +3576,7 @@ int MacroTime(String filepath, int* files)
 	}
 	//Serial.println("macro time: " + String(worked));
 	*files = count;
+	*width = pixels;
 	return retval;
 }
 
@@ -3826,7 +3881,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					file.println(line);
 			}
 			file.close();
-			WriteMessage(String("Saved:\n") + filepath);
+			WriteMessage(String("Saved:\n") + filepath, false, 300);
 		}
 		else {
 			retval = false;
@@ -3925,11 +3980,13 @@ void InfoMacro(MenuItem* menu)
 	ClearScreen();
 	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
 	int files;
+	int width;
 	DisplayLine(0, line, SystemInfo.menuTextColor);
 	DisplayLine(1, "calculating...", SystemInfo.menuTextColor);
-	int seconds = MacroTime(line, &files);
+	int seconds = MacroTime(line, &files, &width);
 	DisplayLine(1, "Files: " + String(files), SystemInfo.menuTextColor);
 	DisplayLine(2, "Time: " + String(seconds) + " Sec", SystemInfo.menuTextColor);
+	DisplayLine(3, "Pixels: " + String(width) + " Pixels", SystemInfo.menuTextColor);
 	while (ReadButton() == BTN_NONE)
 		;
 }
