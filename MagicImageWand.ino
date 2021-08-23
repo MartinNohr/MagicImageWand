@@ -3513,7 +3513,7 @@ bool ProcessConfigFile(String filename)
 }
 
 // return the total time from the macro file
-int MacroTime(String filepath, int* files, int* width)
+int MacroTime(String filepath, int* files, int* width, std::vector<String>& nameList)
 {
 	int retval = 0;
 	int count = 0;
@@ -3543,6 +3543,8 @@ int MacroTime(String filepath, int* files, int* width)
 						case vtShowFile:
 							GetBmpSize(args, &width, &height);
 							pixels += width;
+							// save the name
+							nameList.push_back(args);
 							break;
 						case vtInt:
 						case vtBool:
@@ -3969,20 +3971,47 @@ bool GetYesNo(const char* msg)
 // display some macro info
 void InfoMacro(MenuItem* menu)
 {
+	std::vector<String> nameList;
 	ClearScreen();
 	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
 	int files;
 	int width;
 	DisplayLine(0, line, SystemInfo.menuTextColor);
 	DisplayLine(1, "calculating...", SystemInfo.menuTextColor);
-	int seconds = MacroTime(line, &files, &width);
+	int seconds = MacroTime(line, &files, &width, nameList);
 	DisplayLine(1, "Files: " + String(files), SystemInfo.menuTextColor);
 	DisplayLine(2, "Time: " + String(seconds) + " Sec", SystemInfo.menuTextColor);
 	DisplayLine(3, "Pixels: " + String(width) + " Pixels", SystemInfo.menuTextColor);
 	float walk = (float)width / (float)LedInfo.nTotalLeds;
 	DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
-	while (ReadButton() == BTN_NONE)
-		;
+	DisplayLine(6, "Click=Exit Rotate=Files", SystemInfo.menuTextColor);
+	// rotate dial to view files, else exit on click
+	bool done = false;
+	int offset = -1;
+	while (!done) {
+		CRotaryDialButton::Button btn;
+		switch (btn = ReadButton()) {
+		case BTN_SELECT:
+		case BTN_LONG:
+			done = true;
+			break;
+		case BTN_RIGHT:
+		case BTN_LEFT:
+			if (offset == -1) {
+				offset = 0;
+				ClearScreen();
+			}
+			// range check
+			offset = constrain(offset, 0, nameList.size() - 1);
+			// show the files
+			for (int ix = offset; ix < nameList.size(); ++ix) {
+				DisplayLine(ix % nMenuLineCount, nameList[ix], SystemInfo.menuTextColor);
+			}
+			// go to the next set
+			offset += btn == BTN_RIGHT ? nMenuLineCount : -nMenuLineCount;
+			break;
+		}
+	}
 }
 
 // like run, but doesn't restore settings
