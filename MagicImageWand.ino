@@ -3875,7 +3875,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					file.println(line);
 			}
 			file.close();
-			WriteMessage(String("Saved:\n") + filepath, false, 300);
+			WriteMessage(String("Saved:\n") + filepath, false, 700);
 		}
 		else {
 			retval = false;
@@ -3998,17 +3998,21 @@ void InfoMacro(MenuItem* menu)
 		case BTN_RIGHT:
 		case BTN_LEFT:
 			if (offset == -1) {
-				offset = 0;
+				offset = -nMenuLineCount;
 				ClearScreen();
 			}
-			// range check
-			offset = constrain(offset, 0, nameList.size() - 1);
-			// show the files
-			for (int ix = offset; ix < nameList.size(); ++ix) {
-				DisplayLine(ix % nMenuLineCount, nameList[ix], SystemInfo.menuTextColor);
-			}
 			// go to the next set
-			offset += btn == BTN_RIGHT ? nMenuLineCount : -nMenuLineCount;
+			offset += (btn == BTN_RIGHT ? nMenuLineCount : -nMenuLineCount);
+			// range check
+			offset = constrain(offset, 0, nameList.size() - nMenuLineCount);
+			// no point in scrolling if size isn't larger than the lines on the display
+			if (nameList.size() <= nMenuLineCount)
+				offset = 0;
+			Serial.println("offset: " + String(offset));
+			// show the files
+			for (int lineNum = 0; lineNum < nMenuLineCount; ++lineNum) {
+				DisplayLine(lineNum, (lineNum + offset) < nameList.size() ? nameList[lineNum + offset] : "", SystemInfo.menuTextColor);
+			}
 			break;
 		}
 	}

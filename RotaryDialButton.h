@@ -101,7 +101,7 @@ private:
         static unsigned int countRight = 0;
         static unsigned int countLeft = 0;
         // let the switch settle down
-        delayMicroseconds(2000);
+        delayMicroseconds(2500);
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
         Button btnToPush = BTN_NONE;
