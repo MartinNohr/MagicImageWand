@@ -2729,7 +2729,7 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 	//Serial.println("imgSizeImage: " + String(imgSizeImage));
 	/* Check info header */
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
+		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 	{
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 		return;
@@ -3006,7 +3006,7 @@ void ShowBmp(MenuItem*)
 
 	/* Check info header */
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB || imgSizeImage == 0)
+		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 	{
 		free(scrBuf);
 		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
