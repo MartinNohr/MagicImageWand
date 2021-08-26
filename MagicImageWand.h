@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.56";
+char* myVersion = "1.57";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -231,8 +231,8 @@ struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
-    int nBatteryFullLevel = 1130;               // 100% battery
-    int nBatteryEmptyLevel = 791;               // 0% battery, should cause a shutdown to save the batteries
+    int nBatteryFullLevel = 1730;               // 100% battery
+    int nBatteryEmptyLevel = 1230;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
     //int bShowBatteryLevel = 0;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
@@ -954,7 +954,7 @@ MenuItem MacroMenu[] = {
 };
 MenuItem MainMenu[] = {
     {eBool,"Main Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full"},
-    {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-In","SD Card BMP"},
+    {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-Ins","SD Card BMP"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,false},
             {eText,"Preview BMP",ShowBmp},
