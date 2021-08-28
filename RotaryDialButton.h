@@ -8,6 +8,7 @@ public:
         int m_nDialPulseCount;      // how many pulse to equal one rotation click
         int m_nDialSpeed;           // pause after each dial click
         bool m_bReverseDial;        // direction swapping
+        bool m_bToggleDial;         // set for toggle type dial (newer PCB) and clear for pulse type dial (older PCB ones)
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
@@ -101,9 +102,13 @@ private:
         static unsigned int countRight = 0;
         static unsigned int countLeft = 0;
         // let the switch settle down
-        delayMicroseconds(2500);
+        delayMicroseconds(2000);
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
+		if (valA && !pSettings->m_bToggleDial) {
+            interrupts();
+            return;
+        }
         Button btnToPush = BTN_NONE;
         bool cmpBtn = pSettings->m_bReverseDial ? (valA == valB) : (valA != valB);
         Button btn = cmpBtn ? BTN_RIGHT : BTN_LEFT;
@@ -135,8 +140,9 @@ public:
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
         pSettings->m_nDialPulseCount = 1;
-        pSettings->m_nDialSpeed = 10;
+        pSettings->m_nDialSpeed = 40;
         pSettings->m_bReverseDial = false;
+        pSettings->m_bToggleDial = false;
         gpioA = a;
         gpioB = b;
         gpioC = c;

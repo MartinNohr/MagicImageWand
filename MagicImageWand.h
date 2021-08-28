@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.57";
+char* myVersion = "1.58";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -530,16 +530,7 @@ const saveValues saveValueList[] = {
     {&ImgInfo,sizeof(ImgInfo)},
     {&BuiltinInfo,sizeof(BuiltinInfo)},
     {&SystemInfo,sizeof(SystemInfo)},
-    //{&bAutoLoadSettings, sizeof(bAutoLoadSettings)},
-
-    //{&bRepeatForever, sizeof(bRepeatForever)},
-    //{&nBackLightSeconds, sizeof(nBackLightSeconds)},
-    //{&nMaxBackLight, sizeof(nMaxBackLight)},
     {&CurrentFileIndex,sizeof(CurrentFileIndex)},
-    //{&CRotaryDialButton::m_bReverseDial,sizeof(CRotaryDialButton::m_bReverseDial)},
-    //{&CRotaryDialButton::m_nDialSensitivity,sizeof(CRotaryDialButton::m_nDialSensitivity)},
-    //{&CRotaryDialButton::m_nDialSpeed,sizeof(CRotaryDialButton::m_nDialSpeed)},
-    //{&CRotaryDialButton::m_nLongPressTimerValue,sizeof(CRotaryDialButton::m_nLongPressTimerValue)},
 };
 
 // Gramma Correction (Defalt Gamma = 2.8)
@@ -764,12 +755,13 @@ MenuItem SidewaysScrollMenu[] = {
 };
 MenuItem DialMenu[] = {
     {eExit,"Rotary Dial Settings"},
-    {eBool,"Dial: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
-    {eTextInt,"Dial Pulse Count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseCount,1,5},
-    {eTextInt,"Dial Speed: %d mS",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,5,500},
+    {eBool,"Direction: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
+    {eTextInt,"Pulse Count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseCount,1,5},
+    {eTextInt,"Rotate Speed: %d mS",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,5,500},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
     {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
     {eList,"Btn1 Long: %s",GetSelectChoice,&SystemInfo.nBtn1LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
+    {eBool,"Rotate Type: %s",ToggleBool,&SystemInfo.DialSettings.m_bToggleDial,0,0,0,"Toggle","Pulse"},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}

@@ -56,6 +56,7 @@ void setup()
 	Serial.println(xPortGetCoreID());
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
+
 	// configure LCD PWM functionalitites
 	pinMode(TFT_ENABLE, OUTPUT);
 	digitalWrite(TFT_ENABLE, 1);
@@ -110,10 +111,25 @@ void setup()
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	///////////////////////////// End of Request commands
 	server.begin();
+	tft.setFreeFont(&Dialog_bold_16);
+	SystemInfo.nDisplayRotation = 3;
+	tft.setTextSize(1);
+	tft.setTextPadding(tft.width());
+	SetScreenRotation(SystemInfo.nDisplayRotation);
+	ClearScreen();
+	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+	// see if the button is down, if so clear all settings
+	if (gpio_get_level((gpio_num_t)DIAL_BTN) == 0) {
+		Preferences prefs;
+		prefs.begin(prefsName);
+		prefs.clear();
+		prefs.end();
+		WriteMessage("Factory Reset");
+	}
 
 	String msg;
 	if (SaveLoadSettings(false, true, false, true)) {
-		if ((nBootCount == 0) && bAutoLoadSettings && gpio_get_level((gpio_num_t)DIAL_BTN)) {
+		if ((nBootCount == 0) && bAutoLoadSettings) {
 			SaveLoadSettings(false, false, false, true);
 			msg = "Settings Loaded";
 		}
@@ -122,10 +138,7 @@ void setup()
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
-	tft.setFreeFont(&Dialog_bold_16);
-	SystemInfo.nDisplayRotation = 3;
-	tft.setTextSize(1);
-	tft.setTextPadding(tft.width());
+	// in case the saved ones were different
 	SetScreenRotation(SystemInfo.nDisplayRotation);
 	ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
@@ -282,12 +295,6 @@ void setup()
 	FastLED.clear(true);
 	ClearScreen();
 
-	// wait for button release
-	while (!digitalRead(DIAL_BTN))
-		;
-	delay(30);	// debounce
-	while (!digitalRead(DIAL_BTN))
-		;
 	// clear the button buffer
 	CRotaryDialButton::clear();
 	DisplayCurrentFile();
