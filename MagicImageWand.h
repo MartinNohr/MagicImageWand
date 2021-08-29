@@ -19,7 +19,7 @@ char* myVersion = "1.58";
     #define DIAL_B 12
 #endif
 
-//#include <ArduinoJson.h>
+#include <ArduinoJson.h>
 
 //#include <BLEDevice.h>
 //#include <BLEUtils.h>
@@ -908,16 +908,16 @@ MenuItem EepromMenu[] = {
     {eTerminate}
 };
 MenuItem MacroSelectMenu[] = {
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,0,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,1,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,2,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,3,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,4,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,5,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,6,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,7,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,8,0,0,"Used","Empty"},
-    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,9,0,0,"Used","Empty"},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,0},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,1},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,2},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,3},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,4},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,5},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,6},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,7},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,8},
+    {eMacroList,"#%d %s",NULL,&ImgInfo.nCurrentMacro,9},
     // make sure this one is last
     {eTerminate}
 };
@@ -1081,3 +1081,13 @@ struct TEXTLINES {
     int nRollDirection;
 };
 std::vector<struct TEXTLINES> TextLines;
+
+struct MACRO_INFO {
+	String description;             // description of the file
+	int seconds;                    // total time
+	int pixels;                     // width in pixels
+	float length;                   // how many meters based on 1:1 ratio with nTotalLeds
+	std::vector<String> fileNames;  // list of all the filenames in this macro
+};
+typedef MACRO_INFO MACRO_INFO;
+MACRO_INFO MacroInfo[10];

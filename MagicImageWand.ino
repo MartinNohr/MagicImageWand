@@ -324,6 +324,94 @@ void setup()
 	nBootCount = 0;
 	// load the sleep timer
 	sleepTimer = SystemInfo.nSleepTime * 60;
+	// read the macro data
+	ReadMacroInfo();
+}
+
+#define JSON_DOC_SIZE 6000
+#define MACRO_JSON_FILE "/macro.json"
+// read the macro info from the files if we didn't find the json file first
+void ReadMacroInfo()
+{
+	FsFile file;
+	if (SD.exists(MACRO_JSON_FILE)) {
+		// read the file
+		file = SD.open(MACRO_JSON_FILE);
+		if (file.getError() == 0) {
+			//StaticJsonDocument<JSON_DOC_SIZE> doc;
+			DynamicJsonDocument doc(JSON_DOC_SIZE);
+			String input = file.readString();
+			//Serial.println("json size: " + String(input.length()));
+			DeserializationError err = deserializeJson(doc, input);
+			if (err) {
+				WriteMessage(String("failed to parse: ") + MACRO_JSON_FILE, true);
+				//Serial.print(F("deserializeJson() failed with code "));
+				//Serial.println(err.f_str());
+			}
+			else {
+				// read the json into the macroinfo
+				for (int ix = 0; ix < 10; ++ix) {
+					MacroInfo[ix].description = String(doc[ix]["description"].as<const char*>());
+					MacroInfo[ix].seconds = doc[ix]["seconds"];
+					MacroInfo[ix].length = doc[ix]["length"].as<int>();
+					MacroInfo[ix].pixels = doc[ix]["pixels"].as<int>();
+					JsonArray ja = doc[ix]["images"];
+					for (String str : ja) {
+						MacroInfo[ix].fileNames.push_back(str);
+					}
+				}
+			}
+			file.close();
+		}
+		else {
+			WriteMessage(String("failed to open: ") + MACRO_JSON_FILE + " error: " + String(file.getError()), true);
+		}
+	}
+	else {
+		int fileCount, pixelWidth;
+		for (int ix = 0; ix < 10; ++ix) {
+			MacroInfo[ix].fileNames.clear();
+			MacroInfo[ix].seconds = MacroTime("/" + String(ix) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
+			MacroInfo[ix].description = SD.exists("/" + String(ix) + ".miw") ? "Used" : "Empty";
+			MacroInfo[ix].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
+			MacroInfo[ix].pixels = pixelWidth;
+		}
+		// save the info since we just created it
+		SaveMacroInfo();
+	}
+}
+// save the macro info in json to a file called macro.json
+void SaveMacroInfo()
+{
+	FsFile file;
+	file = SD.open(MACRO_JSON_FILE, O_WRITE | O_CREAT | O_TRUNC);
+	if (file.getError() == 0) {
+		DynamicJsonDocument doc(JSON_DOC_SIZE);
+		//StaticJsonDocument<JSON_DOC_SIZE> doc;
+		for (int ix = 0; ix < 10; ++ix) {
+			doc[ix]["ID"] = ix;
+			doc[ix]["description"] = MacroInfo[ix].description;
+			doc[ix]["length"] = MacroInfo[ix].length;
+			doc[ix]["seconds"] = MacroInfo[ix].seconds;
+			doc[ix]["pixels"] = MacroInfo[ix].pixels;
+			//doc[ix]["filecount"] = MacroInfo[ix].fileNames.size();
+			JsonArray ja = doc[ix]["images"].to<JsonArray>();
+			int fix = 0;
+			// add the filenames in an array
+			for (String fname : MacroInfo[ix].fileNames) {
+				ja[fix] = fname;
+				++fix;
+			}
+		}
+		char output[JSON_DOC_SIZE];
+		serializeJsonPretty(doc, output);
+		file.write(output, strlen(output));
+		file.close();
+	}
+	else {
+		// something went wrong
+		WriteMessage(String("failed to open: ") + MACRO_JSON_FILE + " error: " + String(file.getError()), true);
+	}
 }
 
 void ResetSleepAndDimTimers() {
@@ -610,7 +698,7 @@ void ShowMenu(struct MenuItem* menu)
 			bMenuValid[menix] = false;
 			continue;
 		}
-		char line[100]{}, xtraline[100]{};
+		char line[120]{}, xtraline[100]{};
 		// only displayable menu items should be in this switch
 		line[0] = '\0';
 		int val;
@@ -645,9 +733,10 @@ void ShowMenu(struct MenuItem* menu)
 			// the list of macro files
 			// min holds the macro number
 			val = menu->min;
-			// see if the macro is there and append the text
-			exists = SD.exists("/" + String(val) + ".miw");
-			sprintf(line, menu->text, val, exists ? menu->on : menu->off);
+			//// see if the macro is there and append the text
+			//exists = SD.exists("/" + String(val) + ".miw");
+			//sprintf(line, menu->text, val, exists ? menu->on : menu->off);
+			sprintf(line, menu->text, val, MacroInfo[val].description.c_str());
 			// next line
 			++y;
 			break;
@@ -1126,6 +1215,19 @@ bool HandleMenus()
 	}
 	// see if the recording status changed
 	if (lastRecording != bRecordingMacro) {
+		// if recording off, save the new macro info
+		if (bRecordingMacro) {
+			// clear the new entry
+			MacroInfo[ImgInfo.nCurrentMacro].description = "Used";
+		}
+		else {
+			// save timing and sizes
+			int fileCount, pixelWidth;
+			MacroInfo[ImgInfo.nCurrentMacro].seconds = MacroTime("/" + String(ImgInfo.nCurrentMacro) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ImgInfo.nCurrentMacro].fileNames);
+			MacroInfo[ImgInfo.nCurrentMacro].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
+			MacroInfo[ImgInfo.nCurrentMacro].pixels = pixelWidth;
+			SaveMacroInfo();
+		}
 		MenuStack.top()->index = 0;
 		MenuStack.top()->offset = 0;
 		bMenuChanged = true;
@@ -2915,7 +3017,7 @@ void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
 #endif
 	bmpFile = SD.open(fileName);
 	// if the file is available send it to the LED's
-	if (!bmpFile.available()) {
+	if (!bmpFile) {
 		WriteMessage("failed to open: " + fileName, true);
 		return;
 	}
@@ -3520,7 +3622,8 @@ bool ProcessConfigFile(String filename)
 }
 
 // return the total time from the macro file
-int MacroTime(String filepath, int* files, int* width, std::vector<String>& nameList)
+// nameList can be NULL to avoid saving the files
+int MacroTime(String filepath, int* files, int* width, std::vector<String>* nameList)
 {
 	int retval = 0;
 	int count = 0;
@@ -3551,7 +3654,9 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>& name
 							GetBmpSize(args, &width, &height);
 							pixels += width;
 							// save the name
-							nameList.push_back(args);
+							if (nameList) {
+								nameList->push_back(args);
+							}
 							break;
 						case vtInt:
 						case vtBool:
@@ -3575,7 +3680,6 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>& name
 		}
 		rdfile.close();
 	}
-	//Serial.println("macro time: " + String(worked));
 	*files = count;
 	*width = pixels;
 	return retval;
@@ -3587,7 +3691,7 @@ bool MatchNameFilter(String name, String pattern)
 	String match;
 	int ix = pattern.indexOf('|');
 	do {
-		Serial.println("pattern:" + pattern + " match:" + match);
+		//Serial.println("pattern:" + pattern + " match:" + match);
 		if (ix == -1)
 			match = pattern;
 		else {
@@ -3597,14 +3701,14 @@ bool MatchNameFilter(String name, String pattern)
 			int ixend = match.indexOf('|');
 			if (ixend != -1)
 				match = match.substring(0, ixend);
-			Serial.println("  pattern:" + pattern + " match:" + match);
+			//Serial.println("  pattern:" + pattern + " match:" + match);
 		}
 		if (name.indexOf(match) != -1) {
-			Serial.println("true");
+			//Serial.println("true");
 			return true;
 		}
 	} while (pattern.length() && ix != -1);
-	Serial.println("false");
+	//Serial.println("false");
 	return false;
 }
 
@@ -3978,27 +4082,43 @@ bool GetYesNo(const char* msg)
 // display some macro info
 void InfoMacro(MenuItem* menu)
 {
-	std::vector<String> nameList;
-	ClearScreen();
-	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
-	int files;
-	int width;
-	DisplayLine(0, line, SystemInfo.menuTextColor);
-	DisplayLine(1, "calculating...", SystemInfo.menuTextColor);
-	int seconds = MacroTime(line, &files, &width, nameList);
-	DisplayLine(1, "Files: " + String(files), SystemInfo.menuTextColor);
-	DisplayLine(2, "Time: " + String(seconds) + " Sec", SystemInfo.menuTextColor);
-	DisplayLine(3, "Pixels: " + String(width) + " Pixels", SystemInfo.menuTextColor);
-	float walk = (float)width / (float)LedInfo.nTotalLeds;
-	DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
-	DisplayLine(6, "Click=Exit Rotate=Files", SystemInfo.menuTextColor);
+	int nMacroNum = *(int*)menu->value;
 	// rotate dial to view files, else exit on click
 	bool done = false;
+	bool redraw = true;
 	int offset = -1;
+	String savedNameFilter;
+	bool bMacroChanges = false;
 	while (!done) {
 		CRotaryDialButton::Button btn;
+		if (redraw) {
+			ClearScreen();
+			DisplayLine(0, String(nMacroNum) + " : " + MacroInfo[nMacroNum].description, SystemInfo.menuTextColor);
+			DisplayLine(1, "Files: " + String(MacroInfo[nMacroNum].fileNames.size()), SystemInfo.menuTextColor);
+			DisplayLine(2, "Time: " + String(MacroInfo[nMacroNum].seconds) + " Sec", SystemInfo.menuTextColor);
+			DisplayLine(3, "Pixels: " + String(MacroInfo[nMacroNum].pixels) + " Pixels", SystemInfo.menuTextColor);
+			float walk = (float)MacroInfo[nMacroNum].pixels / (float)LedInfo.nTotalLeds;
+			DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
+			DisplayLine(6, "Long Press=Exit Rotate=Show Files", SystemInfo.menuTextColor);
+			redraw = false;
+		}
+		MenuTextScrollSideways();
 		switch (btn = ReadButton()) {
+		case BTN_B0_CLICK:
+			// save the namefilter and use SetFilter for entering our description
+			savedNameFilter = nameFilter;
+			nameFilter = MacroInfo[nMacroNum].description;
+			SetFilter(menu);
+			if (MacroInfo[nMacroNum].description != nameFilter) {
+				MacroInfo[nMacroNum].description = nameFilter;
+				bMacroChanges = true;
+			}
+			nameFilter = savedNameFilter;
+			redraw = true;
+			break;
 		case BTN_SELECT:
+			redraw = true;
+			break;
 		case BTN_LONG:
 			done = true;
 			break;
@@ -4011,17 +4131,20 @@ void InfoMacro(MenuItem* menu)
 			// go to the next set
 			offset += (btn == BTN_RIGHT ? nMenuLineCount : -nMenuLineCount);
 			// range check
-			offset = constrain(offset, 0, nameList.size() - nMenuLineCount);
+			offset = constrain(offset, 0, MacroInfo[nMacroNum].fileNames.size() - nMenuLineCount);
 			// no point in scrolling if size isn't larger than the lines on the display
-			if (nameList.size() <= nMenuLineCount)
+			if (MacroInfo[nMacroNum].fileNames.size() <= nMenuLineCount)
 				offset = 0;
-			Serial.println("offset: " + String(offset));
+			//Serial.println("offset: " + String(offset));
 			// show the files
 			for (int lineNum = 0; lineNum < nMenuLineCount; ++lineNum) {
-				DisplayLine(lineNum, (lineNum + offset) < nameList.size() ? nameList[lineNum + offset] : "", SystemInfo.menuTextColor);
+				DisplayLine(lineNum, (lineNum + offset) < MacroInfo[nMacroNum].fileNames.size() ? MacroInfo[nMacroNum].fileNames[lineNum + offset] : "", SystemInfo.menuTextColor);
 			}
 			break;
 		}
+	}
+	if (bMacroChanges) {
+		SaveMacroInfo();
 	}
 }
 
@@ -4057,8 +4180,13 @@ void MacroLoadRun(MenuItem* menu, bool save)
 
 void DeleteMacro(MenuItem* menu)
 {
-	if (GetYesNo(("Delete Macro #" + String(ImgInfo.nCurrentMacro) + "?").c_str()))
-		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), true, false);
+	if (GetYesNo(("Delete Macro #" + String(*(int*)menu->value) + "?").c_str())) {
+		WriteOrDeleteConfigFile(String(*(int*)menu->value), true, false);
+		// remove the macroinfo entry
+		MacroInfo[*(int*)menu->value].description = "Empty";
+		MacroInfo[*(int*)menu->value].fileNames.clear();
+		SaveMacroInfo();
+	}
 }
 
 // show some LED's with and without white balance adjust
@@ -4956,17 +5084,19 @@ void ShowBattery(MenuItem* menu)
 	}
 }
 
-// load the filename filter
+// load the filename filter, also used for setting macro names
 void SetFilter(MenuItem* menu)
 {
-	*(bool*)menu->value = !*(bool*)menu->value;
-	if (*(bool*)menu->value) {
+	if (menu->op == eBool) {
+		*(bool*)menu->value = !*(bool*)menu->value;
+	}
+	if (menu->op != eBool || *(bool*)menu->value) {
 		ClearScreen();
 		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_@#$%^&|";
 		CRotaryDialButton::Button button = BTN_NONE;
 		bool done = false;
 		DisplayLine(5, "Rotate dial to select, Click adds char, '|' separates OR fields", SystemInfo.menuTextColor);
-		DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears filter", SystemInfo.menuTextColor);
+		DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears text", SystemInfo.menuTextColor);
 		int nLetterIndex = 0;
 		const int partA = 13;	// half the alphabet
 		do {
@@ -4981,7 +5111,7 @@ void SetFilter(MenuItem* menu)
 			int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
 			char ch[2] = { 0 };
 			ch[0] = letters[nLetterIndex];
-			// the width calculation for ' ' is 0, so we use something close
+			// the width calculation for ' ' is 0 (an error!), so we use something close
 			if (ch[0] == ' ')
 				ch[0] = '|';
 			if (SystemInfo.bMenuStar) {
@@ -5023,7 +5153,8 @@ void SetFilter(MenuItem* menu)
 			}
 		} while (!done);
 	}
-	GetFileNamesFromSDorBuiltins(currentFolder);
+	if (menu->op == eBool)
+		GetFileNamesFromSDorBuiltins(currentFolder);
 }
 
 // set the screen rotation to the correct value, 0-3, allocate the screen memory
