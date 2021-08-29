@@ -126,8 +126,8 @@ void setup()
 		prefs.end();
 		WriteMessage("Factory Reset");
 	}
-
 	String msg;
+	// see if we can read the settings
 	if (SaveLoadSettings(false, true, false, true)) {
 		if ((nBootCount == 0) && bAutoLoadSettings) {
 			SaveLoadSettings(false, false, false, true);
@@ -135,6 +135,8 @@ void setup()
 		}
 	}
 	else {
+		// set the dial type
+		CheckRotaryDialType();
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
@@ -328,6 +330,42 @@ void setup()
 	ReadMacroInfo();
 }
 
+// check and handle the rotary dial type
+// if either A or B is 0, then this is a toggle dial
+// else
+// tell user to rotate one click
+// delay
+// if A or B is 0, then this is a toggle
+// else it is a pulse dial
+void CheckRotaryDialType()
+{
+	bool bA, bB;
+	WriteMessage("checking dial type...", false, 1000);
+	bA = gpio_get_level((gpio_num_t)DIAL_A);
+	bB = gpio_get_level((gpio_num_t)DIAL_B);
+	Serial.println("ab " + String(bA) + String(bB));
+	if (!bA && !bB) {
+		// if both low must be a toggle
+		SystemInfo.DialSettings.m_bToggleDial = true;
+	}
+	else {
+		WriteMessage("Rotate dial 1 click", false, 10);
+		// wait for rotate, they were both high before if we got this far, so just look at A
+		while (gpio_get_level((gpio_num_t)DIAL_A))
+			delay(10);
+		// wait for button bounce
+		delay(250);
+		// read them again
+		bA = gpio_get_level((gpio_num_t)DIAL_A);
+		bB = gpio_get_level((gpio_num_t)DIAL_B);
+		Serial.println("ab " + String(bA) + String(bB));
+		// if both low must be a toggle
+		SystemInfo.DialSettings.m_bToggleDial = !bA && !bB;
+		// we shouldn't need this again
+	}
+	WriteMessage(String("Dial Type: ") + (SystemInfo.DialSettings.m_bToggleDial ? "Toggle" : "Pulse"), false, 1000);
+}
+
 #define JSON_DOC_SIZE 6000
 #define MACRO_JSON_FILE "/macro.json"
 // read the macro info from the files if we didn't find the json file first
@@ -369,6 +407,7 @@ void ReadMacroInfo()
 	}
 	else {
 		int fileCount, pixelWidth;
+		WriteMessage("Checking Macros", false, 10);
 		for (int ix = 0; ix < 10; ++ix) {
 			MacroInfo[ix].fileNames.clear();
 			MacroInfo[ix].seconds = MacroTime("/" + String(ix) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);

@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.58";
+char* myVersion = "1.60";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -761,7 +761,7 @@ MenuItem DialMenu[] = {
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
     {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
     {eList,"Btn1 Long: %s",GetSelectChoice,&SystemInfo.nBtn1LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
-    {eBool,"Rotate Type: %s",ToggleBool,&SystemInfo.DialSettings.m_bToggleDial,0,0,0,"Toggle","Pulse"},
+    {eBool,"Rotate Dial Type: %s",ToggleBool,&SystemInfo.DialSettings.m_bToggleDial,0,0,0,"Toggle","Pulse"},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
