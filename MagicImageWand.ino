@@ -5131,11 +5131,20 @@ void SetFilter(MenuItem* menu)
 	}
 	if (menu->op != eBool || *(bool*)menu->value) {
 		ClearScreen();
-		String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_@#$%^&|";
+		String upperLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_@#$%^&|";
+		String lowerLetters = "abcdefghijklmnopqrstuvwxyz0123456789 -_@#$%^&|";
+		String letters = upperLetters;
+		bool bUpper = true;
 		CRotaryDialButton::Button button = BTN_NONE;
 		bool done = false;
-		DisplayLine(5, "Rotate dial to select, Click adds char, '|' separates OR fields", SystemInfo.menuTextColor);
-		DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears text", SystemInfo.menuTextColor);
+		if (menu->op == eBool) {
+			DisplayLine(5, "Rotate dial to select, Click appends char, '|' separates OR fields", SystemInfo.menuTextColor);
+			DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears text", SystemInfo.menuTextColor);
+		}
+		else {
+			DisplayLine(5, "Rotate dial to select, Click appends char, BTN1 Long toggles case", SystemInfo.menuTextColor);
+			DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears text", SystemInfo.menuTextColor);
+		}
 		int nLetterIndex = 0;
 		const int partA = 13;	// half the alphabet
 		do {
@@ -5164,6 +5173,12 @@ void SetFilter(MenuItem* menu)
 				MenuTextScrollSideways();
 			}
 			switch (button) {
+			case BTN_B1_LONG:
+				if (menu->op != eBool) {
+					bUpper = !bUpper;
+					letters = bUpper ? upperLetters : lowerLetters;
+				}
+				break;
 			case BTN_LEFT:
 				if (nLetterIndex)
 					--nLetterIndex;
