@@ -2223,7 +2223,7 @@ void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	time_t start = time(NULL);
 	bool done = false;
 	while (!done) {
-		SetPixel(random(LedInfo.nTotalLeds), CRGB(random(0, 255), random(0, 255), random(0, 255)));
+		SetPixel(random(LedInfo.nTotalLeds - 1), CRGB(random(0, 255), random(0, 255), random(0, 255)));
 		ShowLeds();
 		//FastLED.show();
 		delay(SpeedDelay);
@@ -2334,7 +2334,7 @@ void confetti()
 {
 	// random colored speckles that blink in and fade smoothly
 	fadeToBlackBy(leds, LedInfo.nTotalLeds, 10);
-	int pos = random16(LedInfo.nTotalLeds);
+	int pos = random16(LedInfo.nTotalLeds - 1);
 	leds[pos] += CHSV(BuiltinInfo.gHue + random8(64), 200, 255);
 }
 
@@ -2560,7 +2560,7 @@ void FadeInOut(int time, bool in)
 void addGlitter(fract8 chanceOfGlitter)
 {
 	if (random8() < chanceOfGlitter) {
-		leds[random16(LedInfo.nTotalLeds)] += CRGB::White;
+		leds[random16(LedInfo.nTotalLeds - 1)] += CRGB::White;
 	}
 }
 
