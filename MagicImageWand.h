@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.62";
+char* myVersion = "1.63";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -398,6 +398,7 @@ bool bRecordingMacro = false;             // set while recording
 char FileToShow[100];
 int recordingTime;                        // shows the time for each part
 bool bRunningMacro = false;               // set while running
+unsigned long nMacroStartTime = 0;        // when the macro started
 int nMacroRepeatsLeft = 1;                // set during macro running
 volatile int nTimerSeconds;
 

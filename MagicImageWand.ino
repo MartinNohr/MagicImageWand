@@ -2624,8 +2624,10 @@ void ProcessFileOrTest()
 	}
 	bIsRunning = true;
 	// clear the rest of the lines
-	for (int ix = 1; ix < nMenuLineCount; ++ix)
-		DisplayLine(ix, "");
+	if (!bRunningMacro) {
+		for (int ix = 1; ix < nMenuLineCount; ++ix)
+			DisplayLine(ix, "");
+	}
 	//DisplayCurrentFile();
 	if (ImgInfo.startDelay) {
 		// set a timer
@@ -2670,7 +2672,7 @@ void ProcessFileOrTest()
 			// process the repeats and waits for each file in the list
 			for (nRepeatsLeft = ImgInfo.repeatCount; nRepeatsLeft > 0; nRepeatsLeft--) {
 				// fill the progress bar
-				if (!ImgInfo.bShowBuiltInTests)
+				if (!ImgInfo.bShowBuiltInTests && !bRunningMacro)
 					ShowProgressBar(0);
 				if (ImgInfo.repeatCount > 1) {
 					line = "Repeats: " + String(nRepeatsLeft) + " ";
@@ -2694,7 +2696,7 @@ void ProcessFileOrTest()
 				if (bCancelRun) {
 					break;
 				}
-				if (!ImgInfo.bShowBuiltInTests)
+				if (!ImgInfo.bShowBuiltInTests && !bRunningMacro)
 					ShowProgressBar(0);
 				if (nRepeatsLeft > 1) {
 					if (ImgInfo.repeatDelay) {
@@ -2782,10 +2784,11 @@ void ProcessFileOrTest()
 	if (ImgInfo.bChainFiles)
 		CurrentFileIndex = lastFileIndex;
 	FastLED.clear(true);
-	ClearScreen();
 	bIsRunning = false;
-	if (!bRunningMacro)
+	if (!bRunningMacro) {
+		ClearScreen();
 		DisplayCurrentFile();
+	}
 	if (bRecordingMacro) {
 		// write the time for this macro into the file
 		time_t now = time(NULL);
@@ -2824,7 +2827,8 @@ void SendFile(String Filename) {
 		WriteMessage("open fail: " + fn, true, 5000);
 		return;
 	}
-	ShowProgressBar(100);
+	if (!bRunningMacro)
+		ShowProgressBar(100);
 	SettingsSaveRestore(false, 0);
 }
 
@@ -2925,19 +2929,40 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 				secondsLeft += totalSeconds;
 			}
 		}
-		if (secondsLeft != lastSeconds) {
-			lastSeconds = secondsLeft;
-			sprintf(num, "File Seconds: %d", secondsLeft);
-			DisplayLine(2, num, SystemInfo.menuTextColor);
+		if (bRunningMacro) {
+			static int lastMacromSeconds;
+//#define MIN_FRAME_TIME_ESTIMATE 10
+//			unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold);
+			//unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000 - (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 25);
+			unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000;
+			Serial.println("px " + String(macromTime));
+			// calculate time left
+			unsigned long macromSecondsUsed = (millis() - nMacroStartTime);
+			int macroSecondsLeft = macromTime - macromSecondsUsed;
+			if (macroSecondsLeft < 0)
+				macroSecondsLeft = 0;
+			if (lastMacromSeconds != macroSecondsLeft) {
+				lastMacromSeconds = macroSecondsLeft;
+				sprintf(num, "Macro Seconds: %d", macroSecondsLeft / 1000);
+				DisplayLine(2, num, SystemInfo.menuTextColor);
+			}
+			percent = map(macromSecondsUsed, 0, macromTime, 0, 100);
 		}
-		percent = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+		else {
+			if (secondsLeft != lastSeconds) {
+				lastSeconds = secondsLeft;
+				sprintf(num, "File Seconds: %d", secondsLeft);
+				DisplayLine(2, num, SystemInfo.menuTextColor);
+			}
+			percent = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+		}
 		if (ImgInfo.bMirrorPlayImage) {
 			percent /= 2;
 			if (!doingFirstHalf) {
 				percent += 50;
 			}
 		}
-		if (((percent % 5) == 0) || percent > 90) {
+		if (percent < 2 || ((percent % 5) == 0) || percent > 90) {
 			ShowProgressBar(percent);
 		}
 		int bufpos = 0;
@@ -3619,7 +3644,8 @@ bool ProcessConfigFile(String filename)
 									CurrentFileIndex = which;
 									// call the process routine
 									strcpy(FileToShow, name.c_str());
-									ClearScreen();
+									if (!bRunningMacro)
+										ClearScreen();
 									ProcessFileOrTest();
 								}
 								if (oldFolder.length()) {
@@ -4055,7 +4081,7 @@ void SaveMacro(MenuItem* menu)
 	bRecordingMacro = false;
 }
 
-// saves and restores settings
+// saves and restores settings before running the macro
 void RunMacro(MenuItem* menu)
 {
 	bCancelMacro = false;
@@ -4201,6 +4227,8 @@ void MacroLoadRun(MenuItem* menu, bool save)
 		SettingsSaveRestore(true, 1);
 	}
 	bRunningMacro = true;
+	nMacroStartTime = millis();
+	ClearScreen();
 	bRecordingMacro = false;
 	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
 	if (!ProcessConfigFile(line)) {
@@ -4215,6 +4243,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 		}
 		SettingsSaveRestore(false, 1);
 	}
+	nMacroStartTime = 0;
 }
 
 void DeleteMacro(MenuItem* menu)
