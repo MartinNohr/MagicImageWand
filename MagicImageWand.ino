@@ -3728,6 +3728,9 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 						case vtMacroTime:
 							{
 								retval += args.toInt();
+								// older macros had seconds, newer ones need mS
+								if (retval < 20)
+									retval *= 1000;
 								++count;
 							}
 							break;
