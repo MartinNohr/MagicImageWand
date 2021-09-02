@@ -299,7 +299,6 @@ void setup()
 
 	// clear the button buffer
 	CRotaryDialButton::clear();
-	DisplayCurrentFile();
 	/*
 		analogSetCycles(8);                   // Set number of cycles per sample, default is 8 and provides an optimal result, range is 1 - 255
 		analogSetSamples(1);                  // Set number of samples in the range, default is 1, it has an effect on sensitivity has been multiplied
@@ -328,6 +327,7 @@ void setup()
 	sleepTimer = SystemInfo.nSleepTime * 60;
 	// read the macro data
 	ReadMacroInfo();
+	DisplayCurrentFile();
 }
 
 // check and handle the rotary dial type
@@ -366,11 +366,12 @@ void CheckRotaryDialType()
 	WriteMessage(String("Dial Type: ") + (SystemInfo.DialSettings.m_bToggleDial ? "Toggle" : "Pulse"), false, 1000);
 }
 
-#define JSON_DOC_SIZE 6000
-#define MACRO_JSON_FILE "/macro.json"
+constexpr int JSON_DOC_SIZE = 5000;
+constexpr char* MACRO_JSON_FILE = "/macro.json";
 // read the macro info from the files if we didn't find the json file first
 void ReadMacroInfo()
 {
+	WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 	FsFile file;
 	if (SD.exists(MACRO_JSON_FILE)) {
 		// read the file
@@ -390,7 +391,7 @@ void ReadMacroInfo()
 				// read the json into the macroinfo
 				for (int ix = 0; ix < 10; ++ix) {
 					MacroInfo[ix].description = String(doc[ix]["description"].as<const char*>());
-					MacroInfo[ix].seconds = doc[ix]["seconds"];
+					MacroInfo[ix].mSeconds = doc[ix]["mSeconds"];
 					MacroInfo[ix].length = doc[ix]["length"].as<int>();
 					MacroInfo[ix].pixels = doc[ix]["pixels"].as<int>();
 					JsonArray ja = doc[ix]["images"];
@@ -410,7 +411,7 @@ void ReadMacroInfo()
 		WriteMessage("Checking Macros", false, 10);
 		for (int ix = 0; ix < 10; ++ix) {
 			MacroInfo[ix].fileNames.clear();
-			MacroInfo[ix].seconds = MacroTime("/" + String(ix) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
+			MacroInfo[ix].mSeconds = MacroTime("/" + String(ix) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
 			MacroInfo[ix].description = SD.exists("/" + String(ix) + ".miw") ? "Used" : "Empty";
 			MacroInfo[ix].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
 			MacroInfo[ix].pixels = pixelWidth;
@@ -431,7 +432,7 @@ void SaveMacroInfo()
 			doc[ix]["ID"] = ix;
 			doc[ix]["description"] = MacroInfo[ix].description;
 			doc[ix]["length"] = MacroInfo[ix].length;
-			doc[ix]["seconds"] = MacroInfo[ix].seconds;
+			doc[ix]["mSeconds"] = MacroInfo[ix].mSeconds;
 			doc[ix]["pixels"] = MacroInfo[ix].pixels;
 			//doc[ix]["filecount"] = MacroInfo[ix].fileNames.size();
 			JsonArray ja = doc[ix]["images"].to<JsonArray>();
@@ -1262,7 +1263,7 @@ bool HandleMenus()
 		else {
 			// save timing and sizes
 			int fileCount, pixelWidth;
-			MacroInfo[ImgInfo.nCurrentMacro].seconds = MacroTime("/" + String(ImgInfo.nCurrentMacro) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ImgInfo.nCurrentMacro].fileNames);
+			MacroInfo[ImgInfo.nCurrentMacro].mSeconds = MacroTime("/" + String(ImgInfo.nCurrentMacro) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ImgInfo.nCurrentMacro].fileNames);
 			MacroInfo[ImgInfo.nCurrentMacro].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
 			MacroInfo[ImgInfo.nCurrentMacro].pixels = pixelWidth;
 			SaveMacroInfo();
@@ -2591,7 +2592,7 @@ void ProcessFileOrTest()
 {
 	// clear the cancel flag
 	bCancelRun = false;
-	time_t recordingTimeStart;                // holds the start time for the current recording part
+	unsigned long recordingTimeStart;                // holds the start time for the current recording part
 	String line;
 	// let's see if this is a folder command
 	String tmp = FileNames[CurrentFileIndex];
@@ -2618,7 +2619,7 @@ void ProcessFileOrTest()
 		// get the starting name, the index will change for chaining, but the macro file has to have the start
 		strcpy(FileToShow, FileNames[CurrentFileIndex].c_str());
 		// tag the start time
-		recordingTimeStart = time(NULL);
+		recordingTimeStart = millis();
 		recordingTime = 0;
 		//Serial.println("marking macro start time: " + String(recordingTimeStart));
 	}
@@ -2792,8 +2793,8 @@ void ProcessFileOrTest()
 	if (bRecordingMacro) {
 		// write the time for this macro into the file
 		time_t now = time(NULL);
-		recordingTime = (int)difftime(now, recordingTimeStart);
-		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
+		recordingTime = millis() - recordingTimeStart;
+		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false, true);
 		DisplayCurrentFile(SystemInfo.bShowFolder);
 	}
 	// clear buttons
@@ -2931,22 +2932,18 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		if (bRunningMacro) {
 			static int lastMacromSeconds;
-//#define MIN_FRAME_TIME_ESTIMATE 10
-//			unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold);
-			//unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000 - (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 25);
-			unsigned long macromTime = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000;
-			Serial.println("px " + String(macromTime));
+			//Serial.println("px " + String(ImgInfo.nMacroTimemS));
 			// calculate time left
 			unsigned long macromSecondsUsed = (millis() - nMacroStartTime);
-			int macroSecondsLeft = macromTime - macromSecondsUsed;
-			if (macroSecondsLeft < 0)
-				macroSecondsLeft = 0;
-			if (lastMacromSeconds != macroSecondsLeft) {
-				lastMacromSeconds = macroSecondsLeft;
-				sprintf(num, "Macro Seconds: %d", macroSecondsLeft / 1000);
+			int macromSecondsLeft = ImgInfo.nMacroTimemS - macromSecondsUsed;
+			if (macromSecondsLeft < 0)
+				macromSecondsLeft = 0;
+			if (lastMacromSeconds != macromSecondsLeft) {
+				lastMacromSeconds = macromSecondsLeft;
+				sprintf(num, "Macro Seconds: %d", (macromSecondsLeft + 500) / 1000);
 				DisplayLine(2, num, SystemInfo.menuTextColor);
 			}
-			percent = map(macromSecondsUsed, 0, macromTime, 0, 100);
+			percent = map(macromSecondsUsed, 0,ImgInfo.nMacroTimemS, 0, 100);
 		}
 		else {
 			if (secondsLeft != lastSeconds) {
@@ -3667,7 +3664,7 @@ bool ProcessConfigFile(String filename)
 							}
 							break;
 							case vtMacroTime:
-								*(int*)(SettingsVarList[which].address) = args.toInt();
+								*(unsigned long*)(SettingsVarList[which].address) = args.toInt();
 								break;
 							default:
 								break;
@@ -3940,12 +3937,12 @@ bool SettingsSaveRestore(bool save, int set)
 void EraseStartFile(MenuItem* menu)
 {
 	if (GetYesNo("Erase START.MIW?"))
-		WriteOrDeleteConfigFile("", true, true);
+		WriteOrDeleteConfigFile("", true, true, false);
 }
 
 void SaveStartFile(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile("", false, true);
+	WriteOrDeleteConfigFile("", false, true, false);
 }
 
 void EraseAssociatedFile(MenuItem* menu)
@@ -3954,12 +3951,12 @@ void EraseAssociatedFile(MenuItem* menu)
 	filepath = currentFolder + MakeMIWFilename(FileNames[CurrentFileIndex], true);
 
 	if (GetYesNo(("Erase " + filepath + "?").c_str()))
-		WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), true, false);
+		WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), true, false, false);
 }
 
 void SaveAssociatedFile(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), false, false);
+	WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), false, false, false);
 }
 
 void LoadAssociatedFile(MenuItem* menu)
@@ -3987,7 +3984,7 @@ void LoadStartFile(MenuItem* menu)
 
 // create the config file, or remove it
 // startfile true makes it use the start.MIW file, else it handles the associated name file
-bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
+bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool bMacro)
 {
 	bool retval = true;
 	String filepath;
@@ -3995,7 +3992,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 		filepath = currentFolder + String("START.MIW");
 	}
 	else {
-		filepath = ((bRecordingMacro || bRunningMacro) ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
+		filepath = (bMacro ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
 	}
 	bool fileExists = SD.exists(filepath.c_str());
 	if (remove) {
@@ -4015,7 +4012,8 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 #else
 		FsFile file = SD.open(filepath.c_str(), bRecordingMacro ? (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
 #endif
-		if (file) {
+		//Serial.println("file: " + filepath + " " + String(remove) + " " + String(startfile) + " recording " + String(bRecordingMacro));
+		if (file.getError() == 0) {
 			// loop through the var list
 			for (int ix = 0; ix < sizeof(SettingsVarList) / sizeof(*SettingsVarList); ++ix) {
 				switch (SettingsVarList[ix].type) {
@@ -4034,12 +4032,12 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 					line = String(SettingsVarList[ix].name) + "=" + String(*(bool*)(SettingsVarList[ix].address) ? "TRUE" : "FALSE");
 					break;
 				case vtRGB:
-				{
-					// handle the RBG colors
-					CRGB* cp = (CRGB*)(SettingsVarList[ix].address);
-					line = String(SettingsVarList[ix].name) + "=" + String(cp->r) + "," + String(cp->g) + "," + String(cp->b);
-				}
-				break;
+					{
+						// handle the RBG colors
+						CRGB* cp = (CRGB*)(SettingsVarList[ix].address);
+						line = String(SettingsVarList[ix].name) + "=" + String(cp->r) + "," + String(cp->g) + "," + String(cp->b);
+					}
+					break;
 				case vtMacroTime:
 					line = String(SettingsVarList[ix].name) + "=" + String(*(int*)(SettingsVarList[ix].address));
 					break;
@@ -4055,6 +4053,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile)
 		}
 		else {
 			retval = false;
+			//Serial.println("error: " + String(file.getError()));
 			WriteMessage(String("Failed to write:\n") + filepath, true);
 		}
 	}
@@ -4077,7 +4076,7 @@ void LoadEepromSettings(MenuItem* menu)
 void SaveMacro(MenuItem* menu)
 {
 	bRecordingMacro = true;
-	WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false);
+	WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false, true);
 	bRecordingMacro = false;
 }
 
@@ -4160,7 +4159,7 @@ void InfoMacro(MenuItem* menu)
 			ClearScreen();
 			DisplayLine(0, String(nMacroNum) + " : " + MacroInfo[nMacroNum].description, SystemInfo.menuTextColor);
 			DisplayLine(1, "Files: " + String(MacroInfo[nMacroNum].fileNames.size()), SystemInfo.menuTextColor);
-			DisplayLine(2, "Time: " + String(MacroInfo[nMacroNum].seconds) + " Sec", SystemInfo.menuTextColor);
+			DisplayLine(2, "Time: " + String((MacroInfo[nMacroNum].mSeconds + 500) / 1000) + " Sec", SystemInfo.menuTextColor);
 			DisplayLine(3, "Pixels: " + String(MacroInfo[nMacroNum].pixels) + " Pixels", SystemInfo.menuTextColor);
 			float walk = (float)MacroInfo[nMacroNum].pixels / (float)LedInfo.nTotalLeds;
 			DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
@@ -4228,6 +4227,13 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	}
 	bRunningMacro = true;
 	nMacroStartTime = millis();
+#define MIN_FRAME_TIME_ESTIMATE 10
+	if (SystemInfo.bMacroUseCurrentSettings)
+		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold) + (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 50);
+	else
+		// calculate the time using the stored mSeconds
+		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].mSeconds;
+		//ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000 - (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 25);
 	ClearScreen();
 	bRecordingMacro = false;
 	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
@@ -4249,10 +4255,12 @@ void MacroLoadRun(MenuItem* menu, bool save)
 void DeleteMacro(MenuItem* menu)
 {
 	if (GetYesNo(("Delete Macro #" + String(*(int*)menu->value) + "?").c_str())) {
-		WriteOrDeleteConfigFile(String(*(int*)menu->value), true, false);
+		WriteOrDeleteConfigFile(String(*(int*)menu->value), true, false, true);
 		// remove the macroinfo entry
 		MacroInfo[*(int*)menu->value].description = "Empty";
 		MacroInfo[*(int*)menu->value].fileNames.clear();
+		MacroInfo[*(int*)menu->value].pixels = 0;
+		MacroInfo[*(int*)menu->value].length = 0;
 		SaveMacroInfo();
 	}
 }

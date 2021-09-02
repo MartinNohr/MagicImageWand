@@ -1,6 +1,6 @@
 #pragma once
 
-char* myVersion = "1.63";
+char* myVersion = "1.64";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -200,9 +200,10 @@ struct IMG_INFO {
     //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
     int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
     int repeatCount = 1;                      // Variable to keep track of number of repeats
-    int nCurrentMacro = 0;                    // the number of the macro to select or run
-    int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
-    int nRepeatCountMacro = 1;                // repeat count for macros
+	unsigned long nMacroTimemS = 0;           // holds the current macro computed runtime
+	int nCurrentMacro = 0;                    // the number of the macro to select or run
+	int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
+	int nRepeatCountMacro = 1;                // repeat count for macros
     bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
     int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
     int nDialDuringImgInc = 1;                // how much to change by during image display
@@ -396,7 +397,7 @@ bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
 bool bRecordingMacro = false;             // set while recording
 char FileToShow[100];
-int recordingTime;                        // shows the time for each part
+unsigned long recordingTime;              // shows the time for each part
 bool bRunningMacro = false;               // set while running
 unsigned long nMacroStartTime = 0;        // when the macro started
 int nMacroRepeatsLeft = 1;                // set during macro running
@@ -501,7 +502,7 @@ void UpdateStripBrightness(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceB(MenuItem* menu, int flag);
-bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile);
+bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool bMacro);
 void RunMacro(MenuItem* menu);
 void LoadMacro(MenuItem* menu);
 void InfoMacro(MenuItem* menu);
@@ -932,7 +933,7 @@ MenuItem MacroMenu[] = {
     {eElse},
         {eTextInt,"Recording Macro: #%d",NULL,&ImgInfo.nCurrentMacro},
     {eEndif},
-    {eBool,"Record: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
+    {eBool,"Record Macro: %s",ToggleBool,&bRecordingMacro,0,0,0,"On","Off"},
     {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.nRepeatCountMacro,1,100},
         {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
@@ -1030,7 +1031,7 @@ enum SETVARTYPE {
     vtRGB,
     vtShowFile,         // run a file on the display, the file has the path which is used to set the current path
     vtBuiltIn,          // bool for builtins or SD
-    vtMacroTime,        // holds the estimated time to run this macro
+    vtMacroTime,        // holds the estimated time to run this macro in mSec
 };
 struct SETTINGVAR {
     char* name;
@@ -1085,7 +1086,7 @@ std::vector<struct TEXTLINES> TextLines;
 
 struct MACRO_INFO {
 	String description;             // description of the file
-	int seconds;                    // total time
+	int mSeconds;                   // total time in mSeconds
 	int pixels;                     // width in pixels
 	float length;                   // how many meters based on 1:1 ratio with nTotalLeds
 	std::vector<String> fileNames;  // list of all the filenames in this macro
