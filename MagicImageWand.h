@@ -1,6 +1,8 @@
 #pragma once
 
-char* myVersion = "1.65";
+const char* MIW_Version = "1.66";
+
+const char* StartFileName = "START.MIW";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
@@ -20,6 +22,8 @@ char* myVersion = "1.65";
 #endif
 
 #include <ArduinoJson.h>
+constexpr int JSON_DOC_SIZE = 5000;
+constexpr char* MACRO_JSON_FILE = "/macro.json";
 
 //#include <BLEDevice.h>
 //#include <BLEUtils.h>
@@ -508,6 +512,7 @@ void LoadMacro(MenuItem* menu);
 void InfoMacro(MenuItem* menu);
 void SaveMacro(MenuItem* menu);
 void DeleteMacro(MenuItem* menu);
+void DeleteMacroJson(MenuItem* menu);
 void LightBar(MenuItem* menu);
 void Sleep(MenuItem* menu);
 //void ReadBattery(MenuItem* menu);
@@ -941,6 +946,7 @@ MenuItem MacroMenu[] = {
         {eTextInt,"Load: #%d",LoadMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Save: #%d",SaveMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Delete: #%d",DeleteMacro,&ImgInfo.nCurrentMacro},
+        {eTextInt,"Delete: Macro JSON File",DeleteMacroJson},
     {eEndif},
     {eExit,PreviousMenu},
     // make sure this one is last
@@ -1093,3 +1099,4 @@ struct MACRO_INFO {
 };
 typedef MACRO_INFO MACRO_INFO;
 MACRO_INFO MacroInfo[10];
+SemaphoreHandle_t macroMutex;

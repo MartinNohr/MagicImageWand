@@ -54,6 +54,9 @@ void setup()
 	delay(10);
 	Serial.print("setup() is running on core ");
 	Serial.println(xPortGetCoreID());
+	// create a mutex
+	macroMutex = xSemaphoreCreateMutex();
+	// init the display
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
 
@@ -153,7 +156,7 @@ void setup()
 		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
 		tft.drawString("Magic Image Wand", 5, 10);
 		tft.setFreeFont(&Dialog_bold_16);
-		tft.drawString(String("Version ") + myVersion, 20, 70);
+		tft.drawString(String("Version ") + MIW_Version, 20, 70);
 		tft.setTextSize(1);
 		tft.drawString(__DATE__, 20, 90);
 		if (msg.length()) {
@@ -366,14 +369,12 @@ void CheckRotaryDialType()
 	WriteMessage(String("Dial Type: ") + (SystemInfo.DialSettings.m_bToggleDial ? "Toggle" : "Pulse"), false, 1000);
 }
 
-constexpr int JSON_DOC_SIZE = 5000;
-constexpr char* MACRO_JSON_FILE = "/macro.json";
 // read the macro info from the files if we didn't find the json file first
 void ReadMacroInfo()
 {
-	WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 	FsFile file;
 	if (SD.exists(MACRO_JSON_FILE)) {
+		WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 		// read the file
 		file = SD.open(MACRO_JSON_FILE);
 		if (file.getError() == 0) {
@@ -408,11 +409,12 @@ void ReadMacroInfo()
 	}
 	else {
 		int fileCount, pixelWidth;
-		WriteMessage("Checking Macros", false, 10);
+		WriteMessage(String("Creating: ") + MACRO_JSON_FILE, false, 1000);
 		for (int ix = 0; ix < 10; ++ix) {
+			String fn = MakeMIWFilename(String(ix), true);
 			MacroInfo[ix].fileNames.clear();
-			MacroInfo[ix].mSeconds = MacroTime("/" + String(ix) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
-			MacroInfo[ix].description = SD.exists("/" + String(ix) + ".miw") ? "Used" : "Empty";
+			MacroInfo[ix].mSeconds = MacroTime("/" + fn, &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
+			MacroInfo[ix].description = SD.exists("/" + fn) ? "Used" : "Empty";
 			MacroInfo[ix].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
 			MacroInfo[ix].pixels = pixelWidth;
 		}
@@ -1261,9 +1263,11 @@ bool HandleMenus()
 			MacroInfo[ImgInfo.nCurrentMacro].description = "Used";
 		}
 		else {
+			ClearScreen();
+			WriteMessage("Saving macro #" + String(ImgInfo.nCurrentMacro), false, 0);
 			// save timing and sizes
 			int fileCount, pixelWidth;
-			MacroInfo[ImgInfo.nCurrentMacro].mSeconds = MacroTime("/" + String(ImgInfo.nCurrentMacro) + ".miw", &fileCount, &pixelWidth, &MacroInfo[ImgInfo.nCurrentMacro].fileNames);
+			MacroInfo[ImgInfo.nCurrentMacro].mSeconds = MacroTime("/" + MakeMIWFilename(String(ImgInfo.nCurrentMacro), true), &fileCount, &pixelWidth, &MacroInfo[ImgInfo.nCurrentMacro].fileNames);
 			MacroInfo[ImgInfo.nCurrentMacro].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
 			MacroInfo[ImgInfo.nCurrentMacro].pixels = pixelWidth;
 			SaveMacroInfo();
@@ -3732,7 +3736,7 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 								if (retval < 20)
 									retval *= 1000;
 								++count;
-							}
+						}
 							break;
 						default:
 							break;
@@ -3842,7 +3846,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 							//Serial.println("name: " + CurrentFilename);
 							FileNames.push_back(CurrentFilename);
 						}
-						else if (uppername == "START.MIW") {
+						else if (uppername == StartFileName) {
 							startfile = CurrentFilename;
 						}
 					}
@@ -3976,7 +3980,7 @@ void LoadAssociatedFile(MenuItem* menu)
 
 void LoadStartFile(MenuItem* menu)
 {
-	String name = "START.MIW";
+	String name = StartFileName;
 	if (ProcessConfigFile(name)) {
 		WriteMessage(String("Processed:\n") + name);
 	}
@@ -3992,7 +3996,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 	bool retval = true;
 	String filepath;
 	if (startfile) {
-		filepath = currentFolder + String("START.MIW");
+		filepath = currentFolder + String(StartFileName);
 	}
 	else {
 		filepath = (bMacro ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
@@ -4106,7 +4110,7 @@ void RunMacro(MenuItem* menu)
 }
 
 // get a yes/no response
-bool GetYesNo(const char* msg)
+bool GetYesNo(String msg)
 {
 	int pad = tft.getTextPadding();
 	tft.setTextPadding(0);
@@ -4231,15 +4235,16 @@ void MacroLoadRun(MenuItem* menu, bool save)
 	bRunningMacro = true;
 	nMacroStartTime = millis();
 #define MIN_FRAME_TIME_ESTIMATE 10
+	// calculate the time using the calculated or stored mSeconds
 	if (SystemInfo.bMacroUseCurrentSettings)
 		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold) + (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 50);
 	else
-		// calculate the time using the stored mSeconds
 		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].mSeconds;
-		//ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].seconds * 1000 - (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 25);
+	// add a little time ta account for file opening/closing etc.
+	ImgInfo.nMacroTimemS += MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 100;
 	ClearScreen();
 	bRecordingMacro = false;
-	String line = "/" + String(ImgInfo.nCurrentMacro) + ".miw";
+	String line = "/" + MakeMIWFilename(String(ImgInfo.nCurrentMacro), true);
 	if (!ProcessConfigFile(line)) {
 		line += " not found";
 		WriteMessage(line, true);
@@ -4265,6 +4270,14 @@ void DeleteMacro(MenuItem* menu)
 		MacroInfo[*(int*)menu->value].pixels = 0;
 		MacroInfo[*(int*)menu->value].length = 0;
 		SaveMacroInfo();
+	}
+}
+
+// remove the macro json file, it will be automatically rebuilt on reboot
+void DeleteMacroJson(MenuItem* menu)
+{
+	if (GetYesNo(String("Delete ") + String(MACRO_JSON_FILE))) {
+		SD.remove(MACRO_JSON_FILE);
 	}
 }
 
@@ -4623,7 +4636,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 	prefs.begin(prefsName, !save);
 	if (save) {
 		//Serial.println("saving");
-		prefs.putString(prefsVersion, myVersion);
+		prefs.putString(prefsVersion, MIW_Version);
 		prefs.putBool(prefsAutoload, bAutoLoadSettings);
 		// save things
 		if (!ledonly) {
@@ -4639,7 +4652,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 	else {
 		// load things
 		String vsn = prefs.getString(prefsVersion, "");
-		if (vsn == myVersion) {
+		if (vsn == MIW_Version) {
 			if (autoloadonly) {
 				bAutoLoadSettings = prefs.getBool(prefsAutoload, false);
 				//Serial.println("getting autoload: " + String(bAutoLoadSettings));
@@ -4794,7 +4807,7 @@ void append_page_footer(){
   webpage += "<li><a href='/settings'>Settings</a></li>";
   webpage += "</ul>";
   webpage += "<footer>MagicImageWand ";
-  webpage += myVersion;
+  webpage += MIW_Version;
   webpage += "</footer>";
   webpage += "</body></html>";
 }
