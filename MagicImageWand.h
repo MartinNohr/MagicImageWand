@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.66";
+const char* MIW_Version = "1.67";
 
 const char* StartFileName = "START.MIW";
 
@@ -1100,3 +1100,4 @@ struct MACRO_INFO {
 typedef MACRO_INFO MACRO_INFO;
 MACRO_INFO MacroInfo[10];
 SemaphoreHandle_t macroMutex;
+TaskHandle_t Task1, Task2;

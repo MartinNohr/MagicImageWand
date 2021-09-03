@@ -119,7 +119,7 @@ void setup()
 	tft.setTextSize(1);
 	tft.setTextPadding(tft.width());
 	SetScreenRotation(SystemInfo.nDisplayRotation);
-	ClearScreen();
+	//ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	// see if the button is down, if so clear all settings
 	if (gpio_get_level((gpio_num_t)DIAL_BTN) == 0) {
@@ -145,25 +145,10 @@ void setup()
 	}
 	// in case the saved ones were different
 	SetScreenRotation(SystemInfo.nDisplayRotation);
-	ClearScreen();
+	//ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 
-	if (nBootCount == 0) {
-		tft.setTextColor(SystemInfo.menuTextColor);
-		rainbow_fill();
-		tft.setTextColor(TFT_BLACK);
-		tft.setFreeFont(&Irish_Grover_Regular_24);
-		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
-		tft.drawString("Magic Image Wand", 5, 10);
-		tft.setFreeFont(&Dialog_bold_16);
-		tft.drawString(String("Version ") + MIW_Version, 20, 70);
-		tft.setTextSize(1);
-		tft.drawString(__DATE__, 20, 90);
-		if (msg.length()) {
-			tft.drawString(msg, 20, 110);
-		}
-	}
-	else {
+	if (nBootCount) {
 		// see if we need to get the path back
 		if (strlen(sleepFolder))
 			currentFolder = sleepFolder;
@@ -171,7 +156,6 @@ void setup()
 #if !HAS_BATTERY_LEVEL
 	SystemInfo.bShowBatteryLevel = false;
 #endif
-
 	GetFileNamesFromSDorBuiltins(currentFolder);
 	tft.setFreeFont(&Dialog_bold_16);
 	tft.setTextColor(SystemInfo.menuTextColor);
@@ -187,7 +171,6 @@ void setup()
 	MenuStack.top()->menu = MainMenu;
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
-
 	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
 	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	//FastLED.addLeds<SK6812, DATA_PIN1, GRB>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
@@ -196,44 +179,26 @@ void setup()
 	if (LedInfo.bSecondController) {
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 		//FastLED.addLeds<SK6812, DATA_PIN2, GRB>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
-		SetPixel(144, CRGB::Red);
-		SetPixel(145, CRGB::Red);
-		SetPixel(146, CRGB::Red);
-		SetPixel(287, CRGB::Red);
-		SetPixel(286, CRGB::Red);
-		SetPixel(285, CRGB::Red);
-		leds[144] = CRGB::Red;
-		leds[145] = CRGB::Green;
-		leds[146] = CRGB::Blue;
-		FastLED.show();
 	}
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nStripMaxCurrent);
 	if (nBootCount == 0) {
-		//bool oldSecond = bSecondStrip;
-		//bSecondStrip = true;
-		// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
-		SetPixel(0, CRGB::Red);
-		SetPixel(1, CRGB::Red);
-		SetPixel(2, CRGB::Red);
-		SetPixel(143, CRGB::Red);
-		SetPixel(142, CRGB::Red);
-		SetPixel(141, CRGB::Red);
-		FastLED.show();
-		delay(100);
-		SetPixel(0, CRGB::Green);
-		SetPixel(1, CRGB::Green);
-		SetPixel(2, CRGB::Green);
-		SetPixel(143, CRGB::Green);
-		SetPixel(142, CRGB::Green);
-		SetPixel(141, CRGB::Green);
-		FastLED.show();
-		delay(100);
-		FastLED.clear(true);
-		RainbowPulse();
-
+		xTaskCreatePinnedToCore(InitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
+		tft.setTextColor(SystemInfo.menuTextColor);
+		rainbow_fill();
+		tft.setTextColor(TFT_BLACK);
+		tft.setFreeFont(&Irish_Grover_Regular_24);
+		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
+		tft.drawString("Magic Image Wand", 5, 10);
+		tft.setFreeFont(&Dialog_bold_16);
+		tft.drawString(String("Version ") + MIW_Version, 20, 70);
+		tft.setTextSize(1);
+		tft.drawString(__DATE__, 20, 90);
+		if (msg.length()) {
+			tft.drawString(msg, 20, 110);
+		}
 		//fill_noise8(leds, 144, 2, 0, 10, 2, 0, 0, 10);
 		//FastSPI_LED.show();
 		//delay(5000);
@@ -297,8 +262,8 @@ void setup()
 		//	delayMicroseconds(50);
 		//}
 	}
-	FastLED.clear(true);
-	ClearScreen();
+	//FastLED.clear(true);
+	//ClearScreen();
 
 	// clear the button buffer
 	CRotaryDialButton::clear();
@@ -330,7 +295,33 @@ void setup()
 	sleepTimer = SystemInfo.nSleepTime * 60;
 	// read the macro data
 	ReadMacroInfo();
+	ClearScreen();
 	DisplayCurrentFile();
+}
+
+// test the LEDS on start
+void InitTestLed(void* parameter)
+{
+	// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
+	SetPixel(0, CRGB::Red);
+	SetPixel(1, CRGB::Red);
+	SetPixel(2, CRGB::Red);
+	SetPixel(143, CRGB::Red);
+	SetPixel(142, CRGB::Red);
+	SetPixel(141, CRGB::Red);
+	FastLED.show();
+	delay(100);
+	SetPixel(0, CRGB::Green);
+	SetPixel(1, CRGB::Green);
+	SetPixel(2, CRGB::Green);
+	SetPixel(143, CRGB::Green);
+	SetPixel(142, CRGB::Green);
+	SetPixel(141, CRGB::Green);
+	FastLED.show();
+	delay(100);
+	FastLED.clear(true);
+	RainbowPulse();
+	vTaskDelete(NULL);
 }
 
 // check and handle the rotary dial type
@@ -374,7 +365,7 @@ void ReadMacroInfo()
 {
 	FsFile file;
 	if (SD.exists(MACRO_JSON_FILE)) {
-		WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
+		//WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 		// read the file
 		file = SD.open(MACRO_JSON_FILE);
 		if (file.getError() == 0) {
