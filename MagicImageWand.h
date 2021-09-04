@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.67";
+const char* MIW_Version = "1.68";
 
 const char* StartFileName = "START.MIW";
 
@@ -204,7 +204,6 @@ struct IMG_INFO {
     //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
     int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
     int repeatCount = 1;                      // Variable to keep track of number of repeats
-	unsigned long nMacroTimemS = 0;           // holds the current macro computed runtime
 	int nCurrentMacro = 0;                    // the number of the macro to select or run
 	int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
 	int nRepeatCountMacro = 1;                // repeat count for macros
@@ -403,7 +402,7 @@ bool bRecordingMacro = false;             // set while recording
 char FileToShow[100];
 unsigned long recordingTime;              // shows the time for each part
 bool bRunningMacro = false;               // set while running
-unsigned long nMacroStartTime = 0;        // when the macro started
+unsigned long nMacroColumnsDone = 0;      // how many pixel columns in the macro
 int nMacroRepeatsLeft = 1;                // set during macro running
 volatile int nTimerSeconds;
 

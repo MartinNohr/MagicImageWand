@@ -2926,19 +2926,19 @@ void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
 			}
 		}
 		if (bRunningMacro) {
-			static int lastMacromSeconds;
-			//Serial.println("px " + String(ImgInfo.nMacroTimemS));
-			// calculate time left
-			unsigned long macromSecondsUsed = (millis() - nMacroStartTime);
-			int macromSecondsLeft = ImgInfo.nMacroTimemS - macromSecondsUsed;
-			if (macromSecondsLeft < 0)
-				macromSecondsLeft = 0;
-			if (lastMacromSeconds != macromSecondsLeft) {
-				lastMacromSeconds = macromSecondsLeft;
-				sprintf(num, "Macro Seconds: %d", (macromSecondsLeft + 500) / 1000);
+			// count columns done
+			++nMacroColumnsDone;
+			percent = map(nMacroColumnsDone, 0, MacroInfo[ImgInfo.nCurrentMacro].pixels, 0, 100);
+			static int lastSeconds;
+			int currentSeconds = (MacroInfo[ImgInfo.nCurrentMacro].mSeconds * percent / 100 + 500) / 1000;
+			if (lastSeconds != currentSeconds) {
+				lastSeconds = currentSeconds;
+				int sec = MacroInfo[ImgInfo.nCurrentMacro].mSeconds / 1000 - currentSeconds;
+				if (sec < 0)
+					sec = 0;
+				sprintf(num, "Macro Seconds: %d", sec);
 				DisplayLine(2, num, SystemInfo.menuTextColor);
 			}
-			percent = map(macromSecondsUsed, 0,ImgInfo.nMacroTimemS, 0, 100);
 		}
 		else {
 			if (secondsLeft != lastSeconds) {
@@ -3727,6 +3727,8 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 								if (retval < 20)
 									retval *= 1000;
 								++count;
+								// add a fudge factor to account for file opening/closing etc
+								retval += 300;
 						}
 							break;
 						default:
@@ -4224,15 +4226,14 @@ void MacroLoadRun(MenuItem* menu, bool save)
 		SettingsSaveRestore(true, 1);
 	}
 	bRunningMacro = true;
-	nMacroStartTime = millis();
-#define MIN_FRAME_TIME_ESTIMATE 10
+	nMacroColumnsDone = 0;
+	//nMacroStartTime = millis();
+//#define MIN_FRAME_TIME_ESTIMATE 10
 	// calculate the time using the calculated or stored mSeconds
-	if (SystemInfo.bMacroUseCurrentSettings)
-		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold) + (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 50);
-	else
-		ImgInfo.nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].mSeconds;
-	// add a little time ta account for file opening/closing etc.
-	ImgInfo.nMacroTimemS += MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 100;
+	//if (SystemInfo.bMacroUseCurrentSettings)
+	//	nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].pixels * (ImgInfo.nFrameHold == 0 ? MIN_FRAME_TIME_ESTIMATE : ImgInfo.nFrameHold) + (MacroInfo[ImgInfo.nCurrentMacro].fileNames.size() * 50);
+	//else
+	//	nMacroTimemS = MacroInfo[ImgInfo.nCurrentMacro].mSeconds;
 	ClearScreen();
 	bRecordingMacro = false;
 	String line = "/" + MakeMIWFilename(String(ImgInfo.nCurrentMacro), true);
@@ -4248,7 +4249,7 @@ void MacroLoadRun(MenuItem* menu, bool save)
 		}
 		SettingsSaveRestore(false, 1);
 	}
-	nMacroStartTime = 0;
+	//nMacroStartTime = 0;
 }
 
 void DeleteMacro(MenuItem* menu)
