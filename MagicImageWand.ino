@@ -113,6 +113,7 @@ void setup()
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	///////////////////////////// End of Request commands
+	SystemInfo.bCriticalBatteryLevel = false;
 	server.begin();
 	tft.setFreeFont(&Dialog_bold_16);
 	SystemInfo.nDisplayRotation = 3;
@@ -558,6 +559,11 @@ void loop()
 	// show battery level if on
 	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
 		ShowBattery(NULL);
+		if (SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
+			SystemInfo.bCriticalBatteryLevel = false;
+			WriteMessage("Entering sleep mode\ndue to low battery", true, 10000);
+			Sleep(NULL);
+		}
 	}
 }
 
@@ -5117,7 +5123,7 @@ int ReadBattery(int* raw)
 	static float eSmooth = 0.0;
 	int percent;
 	float nextLevel;
-	for (int tries = 0; tries < 10; ++tries) {
+	for (int tries = 0; tries < 5; ++tries) {
 		nextLevel = (float)analogRead(36);
 		// calculate the next value
 		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
@@ -5133,6 +5139,8 @@ int ReadBattery(int* raw)
 	}
 	if (raw)
 		*raw = (int)eSmooth;
+	if (percent == 0)
+		SystemInfo.bCriticalBatteryLevel = true;
 	return percent;
 }
 

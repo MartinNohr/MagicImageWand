@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.68";
+const char* MIW_Version = "1.69";
 
 const char* StartFileName = "START.MIW";
 
@@ -238,6 +238,8 @@ struct SYSTEM_INFO {
     int nBatteryFullLevel = 1730;               // 100% battery
     int nBatteryEmptyLevel = 1230;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
+    int bSleepOnLowBattery = false;             // sleep on low battery
+    int bCriticalBatteryLevel = false;          // set true if battery too low
     //int bShowBatteryLevel = 0;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
@@ -741,6 +743,7 @@ MenuItem RandomBarsMenu[] = {
 };
 MenuItem BatteryMenu[] = {
     {eExit,"Battery"},
+    {eBool,"Sleep on Low Battery: %s",ToggleBool,&SystemInfo.bSleepOnLowBattery,0,0,0,"Yes","No"},
     {eBool,"Show Battery: %s",ToggleBool,&SystemInfo.bShowBatteryLevel,0,0,0,"Yes","No"},
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,900,4200},
