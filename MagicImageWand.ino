@@ -1203,6 +1203,14 @@ bool HandleMenus()
 	int lastMenuCount = MenuStack.top()->menucount;
 	bool lastRecording = bRecordingMacro;
 	switch (button) {
+	case BTN_B0_CLICK:	// go back a menu level if we can
+		if (MenuStack.size() > 1) {
+			bMenuChanged = true;
+			menuPtr = MenuStack.top();
+			MenuStack.pop();
+			delete menuPtr;
+		}
+		break;
 	case BTN_SELECT:
 		RunMenus(button);
 		bMenuChanged = true;
