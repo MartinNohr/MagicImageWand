@@ -808,7 +808,11 @@ void ShowMenu(struct MenuItem* menu)
 		case eReboot:
 			bMenuValid[menix] = true;
 			if (menu->value) {
-				sprintf(xtraline, menu->text, *(int*)menu->value);
+				// check for %d or %s in string, be lazy and assume %s if %d not there
+				if (String(menu->text).indexOf("%d") != -1)
+					sprintf(xtraline, menu->text, *(int*)menu->value);
+				else
+					sprintf(xtraline, menu->text, (char*)menu->value);
 			}
 			else {
 				strcpy(xtraline, menu->text);
@@ -4184,7 +4188,7 @@ void InfoMacro(MenuItem* menu)
 		CRotaryDialButton::Button btn;
 		if (redraw) {
 			ClearScreen();
-			DisplayLine(0, String(nMacroNum) + " : " + MacroInfo[nMacroNum].description, SystemInfo.menuTextColor);
+			DisplayLine(0, String(nMacroNum) + " : " + MacroInfo[nMacroNum].description, TFT_BLACK, SystemInfo.menuTextColor);
 			DisplayLine(1, "Files: " + String(MacroInfo[nMacroNum].fileNames.size()), SystemInfo.menuTextColor);
 			DisplayLine(2, "Time: " + String((MacroInfo[nMacroNum].mSeconds + 500) / 1000) + " Sec", SystemInfo.menuTextColor);
 			DisplayLine(3, "Pixels: " + String(MacroInfo[nMacroNum].pixels) + " Pixels", SystemInfo.menuTextColor);
@@ -4196,6 +4200,7 @@ void InfoMacro(MenuItem* menu)
 		MenuTextScrollSideways();
 		switch (btn = ReadButton()) {
 		case BTN_B0_CLICK:
+		case BTN_SELECT:
 			// save the namefilter and use SetFilter for entering our description
 			savedNameFilter = nameFilter;
 			nameFilter = MacroInfo[nMacroNum].description;
@@ -4207,14 +4212,14 @@ void InfoMacro(MenuItem* menu)
 			nameFilter = savedNameFilter;
 			redraw = true;
 			break;
-		case BTN_SELECT:
-			redraw = true;
-			break;
 		case BTN_LONG:
 			done = true;
 			break;
 		case BTN_RIGHT:
 		case BTN_LEFT:
+			// check if 0 files, nothing to do
+			if (MacroInfo[nMacroNum].fileNames.size() == 0)
+				break;
 			if (offset == -1) {
 				offset = -nMenuLineCount;
 				ClearScreen();

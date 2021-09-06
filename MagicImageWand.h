@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.72";
+const char* MIW_Version = "1.73";
 
 const char* StartFileName = "START.MIW";
 
@@ -436,7 +436,7 @@ enum eDisplayOperation {
     eTextCurrentFile,   // adds current basefilename for %s in string
     eBool,              // handle bool using %s and on/off values
     eMenu,              // load another menu
-    eExit,              // closes this menu
+    eExit,              // closes this menu, handles optional %d or %s in string
     eIfEqual,           // start skipping menu entries if match with boolean data value
     eIfIntEqual,        // start skipping menu entries if match with int data value
     eElse,              // toggles the skipping
@@ -930,6 +930,13 @@ MenuItem MacroSelectMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+//MenuItem MacroInfoMenu[] = {
+//    {eExit,"Macro Information: %d",NULL,&ImgInfo.nCurrentMacro},
+//    //{eText,"Desc: %s",SetFilter,&bnameFilter,0,0,0,"Enabled","Disabled"/*,UpdateFilter*/},
+//    {eExit,PreviousMenu},
+//    // make sure this one is last
+//    {eTerminate}
+//};
 MenuItem MacroMenu[] = {
     {eExit,"Macro Operations"},
     //{eTextInt,"Macro #: %d",GetIntegerValue,&nCurrentMacro,0,9},
@@ -945,6 +952,7 @@ MenuItem MacroMenu[] = {
         {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.nRepeatCountMacro,1,100},
         {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.nRepeatWaitMacro,0,100,1},
         {eTextInt,"Information: #%d",InfoMacro,&ImgInfo.nCurrentMacro},
+       //{eTextInt,"Information: #%d",{.menu = MacroInfoMenu},&ImgInfo.nCurrentMacro},
         {eTextInt,"Load: #%d",LoadMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Save: #%d",SaveMacro,&ImgInfo.nCurrentMacro},
         {eTextInt,"Delete: #%d",DeleteMacro,&ImgInfo.nCurrentMacro},
