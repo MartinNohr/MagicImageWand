@@ -667,7 +667,7 @@ bool RunMenus(int button)
 	}
 	// if no match, and we are in a submenu, go back one level, or if bExit is set
 	if (bExit || (!bMenuChanged && MenuStack.size() > 1)) {
-		UpMenuLevel();
+		UpMenuLevel(false);
 	}
 	// see if the autoload flag changed
 	if (bAutoLoadSettings != lastAutoLoadFlag) {
@@ -1186,15 +1186,22 @@ void SetMenuColor(MenuItem* menu)
 	}
 }
 
-// go up one menu level
-void UpMenuLevel()
+// go up one menu level, return true if anything done
+// set gotoMain to go all the way back to the top
+bool UpMenuLevel(bool gotoMain)
 {
-	if (MenuStack.size() > 1) {
+	if (gotoMain) {
+		while (UpMenuLevel(false))
+			;
+	}
+	else if (MenuStack.size() > 1) {
 		bMenuChanged = true;
 		menuPtr = MenuStack.top();
 		MenuStack.pop();
 		delete menuPtr;
+		return true;
 	}
+	return false;
 }
 
 // handle the menus
@@ -1212,7 +1219,10 @@ bool HandleMenus()
 	bool lastRecording = bRecordingMacro;
 	switch (button) {
 	case BTN_B0_CLICK:	// go back a menu level if we can
-		UpMenuLevel();
+		UpMenuLevel(false);
+		break;
+	case BTN_B0_LONG:	// go back to the top menu
+		UpMenuLevel(true);
 		break;
 	case BTN_SELECT:
 		RunMenus(button);
