@@ -184,7 +184,7 @@ void setup()
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
-	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nStripMaxCurrent);
+	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
 	if (nBootCount == 0) {
 		xTaskCreatePinnedToCore(InitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
 		tft.setTextColor(SystemInfo.menuTextColor);
@@ -353,7 +353,7 @@ void CheckRotaryDialType()
 		// read them again
 		bA = gpio_get_level((gpio_num_t)DIAL_A);
 		bB = gpio_get_level((gpio_num_t)DIAL_B);
-		Serial.println("ab " + String(bA) + String(bB));
+		//Serial.println("ab " + String(bA) + String(bB));
 		// if both low must be a toggle
 		SystemInfo.DialSettings.m_bToggleDial = !bA && !bB;
 		// we shouldn't need this again
@@ -983,6 +983,26 @@ void GetIntegerValue(MenuItem* menu)
 		}
 	} while (!done);
 }
+
+//void UpdatePixelMaxCurrent(MenuItem* menu, int flag)
+//{
+//	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
+//	switch (flag) {
+//	case 1:		// first time
+//		for (int ix = 0; ix < 64; ++ix) {
+//			SetPixel(ix, CRGB::White);
+//		}
+//		FastLED.show();
+//		break;
+//	case 0:		// every change
+//		FastLED.setBrightness(*(int*)menu->value);
+//		FastLED.show();
+//		break;
+//	case -1:	// last time
+//		FastLED.clear(true);
+//		break;
+//	}
+//}
 
 void UpdateStripBrightness(MenuItem* menu, int flag)
 {
@@ -2679,7 +2699,8 @@ void ProcessFileOrTest()
 	// set the basic LED info
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
-	FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nStripMaxCurrent);
+	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
+	//Serial.println("mA: " + String(LedInfo.nStripMaxCurrent));
 	line = "";
 	while (chainRepeatCount-- > 0) {
 		while (chainCount-- > 0) {

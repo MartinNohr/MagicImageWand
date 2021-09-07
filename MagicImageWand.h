@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.73";
+const char* MIW_Version = "1.74";
 
 const char* StartFileName = "START.MIW";
 
@@ -174,7 +174,7 @@ struct LED_INFO {
         int g;
         int b;
     } whiteBalance = { 255,255,255 };
-    int nStripMaxCurrent = 1000;              // maximum milliamps to allow
+    //int nPixelMaxCurrent = 48;              // maximum milliamps to allow on any pixel
 };
 typedef LED_INFO LED_INFO;
 LED_INFO LedInfo;
@@ -504,6 +504,7 @@ void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
 void UpdateWiringMode(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
+//void UpdatePixelMaxCurrent(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceB(MenuItem* menu, int flag);
@@ -856,8 +857,8 @@ MenuItem ImageMenu[] = {
 };
 MenuItem StripMenu[] = {
     {eExit,"LED Strip Settings"},
-    {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-    {eTextInt,"Max Current: %d mA",GetIntegerValue,&LedInfo.nStripMaxCurrent,100,10000},
+    {eTextInt,"Max Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+    //{eTextInt,"Max Pixel Current: %d mA",GetIntegerValue,&LedInfo.nPixelMaxCurrent,1,2000,0,NULL,NULL,UpdatePixelMaxCurrent},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
 	{eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,sizeof(StripsWiringText) / sizeof(*StripsWiringText) - 1,0,NULL,NULL,UpdateWiringMode,StripsWiringText},

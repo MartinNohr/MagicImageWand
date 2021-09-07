@@ -140,7 +140,7 @@ public:
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
         pSettings->m_nDialPulseCount = 1;
-        pSettings->m_nDialSpeed = 40;
+        pSettings->m_nDialSpeed = 20;
         pSettings->m_bReverseDial = false;
         pSettings->m_bToggleDial = false;
         gpioA = a;
