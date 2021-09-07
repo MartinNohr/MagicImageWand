@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.74";
+const char* MIW_Version = "1.75";
 
 const char* StartFileName = "START.MIW";
 
@@ -744,7 +744,7 @@ MenuItem RandomBarsMenu[] = {
 };
 MenuItem BatteryMenu[] = {
     {eExit,"Battery"},
-    {eBool,"Sleep on Low Battery: %s",ToggleBool,&SystemInfo.bSleepOnLowBattery,0,0,0,"Yes","No"},
+    {eBool,"Low Battery Sleep: %s",ToggleBool,&SystemInfo.bSleepOnLowBattery,0,0,0,"Yes","No"},
     {eBool,"Show Battery: %s",ToggleBool,&SystemInfo.bShowBatteryLevel,0,0,0,"Yes","No"},
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,900,4200},

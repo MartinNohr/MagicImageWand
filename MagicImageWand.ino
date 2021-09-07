@@ -5186,8 +5186,13 @@ int ReadBattery(int* raw)
 	}
 	if (raw)
 		*raw = (int)eSmooth;
-	if (percent == 0)
-		SystemInfo.bCriticalBatteryLevel = true;
+	if (percent == 0) {
+		static int count0 = 0;
+		// we need at least 5 0's before claiming no power, it takes a few cycles to stabilize
+		if (count0++ > 5) {
+			SystemInfo.bCriticalBatteryLevel = true;
+		}
+	}
 	return percent;
 }
 
