@@ -1398,6 +1398,9 @@ enum CRotaryDialButton::Button ReadButton()
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
+	// reboot?
+	if (retValue == BTN_B2_LONG)
+		ESP.restart();
 	// turn the b1 button into a dial long click
 	if (retValue == BTN_B1_CLICK)
 		retValue = BTN_LONG;
@@ -2062,13 +2065,14 @@ void DisplayLedLightBar()
 			break;
 		}
 		switch (btn) {
-		case BTN_B2_LONG:
-			// next mode
-			++BuiltinInfo.nLightBarMode;
-			// wrap
-			BuiltinInfo.nLightBarMode %= sizeof(LightBarModeText) / sizeof(*LightBarModeText);
-			DisplayLightBarTitle(false);
-			break;
+		//**** B2 long is reserved for reboot
+		//case BTN_B2_LONG:
+		//	// next mode
+		//	++BuiltinInfo.nLightBarMode;
+		//	// wrap
+		//	BuiltinInfo.nLightBarMode %= sizeof(LightBarModeText) / sizeof(*LightBarModeText);
+		//	DisplayLightBarTitle(false);
+		//	break;
 		case BTN_B0_CLICK:	// change the inc
 			++incIx;
 			incIx %= sizeof(incList) / sizeof(*incList);
