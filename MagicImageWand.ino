@@ -929,6 +929,7 @@ void GetIntegerValue(MenuItem* menu)
 	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
 	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
 	DisplayLine(1, String("Range: ") + String(minstr) + " to " + String(maxstr), SystemInfo.menuTextColor);
+	DisplayLine(5, "Long Press B0 to reset", SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press to Accept", SystemInfo.menuTextColor);
 	int oldVal = *(int*)menu->value;
 	do {
@@ -943,6 +944,7 @@ void GetIntegerValue(MenuItem* menu)
 				*(int*)menu->value += stepSize;
 			break;
 		case BTN_SELECT:
+		case BTN_B0_CLICK:
 			if (stepSize == -1) {
 				stepSize = 1;
 			}
@@ -952,6 +954,10 @@ void GetIntegerValue(MenuItem* menu)
 			if (stepSize > (menu->max / 10)) {
 				stepSize = -1;
 			}
+			break;
+		case BTN_B0_LONG:	// reset
+			*(int*)menu->value = originalValue;
+			stepSize = 1;
 			break;
 		case BTN_LONG:
 			if (stepSize == -1) {
@@ -1248,6 +1254,9 @@ bool HandleMenus()
 	case BTN_B0_LONG:	// go back to the top menu
 		UpMenuLevel(true);
 		break;
+	case BTN_B1_LONG:
+		button = BTN_SELECT;
+		// yes, no break here
 	case BTN_SELECT:
 		RunMenus(button);
 		bMenuChanged = true;
