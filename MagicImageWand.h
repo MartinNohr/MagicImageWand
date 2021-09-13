@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.78";
+const char* MIW_Version = "1.79";
 
 const char* StartFileName = "START.MIW";
 
@@ -252,7 +252,8 @@ struct SYSTEM_INFO {
     bool bSimpleMenu = false;                   // full or simple menu
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
-SYSTEM_INFO SystemInfo;
+RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
+
 enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
 char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
 uint32_t LightBarColorList[] = {
