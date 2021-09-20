@@ -4228,7 +4228,7 @@ void InfoMacro(MenuItem* menu)
 			DisplayLine(3, "Pixels: " + String(MacroInfo[nMacroNum].pixels) + " Pixels", SystemInfo.menuTextColor);
 			float walk = (float)MacroInfo[nMacroNum].pixels / (float)LedInfo.nTotalLeds;
 			DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
-			DisplayLine(6, "Long Press=Exit Rotate=Show Files", SystemInfo.menuTextColor);
+			DisplayLine(6, "Click=Edit Text, Long Press=Exit, Rotate=Show Files", SystemInfo.menuTextColor);
 			redraw = false;
 		}
 		MenuTextScrollSideways();
