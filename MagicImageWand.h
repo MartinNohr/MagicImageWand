@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.81";
+const char* MIW_Version = "1.82";
 
 const char* StartFileName = "START.MIW";
 
@@ -964,6 +964,15 @@ MenuItem MacroMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+MenuItem MacroMenuSimple[] = {
+    {eExit,"Macros"},
+    {eTextInt,"Run Macro: #%d",RunMacro,&ImgInfo.nCurrentMacro},
+    {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
+    {eTextInt,"Information: #%d",InfoMacro,&ImgInfo.nCurrentMacro},
+    {eExit,PreviousMenu},
+    // make sure this one is last
+    {eTerminate}
+};
 MenuItem MainMenu[] = {
     {eBool,"Main Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full"},
     {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-Ins","SD Card BMP"},
@@ -975,8 +984,7 @@ MenuItem MainMenu[] = {
     {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,true},
         {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
         {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
-        {eTextInt,"Run Macro: #%d",RunMacro,&ImgInfo.nCurrentMacro},
-        {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
+        {eMenu,"Macros: #%d",{.menu = MacroMenuSimple},&ImgInfo.nCurrentMacro},
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
             {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
         {eEndif},

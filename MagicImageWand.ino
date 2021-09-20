@@ -3958,9 +3958,9 @@ bool CompareNames(const String& a, const String& b)
 	b1.toUpperCase();
 	// force folders to sort last
 	if (a1[0] == NEXT_FOLDER_CHAR)
-		a1[0] = '0x7e';
+		a1[0] = '\x7e';
 	if (b1[0] == NEXT_FOLDER_CHAR)
-		b1[0] = '0x7e';
+		b1[0] = '\x7e';
 	// force previous folder to sort first
 	if (a1[0] == PREVIOUS_FOLDER_CHAR)
 		a1[0] = '0' - 1;
