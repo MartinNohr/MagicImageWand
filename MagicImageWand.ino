@@ -567,7 +567,7 @@ void loop()
 	}
 }
 
-bool RunMenus(int button)
+void RunMenus(int button)
 {
 	// save this so we can see if we need to save a new changed value
 	bool lastAutoLoadFlag = bAutoLoadSettings;
@@ -588,6 +588,12 @@ bool RunMenus(int button)
 			//Serial.println("clicked on menu");
 			// got one, service it
 			switch (MenuStack.top()->menu[ix].op) {
+			case eTerminate:	// not used, tell compiler
+			case eIfEqual:
+			case eIfIntEqual:
+			case eElse:
+			case eEndif:
+				break;
 			case eText:
 			case eTextInt:
 			case eTextCurrentFile:
@@ -1822,7 +1828,7 @@ void RandomDot()
 	r = 255;
 	g = 0;
 	b = 0;
-	long delayTime;
+	long delayTime = 0;
 	fixRGBwithGamma(&r, &g, &b);
 	for (int ix = 0; ix < LedInfo.nTotalLeds; ++ix) {
 		if (CheckCancel()) {
@@ -1961,8 +1967,8 @@ void DisplayLedLightBar()
 	}
 	// these are used to handle the slow transition mode
 	// it works by saving the increment, setting it to 1, and then saving the number in count
-	CRotaryDialButton::Button btnSlowChange;
-	int savedIncrement;
+	CRotaryDialButton::Button btnSlowChange = BTN_NONE;
+	int savedIncrement = 0;
 	int nSlowChangeCount = 0;
 
 	FillLightBar();
@@ -2651,7 +2657,7 @@ void ProcessFileOrTest()
 {
 	// clear the cancel flag
 	bCancelRun = false;
-	unsigned long recordingTimeStart;                // holds the start time for the current recording part
+	unsigned long recordingTimeStart = 0;                // holds the start time for the current recording part
 	String line;
 	// let's see if this is a folder command
 	String tmp = FileNames[CurrentFileIndex];
@@ -3297,6 +3303,12 @@ void ShowBmp(MenuItem*)
 				;
 		}
 		switch (ReadButton()) {
+		case BTN_NONE:
+		case BTN_B1_CLICK:
+		case BTN_B0_LONG:
+		case BTN_B1_LONG:
+		case BTN_B2_LONG:
+			break;
 		case BTN_RIGHT:
 			if (allowScroll) {
 				imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
@@ -4059,7 +4071,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 	else {
 		filepath = (bMacro ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
 	}
-	bool fileExists = SD.exists(filepath.c_str());
+	//bool fileExists = SD.exists(filepath.c_str());
 	if (remove) {
 		if (!SD.exists(filepath.c_str()))
 			WriteMessage(String("Not Found:\n") + filepath, true);
@@ -4233,6 +4245,12 @@ void InfoMacro(MenuItem* menu)
 		}
 		MenuTextScrollSideways();
 		switch (btn = ReadButton()) {
+		case BTN_NONE:
+		case BTN_B1_CLICK:
+		case BTN_B0_LONG:
+		case BTN_B1_LONG:
+		case BTN_B2_LONG:
+			break;
 		case BTN_B0_CLICK:
 		case BTN_SELECT:
 			// save the namefilter and use SetFilter for entering our description
@@ -4286,7 +4304,7 @@ void LoadMacro(MenuItem* menu)
 
 void MacroLoadRun(MenuItem* menu, bool save)
 {
-	bool oldShowBuiltins;
+	bool oldShowBuiltins = false;
 	if (save) {
 		oldShowBuiltins = ImgInfo.bShowBuiltInTests;
 		SettingsSaveRestore(true, 1);
@@ -4429,7 +4447,7 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		// no fade
 		fade = 255;
 	}
-	int ix1, ix2;
+	int ix1 = 0, ix2 = 0;
 	if (ImgInfo.bUpsideDown) {
 		if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(LedInfo.nTotalLeds - 1 - 2 * ix);
@@ -5291,6 +5309,10 @@ void SetFilter(MenuItem* menu)
 				MenuTextScrollSideways();
 			}
 			switch (button) {
+			case BTN_NONE:
+			case BTN_B1_CLICK:
+			case BTN_B2_LONG:
+				break;
 			case BTN_B1_LONG:
 				if (menu->op != eBool) {
 					bUpper = !bUpper;

@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.80";
+const char* MIW_Version = "1.81";
 
 const char* StartFileName = "START.MIW";
 
@@ -22,8 +22,8 @@ const char* StartFileName = "START.MIW";
 #endif
 
 #include <ArduinoJson.h>
-constexpr int JSON_DOC_SIZE = 5000;
-constexpr char* MACRO_JSON_FILE = "/macro.json";
+const int JSON_DOC_SIZE = 5000;
+const char* MACRO_JSON_FILE = "/macro.json";
 
 //#include <BLEDevice.h>
 //#include <BLEUtils.h>
@@ -68,19 +68,19 @@ String file_size(int bytes){
 //#include <fonts/GFXFF/FreeMono18pt7b.h>
 
 // definitions for preferences
-char* prefsName = "MIW";
-char* prefsVars = "vars";
-char* prefsVersion = "version";
-char* prefsBuiltInInfo = "builtininfo";
-char* prefsImgInfo = "imginfo";
-char* prefsLedInfo = "ledinfo";
-char* prefsSystemInfo = "systeminfo";
-char* prefsAutoload = "autoload";
+const char* prefsName = "MIW";
+const char* prefsVars = "vars";
+const char* prefsVersion = "version";
+const char* prefsBuiltInInfo = "builtininfo";
+const char* prefsImgInfo = "imginfo";
+const char* prefsLedInfo = "ledinfo";
+const char* prefsSystemInfo = "systeminfo";
+const char* prefsAutoload = "autoload";
 // rotary dial values
-char* prefsLongPressTimer = "longpress";
-char* prefsDialSensitivity = "dialsense";
-char* prefsDialSpeed = "dialspeed";
-char* prefsDialReverse = "dialreverse";
+const char* prefsLongPressTimer = "longpress";
+const char* prefsDialSensitivity = "dialsense";
+const char* prefsDialSpeed = "dialspeed";
+const char* prefsDialReverse = "dialreverse";
 
 #if USE_STANDARD_SD
   SPIClass spiSDCard;
@@ -160,8 +160,8 @@ bool bAutoLoadSettings = false;
 CRGB* leds;
 // 0 feed from center, 1 serial from end, 2 from outsides
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
-char* StripsWiringText[] = { "Middle","Serial","Outside" };
-char* DisplayRotationText[] = { "90","180","270","0" };
+const char* StripsWiringText[] = { "Middle","Serial","Outside" };
+const char* DisplayRotationText[] = { "90","180","270","0" };
 struct LED_INFO {
     bool bSecondController = false;
     int nLEDBrightness = 25;
@@ -180,7 +180,7 @@ typedef LED_INFO LED_INFO;
 LED_INFO LedInfo;
 
 enum DIAL_IMG_FUNCTIONS { DIAL_IMG_NONE = 0, DIAL_IMG_BRIGHTNESS, DIAL_IMB_SPEED };
-char* DialImgText[] = { "None","Brightness","Speed" };
+const char* DialImgText[] = { "None","Brightness","Speed" };
 
 // image settings
 struct IMG_INFO {
@@ -218,7 +218,7 @@ RTC_DATA_ATTR int CurrentFileIndex = 0;
 
 // functions that btn0 long press can map to
 enum BTN_LONG_FUNCTIONS { BTN_LONG_ROTATION = 0, BTN_LONG_LIGHTBAR };
-char* BtnLongText[] = { "DisplayRotate","LightBar" };
+const char* BtnLongText[] = { "DisplayRotate","LightBar" };
 
 struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
@@ -255,7 +255,7 @@ typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
 
 enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
-char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
+const char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
 uint32_t LightBarColorList[] = {
     Candle,
     Tungsten40W,
@@ -277,7 +277,7 @@ uint32_t LightBarColorList[] = {
     MetalHalide,
     HighPressureSodium, 
 };
-char* LightBarColorKelvinText[] = {
+const char* LightBarColorKelvinText[] = {
     "Candle 1900K",
     "Tungsten 40W 2600K",
     "Tungsten 100W 2850K",
@@ -463,11 +463,11 @@ struct MenuItem {
     long min;                           // the minimum value, also used for ifequal
     long max;                           // the maximum value, also size to compare for if
     int decimals;                       // 0 for int, 1 for 0.1
-    char* on;                           // text for boolean true
-    char* off;                          // text for boolean false
+    const char* on;                           // text for boolean true
+    const char* off;                          // text for boolean false
     // flag is 1 for first time, 0 for changes, and -1 for last call, bools only call this with -1
     void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect, can be NULL
-    char** nameList;                    // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
+    const char** nameList;                    // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
 };
 typedef MenuItem MenuItem;
 
@@ -599,7 +599,7 @@ const uint8_t gammaB[] = {
   139,141,143,144,146,148,150,152,153,155,157,159,161,163,165,167,
   169,171,173,175,177,179,181,183,185,187,189,191,193,196,198,200 };
 
-static char* PreviousMenu = "Back";
+const char* PreviousMenu = "Back";
 MenuItem BouncingBallsMenu[] = {
     {eExit,"Bouncing Balls"},
     {eTextInt,"Ball Count: %d",GetIntegerValue,&BuiltinInfo.nBouncingBallsCount,1,32},
@@ -1052,7 +1052,7 @@ enum SETVARTYPE {
     vtMacroTime,        // holds the estimated time to run this macro in mSec
 };
 struct SETTINGVAR {
-    char* name;
+    const char* name;
     void* address;
     enum SETVARTYPE type;
     int min, max;
