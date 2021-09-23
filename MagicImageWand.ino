@@ -1912,7 +1912,7 @@ void LightBar(MenuItem* menu)
 {
 	ClearScreen();
 	DisplayLightBarTitle(false);
-	DisplayLine(4, "B0-Inc  B0/1Long-Delay", SystemInfo.menuTextColor);
+	DisplayLine(4, "B0Long=Inc Delay, B1Long=Dec Delay", SystemInfo.menuTextColor);
 	DisplayLine(5, "Click/Rotate Dial", SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press Exit", SystemInfo.menuTextColor);
 	DisplayLedLightBar();
@@ -2088,7 +2088,7 @@ void DisplayLedLightBar()
 			BuiltinInfo.nDisplayAllChangeTime += BuiltinInfo.nDisplayAllIncrement;
 			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);
 			break;
-		case BTN_B1_LONG:
+		case BTN_B1_LONG:	// decrement delay
 			//ShowMenu(LedLightBarMenu);
 			BuiltinInfo.nDisplayAllChangeTime -= BuiltinInfo.nDisplayAllIncrement;
 			BuiltinInfo.nDisplayAllChangeTime = constrain(BuiltinInfo.nDisplayAllChangeTime, 0, 1000);

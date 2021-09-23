@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.82";
+const char* MIW_Version = "1.83";
 
 const char* StartFileName = "START.MIW";
 
