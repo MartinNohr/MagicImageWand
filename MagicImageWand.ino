@@ -1159,6 +1159,16 @@ void UpdateDisplayRotation(MenuItem* menu, int flag)
 
 void UpdateDisplayDimMode(MenuItem* menu, int flag)
 {
+	switch (flag) {
+	case 0:
+		break;
+	case 1:
+		break;
+	case -1:
+		if (SystemInfo.eDisplayDimMode != DISPLAY_DIM_MODE_SENSOR) {
+			SetDisplayBrightness(SystemInfo.nDisplayBrightness);
+		}
+	}
 }
 
 void SetDisplayBrightness(int val)
