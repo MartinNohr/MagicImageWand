@@ -141,6 +141,18 @@ void setup()
 	else {
 		// set the dial type
 		CheckRotaryDialType();
+		// see if there is a light sensor, read it until it is stable
+		int lastVal = 0;
+		int val = 0;
+		for (int i = 0; i < 50; ++i) {
+			val = ReadLightSensor();
+			//Serial.println("read sensor: " + String(val));
+			if (lastVal >= val)
+				break;
+			lastVal = val;
+			delay(10);
+		}
+		SystemInfo.bHasLightSensor = val < 4094;
 		// must not be anything there, so save it
 		SaveLoadSettings(true, false, false, true);
 	}
@@ -338,7 +350,7 @@ void CheckRotaryDialType()
 	WriteMessage("checking dial type...", false, 1000);
 	bA = gpio_get_level((gpio_num_t)DIAL_A);
 	bB = gpio_get_level((gpio_num_t)DIAL_B);
-	Serial.println("ab " + String(bA) + String(bB));
+	//Serial.println("ab " + String(bA) + String(bB));
 	if (!bA && !bB) {
 		// if both low must be a toggle
 		SystemInfo.DialSettings.m_bToggleDial = true;
@@ -1160,11 +1172,14 @@ void UpdateDisplayRotation(MenuItem* menu, int flag)
 void UpdateDisplayDimMode(MenuItem* menu, int flag)
 {
 	switch (flag) {
-	case 0:
+	case 0:		// first time
 		break;
-	case 1:
+	case 1:		// every change
 		break;
-	case -1:
+	case -1:	// last time
+		if (!SystemInfo.bHasLightSensor && SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_SENSOR) {
+			SystemInfo.eDisplayDimMode = DISPLAY_DIM_MODE_NONE;
+		}
 		if (SystemInfo.eDisplayDimMode != DISPLAY_DIM_MODE_SENSOR) {
 			SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 		}

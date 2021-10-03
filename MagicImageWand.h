@@ -1,12 +1,11 @@
 #pragma once
 
-const char* MIW_Version = "1.85";
+const char* MIW_Version = "1.86";
 
 const char* StartFileName = "START.MIW";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
-#define USE_LIGHT_SENSOR 1
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
@@ -260,6 +259,7 @@ struct SYSTEM_INFO {
     bool bSimpleMenu = false;                   // full or simple menu
     int nLightSensorDim = 4000;                 // value for the dimmest setting
     int nLightSensorBright = 100;               // value for the brightest setting
+    bool bHasLightSensor = false;               // set to true if the light sensor is detected
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -809,11 +809,7 @@ MenuItem HomeScreenMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-#if USE_LIGHT_SENSOR
-    #define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 1)
-#else
-    #define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 2)
-#endif
+#define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 1)
 MenuItem DisplayMenu[] = {
     {eExit,"Display Settings"},
     {eList, "Display Rotation: %s", GetSelectChoice, &SystemInfo.nDisplayRotation, 0, sizeof(DisplayRotationText) / sizeof(*DisplayRotationText) - 1, 0, NULL, NULL, UpdateDisplayRotation, DisplayRotationText},
