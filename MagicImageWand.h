@@ -1,11 +1,12 @@
 #pragma once
 
-const char* MIW_Version = "1.83";
+const char* MIW_Version = "1.84";
 
 const char* StartFileName = "START.MIW";
 
 // ***** Various switches for options are set here *****
 #define HAS_BATTERY_LEVEL 1
+#define USE_LIGHT_SENSOR 1
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
 // *****
@@ -20,6 +21,8 @@ const char* StartFileName = "START.MIW";
     #define DIAL_A 13
     #define DIAL_B 12
 #endif
+#define BATTERY_SENSOR 36
+#define LIGHT_SENSOR 39
 
 #include <ArduinoJson.h>
 const int JSON_DOC_SIZE = 5000;
@@ -220,6 +223,10 @@ RTC_DATA_ATTR int CurrentFileIndex = 0;
 enum BTN_LONG_FUNCTIONS { BTN_LONG_ROTATION = 0, BTN_LONG_LIGHTBAR };
 const char* BtnLongText[] = { "DisplayRotate","LightBar" };
 
+// display dim modes, make sure sensor mode is last
+enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE, DISPLAY_DIM_MODE_TIME, DISPLAY_DIM_MODE_SENSOR };
+const char* DisplayDimModeText[] = { "None","Timer","Sensor" };
+
 struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
@@ -244,12 +251,15 @@ struct SYSTEM_INFO {
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
     int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
+    int eDisplayDimMode = DISPLAY_DIM_MODE_NONE;// 0 is none, 1 is dimtime, 2 is light sensor
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
     int nDisplayRotation = 1;                   // rotates display 0, 180, 90, 270
-    int nBtn0LongFunction = BTN_LONG_ROTATION;// function that long btn0 performs
+    int nBtn0LongFunction = BTN_LONG_ROTATION;  // function that long btn0 performs
     int nBtn1LongFunction = BTN_LONG_LIGHTBAR;  // function that long btn1 performs
     bool bSimpleMenu = false;                   // full or simple menu
+    int nLightSensorDim = 4000;                 // value for the dimmest setting
+    int nLightSensorBright = 100;               // value for the brightest setting
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -500,6 +510,7 @@ void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void UpdateBatteries(MenuItem* menu, int flag);
 void UpdateDisplayRotation(MenuItem* menu, int flag);
+void UpdateDisplayDimMode(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
 void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
@@ -522,6 +533,7 @@ void Sleep(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
 void ShowBattery(MenuItem* menu);
 void SetFilter(MenuItem* menu);
+void ShowLightSensor(MenuItem* menu);
 //void UpdateFilter(MenuItem* menu, int flag);
 
 // SD details
@@ -755,6 +767,15 @@ MenuItem BatteryMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+MenuItem LightSensorMenu[] = {
+    {eExit,"Light Sensor"},
+    {eText,"Read Light Sensor",ShowLightSensor},
+    {eTextInt,"Dim Value: %d",GetIntegerValue,&SystemInfo.nLightSensorDim,1000,5000},
+    {eTextInt,"Bright Value: %d",GetIntegerValue,&SystemInfo.nLightSensorBright,0,1000},
+    {eExit,PreviousMenu},
+    // make sure this one is last
+    {eTerminate}
+};
 MenuItem SidewaysScrollMenu[] = {
     {eExit,"Sideways Scrolling"},
     {eTextInt,"Sideways Scroll Speed: %d mS",GetIntegerValue,&SystemInfo.nSidewayScrollSpeed,1,1000},
@@ -788,14 +809,25 @@ MenuItem HomeScreenMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+#if USE_LIGHT_SENSOR
+    #define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 1)
+#else
+    #define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 2)
+#endif
 MenuItem DisplayMenu[] = {
     {eExit,"Display Settings"},
     {eList, "Display Rotation: %s", GetSelectChoice, &SystemInfo.nDisplayRotation, 0, sizeof(DisplayRotationText) / sizeof(*DisplayRotationText) - 1, 0, NULL, NULL, UpdateDisplayRotation, DisplayRotationText},
-    {eTextInt,"Display Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
-    {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
-    {eIfIntEqual,"",NULL,&SystemInfo.nDisplayDimTime,0},
+    {eList, "Dimming Mode: %s", GetSelectChoice, &SystemInfo.eDisplayDimMode, 0, MAX_DIM_MODE, 0, NULL, NULL, UpdateDisplayDimMode, DisplayDimModeText},
+    {eTextInt,"Bright Value: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
+    {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_NONE},
     {eElse},
-    {eTextInt,"Display Dim: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,0,100},
+        {eTextInt,"Dim Value: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,1,100},
+    {eEndif},
+    {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_TIME},
+        {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
+    {eEndif},
+    {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_SENSOR},
+        {eMenu,"Light Sensor",{.menu = LightSensorMenu}},
     {eEndif},
     {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
     {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},

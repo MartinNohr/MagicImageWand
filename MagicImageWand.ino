@@ -33,7 +33,7 @@ void IRAM_ATTR periodic_Second_timer_callback(void* arg)
 {
 	if (sleepTimer)
 		--sleepTimer;
-	if (displayDimTimer) {
+	if (SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_TIME && displayDimTimer) {
 		--displayDimTimer;
 		if (displayDimTimer == 0) {
 			displayDimNow = true;
@@ -451,16 +451,22 @@ void SaveMacroInfo()
 void ResetSleepAndDimTimers() {
 	sleepTimer = SystemInfo.nSleepTime * 60;
 	displayDimTimer = SystemInfo.nDisplayDimTime;
-	if (SystemInfo.nDisplayDimTime) {
+	if (SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_TIME && SystemInfo.nDisplayDimTime) {
 		SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	}
 }
 
 // scroll the long menu lines
+// this also checks the light sensor if enabled
 void MenuTextScrollSideways()
 {
 	// this handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
+	static unsigned long ledUpdateTime = 0;
+	if (SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_SENSOR && millis() > ledUpdateTime + 100) {
+		ledUpdateTime = millis();
+		LightSensorLedBrightness();
+	}
 	if (millis() > menuUpdateTime + SystemInfo.nSidewayScrollSpeed) {
 		menuUpdateTime = millis();
 		for (int ix = 0; ix < nMenuLineCount; ++ix) {
@@ -1149,6 +1155,10 @@ void UpdateDisplayRotation(MenuItem* menu, int flag)
 {
 	SetScreenRotation(SystemInfo.nDisplayRotation);
 	tft.fillScreen(TFT_BLACK);
+}
+
+void UpdateDisplayDimMode(MenuItem* menu, int flag)
+{
 }
 
 void SetDisplayBrightness(int val)
@@ -5202,7 +5212,7 @@ int ReadBattery(int* raw)
 	int percent;
 	float nextLevel;
 	for (int tries = 0; tries < 5; ++tries) {
-		nextLevel = (float)analogRead(36);
+		nextLevel = (float)analogRead(BATTERY_SENSOR);
 		// calculate the next value
 		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
 		// calculate the %
@@ -5227,6 +5237,8 @@ int ReadBattery(int* raw)
 	return percent;
 }
 
+// this code shows the battery on the main display when menu is NULL
+// otherwise it shows the current raw integer readings of the battery sensor
 void ShowBattery(MenuItem* menu)
 {
 	static int percent = 0, raw = 0;
@@ -5365,6 +5377,45 @@ void SetScreenRotation(int rot)
 	tft.setRotation(SystemInfo.nDisplayRotation);
 	nMenuLineCount = tft.height() / tft.fontHeight();
 	TextLines.resize(nMenuLineCount);
+}
+
+// read the light sensor
+// smoothing of the reading is done using an exponential moving average
+int ReadLightSensor()
+{
+	const float alpha = 0.9;
+	static float eSmooth = 0.0;
+	float nextLevel;
+	for (int tries = 0; tries < 5; ++tries) {
+		nextLevel = (float)analogRead(LIGHT_SENSOR);
+		// calculate the next value
+		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
+		delay(2);
+	}
+	return (int)eSmooth;
+}
+
+// this code shows the light sensor value on the display
+void ShowLightSensor(MenuItem* menu)
+{
+	static int nLightValue = 0;
+	ClearScreen();
+	DisplayLine(2, "Long Press to Cancel", SystemInfo.menuTextColor);
+	while (!menu || ReadButton() != BTN_LONG) {
+		nLightValue = ReadLightSensor();
+		DisplayLine(0, "Light Sensor: " + String(nLightValue), SystemInfo.menuTextColor);
+		delay(100);
+	}
+}
+
+// calculate the LED brightness from the ambient light
+void LightSensorLedBrightness()
+{
+	int sensor = ReadLightSensor();
+	int percent = map(sensor, SystemInfo.nLightSensorDim, SystemInfo.nLightSensorBright, 0, 100);
+	percent = constrain(percent, SystemInfo.nDisplayDimValue, SystemInfo.nDisplayBrightness);
+	SetDisplayBrightness(percent);
+	//Serial.println("led: " + String(percent));
 }
 
 //void UpdateFilter(MenuItem* menu, int flag)
