@@ -9,6 +9,7 @@ public:
         int m_nDialSpeed;           // pause after each dial click
         bool m_bReverseDial;        // direction swapping
         bool m_bToggleDial;         // set for toggle type dial (newer PCB) and clear for pulse type dial (older PCB ones)
+        bool m_bAcceleration;       // set to accelerate fast rotations, I.E. more clicks per click when fast
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
@@ -92,7 +93,8 @@ private:
     // slowing down the max rotation speed of the dial
     static void rotateHandler() {
         noInterrupts();
-        static long lastTime = 0;
+        static unsigned long lastTime = 0;
+        static unsigned long lastButtonPush = 0;
         // ignore pushes if too soon since the last int
         if (millis() < lastTime + pSettings->m_nDialSpeed) {
             return;
@@ -129,7 +131,16 @@ private:
 			btnToPush = BTN_RIGHT;
 			countRight = 0;
 		}
-        btnBuf.push(btnToPush);
+        unsigned long diff = millis() - lastButtonPush;
+        int count = 1;
+		if (pSettings->m_bAcceleration && diff < 100) {
+            count = 200 / diff;
+			//Serial.println("diff: " + String(diff) + " " + String(count));
+        }
+        while (count--) {
+			btnBuf.push(btnToPush);
+        }
+        lastButtonPush = millis();
         interrupts();
     }
 
@@ -143,6 +154,7 @@ public:
         pSettings->m_nDialSpeed = 30;
         pSettings->m_bReverseDial = false;
         pSettings->m_bToggleDial = false;
+        pSettings->m_bAcceleration = false;
         gpioA = a;
         gpioB = b;
         gpioC = c;
