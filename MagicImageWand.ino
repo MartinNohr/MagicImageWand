@@ -1408,8 +1408,13 @@ bool HandleRunMode()
 		bSettingsMode = true;
 		break;
 	case BTN_B0_CLICK:
-		ShowBmp(NULL);
-		bRedraw = true;
+		if (IsFolder(CurrentFileIndex)) {
+			CRotaryDialButton::pushButton(BTN_SELECT);
+		}
+		else {
+			ShowBmp(NULL);
+			bRedraw = true;
+		}
 		break;
 	case BTN_B0_LONG:
 		CallBtnLongFunction(SystemInfo.nBtn0LongFunction);

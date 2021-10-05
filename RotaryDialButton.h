@@ -104,7 +104,7 @@ private:
         static unsigned int countRight = 0;
         static unsigned int countLeft = 0;
         // let the switch settle down
-        delayMicroseconds(2000);
+        delayMicroseconds(1000);
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
 		if (valA && !pSettings->m_bToggleDial) {
@@ -151,7 +151,7 @@ public:
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
         pSettings->m_nDialPulseCount = 1;
-        pSettings->m_nDialSpeed = 30;
+        pSettings->m_nDialSpeed = 10;
         pSettings->m_bReverseDial = false;
         pSettings->m_bToggleDial = false;
         pSettings->m_bAcceleration = false;
