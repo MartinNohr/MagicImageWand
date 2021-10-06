@@ -3345,7 +3345,6 @@ void ShowBmp(MenuItem*)
 		switch (ReadButton()) {
 		case BTN_NONE:
 		case BTN_B1_CLICK:
-		case BTN_B0_LONG:
 		case BTN_B1_LONG:
 		case BTN_B2_LONG:
 			break;
@@ -3365,7 +3364,8 @@ void ShowBmp(MenuItem*)
 		case BTN_LONG:
 			done = true;
 			break;
-		case BTN_SELECT:
+		case BTN_SELECT:	// show the bmp information
+		case BTN_B0_LONG:
 			if (bShowingSize) {
 				bShowingSize = false;
 				redraw = true;

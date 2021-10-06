@@ -137,7 +137,7 @@ private:
             count = 200 / diff;
 			//Serial.println("diff: " + String(diff) + " " + String(count));
         }
-        while (count--) {
+		while (btnToPush != BTN_NONE && count--) {
 			btnBuf.push(btnToPush);
         }
         lastButtonPush = millis();
