@@ -97,6 +97,7 @@ private:
         static unsigned long lastButtonPush = 0;
         // ignore pushes if too soon since the last int
         if (millis() < lastTime + pSettings->m_nDialSpeed) {
+            interrupts();
             return;
         }
         lastTime = millis();
