@@ -15,12 +15,13 @@
 #define _VSARDUINO_H_
 #define __ESP32_esp32__
 #define __ESP32_ESP32__
+#define _VMDEBUG 1
 #define ESP_PLATFORM
 #define HAVE_CONFIG_H
 #define GCC_NOT_5_2_0 0
 #define WITH_POSIX
 #define F_CPU 240000000L
-#define ARDUINO 108015
+#define ARDUINO 108013
 #define ARDUINO_TTGO_T1
 #define ARDUINO_ARCH_ESP32
 #define ESP32
@@ -90,10 +91,7 @@ typedef long pthread_mutex_t;
 typedef long pthread_mutex_t;
 typedef long pthread_cond_t;
 
-#define __CHAR_BIT__ 1
 
-// Ensure ArduinoJSON Lib Intellisense works correctly
-#define ARDUINOJSON_ENABLE_STD_STREAM 0
 
 #include "arduino.h"
 #include <pins_arduino.h> 
