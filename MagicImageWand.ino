@@ -3349,13 +3349,13 @@ void ShowBmp(MenuItem*)
 		case BTN_B2_LONG:
 			break;
 		case BTN_RIGHT:
-			if (allowScroll) {
+			if (!bShowingSize && allowScroll) {
 				imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = max(0, imgOffset);
 			}
 			break;
 		case BTN_LEFT:
-			if (allowScroll) {
+			if (!bShowingSize && allowScroll) {
 				imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
 			}
