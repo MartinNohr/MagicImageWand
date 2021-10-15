@@ -2467,7 +2467,7 @@ void juggle()
 	byte dothue = 0;
 	uint16_t index;
 	for (int i = 0; i < 8; i++) {
-		index = beatsin16(i + 7, 0, LedInfo.nTotalLeds);
+		index = beatsin16(i + 7, 0, LedInfo.nTotalLeds - 1);
 		// use AdjustStripIndex to get the right one
 		SetPixel(index, leds[AdjustStripIndex(index)] | CHSV(dothue, 255, 255));
 		//leds[beatsin16(i + 7, 0, STRIPLENGTH)] |= CHSV(dothue, 255, 255);
@@ -2495,7 +2495,7 @@ void sinelon()
 {
 	// a colored dot sweeping back and forth, with fading trails
 	fadeToBlackBy(leds, LedInfo.nTotalLeds, 20);
-	int pos = beatsin16(BuiltinInfo.nSineSpeed, 0, LedInfo.nTotalLeds);
+	int pos = beatsin16(BuiltinInfo.nSineSpeed, 0, LedInfo.nTotalLeds - 1);
 	leds[AdjustStripIndex(pos)] += CHSV(BuiltinInfo.gHue, 255, 192);
 	if (BuiltinInfo.bSineCycleHue)
 		++BuiltinInfo.gHue;
