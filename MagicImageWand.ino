@@ -1952,7 +1952,7 @@ void LightBar(MenuItem* menu)
 {
 	ClearScreen();
 	DisplayLightBarTitle(false);
-	DisplayLine(4, "B0Long=Inc Delay, B1Long=Dec Delay", SystemInfo.menuTextColor);
+	DisplayLine(4, "B0=+Inc, B0Long=+Delay, B1Long=-Delay", SystemInfo.menuTextColor);
 	DisplayLine(5, "Click/Rotate Dial", SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press Exit", SystemInfo.menuTextColor);
 	DisplayLedLightBar();
