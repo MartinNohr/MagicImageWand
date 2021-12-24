@@ -576,8 +576,11 @@ void loop()
 	}
 	// show battery level if on
 	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
+		//int raw;
+		//ReadBattery(&raw);
+		//Serial.println(String("bat:") + String(raw));
 		ShowBattery(NULL);
-		if (SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
+		if (/*raw > 800 &&*/ SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
 			SystemInfo.bCriticalBatteryLevel = false;
 			WriteMessage("Entering sleep mode\ndue to low battery", true, 10000);
 			Sleep(NULL);
@@ -5284,12 +5287,17 @@ void ShowBattery(MenuItem* menu)
 				DisplayLine(3, "Long Press to Cancel", SystemInfo.menuTextColor);
 			}
 			else {
-				int x = tft.width() - 64;
-				int y = tft.height() - 20;
-				tft.drawRoundRect(x, y, 64, 17, 8, SystemInfo.menuTextColor);
-				tft.fillRoundRect(x + 1, y + 1, 62, 15, 8, TFT_BLACK);
-				tft.fillRoundRect(x + 1, y + 1, 62 * percent / 100, 15, 8, TFT_DARKGREY);
-				tft.drawString(String(percent) + "%", x + 10, y + 2);
+				int x = tft.width() - 101;
+				int y = tft.height() - 4;
+				// show % full
+				tft.fillRoundRect(x, y, percent, 4, 0, SystemInfo.menuTextColor);
+				// single line rest of line
+				tft.fillRoundRect(x + percent, y + 2, 100 - percent, 1, 0, SystemInfo.menuTextColor);
+				// show the text above the bar
+				String pc = String(percent) + "%";
+				// figure out how long the string is
+				int end = tft.textWidth(pc);
+				tft.drawString(pc, x - end - 2 + 100, y - 17);
 				//DisplayLine(MENU_LINES - 1, "          Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
 			}
 			showtime = millis();
