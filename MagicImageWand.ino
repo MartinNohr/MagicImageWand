@@ -47,6 +47,8 @@ const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
 TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite" with pointer to "tft" object
+#define BATTERY_BAR_HEIGHT 5
+TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
 
 void setup()
 {
@@ -178,6 +180,12 @@ void setup()
 	LineSprite.fillSprite(TFT_BLACK);
 	LineSprite.setFreeFont(&Dialog_bold_16);
 	LineSprite.setTextPadding(tft.width());
+	// get our Battery sprite ready
+	BatterySprite.setColorDepth(16);
+	BatterySprite.createSprite(100, tft.fontHeight() + BATTERY_BAR_HEIGHT);
+	BatterySprite.fillSprite(TFT_BLACK);
+	BatterySprite.setFreeFont(&Dialog_bold_16);
+	BatterySprite.setTextPadding(tft.width());
 	// get the menu system ready
 	menuPtr = new MenuInfo;
 	MenuStack.push(menuPtr);
@@ -5287,17 +5295,18 @@ void ShowBattery(MenuItem* menu)
 				DisplayLine(3, "Long Press to Cancel", SystemInfo.menuTextColor);
 			}
 			else {
-				int x = tft.width() - 101;
-				int y = tft.height() - 4;
+				int sh = BatterySprite.height();
+				BatterySprite.fillSprite(TFT_BLACK);
+				BatterySprite.setTextColor(SystemInfo.menuTextColor);
 				// show % full
-				tft.fillRoundRect(x, y, percent, 4, 0, SystemInfo.menuTextColor);
-				// single line rest of line
-				tft.fillRoundRect(x + percent, y + 2, 100 - percent, 1, 0, SystemInfo.menuTextColor);
+				BatterySprite.fillRect(0, sh - BATTERY_BAR_HEIGHT - 2, percent, BATTERY_BAR_HEIGHT, SystemInfo.menuTextColor);
+				// thin line rest of line
+				BatterySprite.fillRect(percent, sh - 4, 100 - percent, 2, SystemInfo.menuTextColor);
 				// show the text above the bar
 				String pc = String(percent) + "%";
-				// figure out how long the string is
-				int end = tft.textWidth(pc);
-				tft.drawString(pc, x - end - 2 + 100, y - 17);
+				BatterySprite.drawString(pc, 100 - tft.textWidth(pc) - 2, 0);
+				// push the sprite to the display
+				BatterySprite.pushSprite(tft.width() - 101, tft.height() - sh + 2);
 				//DisplayLine(MENU_LINES - 1, "          Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
 			}
 			showtime = millis();
