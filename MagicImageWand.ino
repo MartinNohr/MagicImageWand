@@ -3261,14 +3261,16 @@ void ShowBmp(MenuItem*)
 			scrBuf = (uint16_t*)calloc(tft.width() * tft.height(), sizeof(uint16_t));
 		if (scrBuf == NULL) {
 			WriteMessage("Not enough memory", true, 5000);
+			bKeepShowing = false;
 			break;
 		}
 		if (dataFile.isOpen())
 			dataFile.close();
 		dataFile = SD.open(fn);
-		// if the file is available send it to the LED's
+		// if the file is not available, give up
 		if (!dataFile.available()) {
 			WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
+			bKeepShowing = false;
 			break;
 		}
 		ClearScreen();
@@ -3285,7 +3287,8 @@ void ShowBmp(MenuItem*)
 		if (bmpType != MYBMP_BF_TYPE) {
 			free(scrBuf);
 			WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-			return;
+			bKeepShowing = false;
+			break;
 		}
 
 		/* Read info header */
@@ -3307,7 +3310,8 @@ void ShowBmp(MenuItem*)
 		{
 			free(scrBuf);
 			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-			return;
+			bKeepShowing = false;
+			break;
 		}
 		bool bHalfSize = false;
 		int displayWidth = imgWidth;
@@ -3371,7 +3375,10 @@ void ShowBmp(MenuItem*)
 			case BTN_RIGHT:
 				if (bScrollFiles) {
 					if (CurrentFileIndex < FileNames.size() - 1) {
-						++CurrentFileIndex;
+						// stop if this is a folder
+						if (!IsFolder(CurrentFileIndex + 1)) {
+							++CurrentFileIndex;
+						}
 						bDone = true;
 					}
 				}
@@ -3385,7 +3392,10 @@ void ShowBmp(MenuItem*)
 			case BTN_LEFT:
 				if (bScrollFiles) {
 					if (CurrentFileIndex > 0) {
-						--CurrentFileIndex;
+						// stop if this is a folder
+						if (!IsFolder(CurrentFileIndex - 1)) {
+							--CurrentFileIndex;
+						}
 						bDone = true;
 					}
 				}
@@ -3424,7 +3434,7 @@ void ShowBmp(MenuItem*)
 			case BTN_B1_LONG:	// change scroll mode
 				bScrollFiles = !bScrollFiles;
 				bDone = true;
-				WriteMessage(bScrollFiles ? "Dial: browse images" : "Dial: sideways scroll", false, 1000);
+				WriteMessage(bScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
 				break;
 			}
 			if (oldImgOffset != imgOffset) {
