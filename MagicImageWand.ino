@@ -3241,7 +3241,7 @@ void ShowBmp(MenuItem*)
 		return;
 	}
 	// true to use dial to select different image files
-	bool bScrollFiles = false;
+	static bool bScrollFiles = false;
 	// true until cancel selected
 	uint16_t* scrBuf = NULL;
 	bool bOldGamma = LedInfo.bGammaCorrection;
@@ -3378,8 +3378,8 @@ void ShowBmp(MenuItem*)
 						// stop if this is a folder
 						if (!IsFolder(CurrentFileIndex + 1)) {
 							++CurrentFileIndex;
+							bDone = true;
 						}
-						bDone = true;
 					}
 				}
 				else {
@@ -3395,8 +3395,8 @@ void ShowBmp(MenuItem*)
 						// stop if this is a folder
 						if (!IsFolder(CurrentFileIndex - 1)) {
 							--CurrentFileIndex;
+							bDone = true;
 						}
-						bDone = true;
 					}
 				}
 				else {
