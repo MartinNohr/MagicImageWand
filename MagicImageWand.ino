@@ -3240,169 +3240,202 @@ void ShowBmp(MenuItem*)
 		bCancelMacro = bCancelRun = false;
 		return;
 	}
-	String fn = currentFolder + FileNames[CurrentFileIndex];
-	// make sure this is a bmp file, if not just quietly go away
-	String tmp = fn.substring(fn.length() - 3);
-	tmp.toLowerCase();
-	if (tmp.compareTo("bmp")) {
-		return;
-	}
-	uint16_t* scrBuf;
-	scrBuf = (uint16_t*)calloc(240 * 135, sizeof(uint16_t));
-	if (scrBuf == NULL) {
-		WriteMessage("Not enough memory", true, 5000);
-		return;
-	}
+	// true to use dial to select different image files
+	bool bScrollFiles = false;
+	// true until cancel selected
+	uint16_t* scrBuf = NULL;
 	bool bOldGamma = LedInfo.bGammaCorrection;
 	LedInfo.bGammaCorrection = false;
-	dataFile = SD.open(fn);
-	// if the file is available send it to the LED's
-	if (!dataFile.available()) {
-		free(scrBuf);
-		WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
-	ClearScreen();
-	// clear the file cache buffer
-	readByte(true);
-	uint16_t bmpType = readInt();
-	uint32_t bmpSize = readLong();
-	uint16_t bmpReserved1 = readInt();
-	uint16_t bmpReserved2 = readInt();
-	uint32_t bmpOffBits = readLong();
+	bool bKeepShowing = true;
+	while (bKeepShowing) {
+		String fn = currentFolder + FileNames[CurrentFileIndex];
+		// make sure this is a bmp file, if not just quietly go away
+		String tmp = fn.substring(fn.length() - 3);
+		tmp.toLowerCase();
+		// check if really an image file (BMP)
+		if (tmp.compareTo("bmp") != 0) {
+			break;
+		}
+		// get a buffer if we don't already have one
+		if (scrBuf == NULL)
+			scrBuf = (uint16_t*)calloc(tft.width() * tft.height(), sizeof(uint16_t));
+		if (scrBuf == NULL) {
+			WriteMessage("Not enough memory", true, 5000);
+			break;
+		}
+		if (dataFile.isOpen())
+			dataFile.close();
+		dataFile = SD.open(fn);
+		// if the file is available send it to the LED's
+		if (!dataFile.available()) {
+			WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
+			break;
+		}
+		ClearScreen();
+		memset(scrBuf, 0, tft.width() * tft.height() * sizeof(uint16_t));
+		// clear the file cache buffer
+		readByte(true);
+		uint16_t bmpType = readInt();
+		uint32_t bmpSize = readLong();
+		uint16_t bmpReserved1 = readInt();
+		uint16_t bmpReserved2 = readInt();
+		uint32_t bmpOffBits = readLong();
 
-	/* Check file header */
-	if (bmpType != MYBMP_BF_TYPE) {
-		free(scrBuf);
-		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
+		/* Check file header */
+		if (bmpType != MYBMP_BF_TYPE) {
+			free(scrBuf);
+			WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+			return;
+		}
 
-	/* Read info header */
-	uint32_t imgSize = readLong();
-	uint32_t imgWidth = readLong();
-	uint32_t imgHeight = readLong();
-	uint16_t imgPlanes = readInt();
-	uint16_t imgBitCount = readInt();
-	uint32_t imgCompression = readLong();
-	uint32_t imgSizeImage = readLong();
-	uint32_t imgXPelsPerMeter = readLong();
-	uint32_t imgYPelsPerMeter = readLong();
-	uint32_t imgClrUsed = readLong();
-	uint32_t imgClrImportant = readLong();
+		/* Read info header */
+		uint32_t imgSize = readLong();
+		uint32_t imgWidth = readLong();
+		uint32_t imgHeight = readLong();
+		uint16_t imgPlanes = readInt();
+		uint16_t imgBitCount = readInt();
+		uint32_t imgCompression = readLong();
+		uint32_t imgSizeImage = readLong();
+		uint32_t imgXPelsPerMeter = readLong();
+		uint32_t imgYPelsPerMeter = readLong();
+		uint32_t imgClrUsed = readLong();
+		uint32_t imgClrImportant = readLong();
 
-	/* Check info header */
-	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
-	{
-		free(scrBuf);
-		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
-		return;
-	}
-	bool bHalfSize = false;
-	int displayWidth = imgWidth;
-	if (imgWidth > LedInfo.nTotalLeds) {
-		displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
-	}
-	// see if this is too big for the TFT
-	if (imgWidth > 144) {
-		bHalfSize = true;
-	}
+		/* Check info header */
+		if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
+			imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
+		{
+			free(scrBuf);
+			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+			return;
+		}
+		bool bHalfSize = false;
+		int displayWidth = imgWidth;
+		if (imgWidth > LedInfo.nTotalLeds) {
+			displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
+		}
+		// see if this is too big for the TFT
+		if (imgWidth > 144) {
+			bHalfSize = true;
+		}
 
-	/* compute the line length */
-	uint32_t lineLength = imgWidth * 3;
-	// fix for padding to 4 byte words
-	if ((lineLength % 4) != 0)
-		lineLength = (lineLength / 4 + 1) * 4;
-	bool done = false;
-	bool redraw = true;
-	bool allowScroll = imgHeight > 240;
-	// offset for showing the image
-	int imgOffset = 0;
-	int oldImgOffset;
-	bool bShowingSize = false;
-	while (!done) {
-		if (redraw) {
-			// loop through the image, y is the image width, and x is the image height
-			for (int col = 0; col < (imgHeight > 240 ? 240 : imgHeight); ++col) {
-				int bufpos = 0;
-				CRGB pixel;
-				// get to start of pixel data for this column
-				FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgOffset) * lineLength));
-				for (int x = displayWidth - 1; x >= 0; --x) {
-					// this reads three bytes
-					pixel = getRGBwithGamma();
-					if (bHalfSize)
+		/* compute the line length */
+		uint32_t lineLength = imgWidth * 3;
+		// fix for padding to 4 byte words
+		if ((lineLength % 4) != 0)
+			lineLength = (lineLength / 4 + 1) * 4;
+		bool bDone = false;
+		bool bRedraw = true;
+		bool bAllowScroll = imgHeight > 240;
+		// offset for showing the image
+		int imgOffset = 0;
+		int oldImgOffset;
+		bool bShowingSize = false;
+		while (!bDone) {
+			if (bRedraw) {
+				// loop through the image, y is the image width, and x is the image height
+				for (int col = 0; col < (imgHeight > 240 ? 240 : imgHeight); ++col) {
+					int bufpos = 0;
+					CRGB pixel;
+					// get to start of pixel data for this column
+					FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgOffset) * lineLength));
+					for (int x = displayWidth - 1; x >= 0; --x) {
+						// this reads three bytes
 						pixel = getRGBwithGamma();
-					// add to the display memory
-					int row = x - 5;
-					if (row >= 0 && row < 135) {
-						uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
-						uint16_t sbcolor;
-						// the memory image colors are byte swapped
-						swab(&color, &sbcolor, 2);
-						scrBuf[(134 - row) * 240 + col] = sbcolor;
+						if (bHalfSize)
+							pixel = getRGBwithGamma();
+						// add to the display memory
+						int row = x - 5;
+						if (row >= 0 && row < 135) {
+							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
+							uint16_t sbcolor;
+							// the memory image colors are byte swapped
+							swab(&color, &sbcolor, 2);
+							scrBuf[(134 - row) * 240 + col] = sbcolor;
+						}
 					}
 				}
+				oldImgOffset = imgOffset;
+				// got it all, go show it
+				tft.pushRect(0, 0, 240, 135, scrBuf);
+				// don't draw it again until something changes
+				bRedraw = false;
+				while (ReadButton() != BTN_NONE)
+					;
 			}
-			oldImgOffset = imgOffset;
-			// got it all, go show it
-			tft.pushRect(0, 0, 240, 135, scrBuf);
-			// don't draw it again until something changes
-			redraw = false;
-			while (ReadButton() != BTN_NONE)
-				;
+			switch (ReadButton()) {
+			case BTN_NONE:
+			case BTN_B1_CLICK:
+			case BTN_B2_LONG:
+				break;
+			case BTN_RIGHT:
+				if (bScrollFiles) {
+					if (CurrentFileIndex < FileNames.size() - 1) {
+						++CurrentFileIndex;
+						bDone = true;
+					}
+				}
+				else {
+					if (!bShowingSize && bAllowScroll) {
+						imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+						imgOffset = max(0, imgOffset);
+					}
+				}
+				break;
+			case BTN_LEFT:
+				if (bScrollFiles) {
+					if (CurrentFileIndex > 0) {
+						--CurrentFileIndex;
+						bDone = true;
+					}
+				}
+				else {
+					if (!bShowingSize && bAllowScroll) {
+						imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+						imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
+					}
+				}
+				break;
+			case BTN_B0_CLICK:
+			case BTN_LONG:
+				bDone = true;
+				bKeepShowing = false;
+				break;
+			case BTN_SELECT:	// show the bmp information
+			case BTN_B0_LONG:
+				if (bShowingSize) {
+					bShowingSize = false;
+					bRedraw = true;
+				}
+				else {
+					ClearScreen();
+					DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
+					DisplayLine(1, FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
+					float walk = (float)imgHeight / (float)imgWidth;
+					DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
+					DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
+					// calculate display time
+					float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+					DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
+					bShowingSize = true;
+					bRedraw = false;
+				}
+				break;
+			case BTN_B1_LONG:	// change scroll mode
+				bScrollFiles = !bScrollFiles;
+				bDone = true;
+				WriteMessage(bScrollFiles ? "Dial: browse images" : "Dial: sideways scroll", false, 1000);
+				break;
+			}
+			if (oldImgOffset != imgOffset) {
+				bRedraw = true;
+			}
+			delay(2);
 		}
-		switch (ReadButton()) {
-		case BTN_NONE:
-		case BTN_B1_CLICK:
-		case BTN_B1_LONG:
-		case BTN_B2_LONG:
-			break;
-		case BTN_RIGHT:
-			if (!bShowingSize && allowScroll) {
-				imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
-				imgOffset = max(0, imgOffset);
-			}
-			break;
-		case BTN_LEFT:
-			if (!bShowingSize && allowScroll) {
-				imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
-				imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
-			}
-			break;
-		case BTN_B0_CLICK:
-		case BTN_LONG:
-			done = true;
-			break;
-		case BTN_SELECT:	// show the bmp information
-		case BTN_B0_LONG:
-			if (bShowingSize) {
-				bShowingSize = false;
-				redraw = true;
-			}
-			else {
-				ClearScreen();
-				DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
-				DisplayLine(1, FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
-				float walk = (float)imgHeight / (float)imgWidth;
-				DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
-				DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
-				// calculate display time
-				float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
-				DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
-				bShowingSize = true;
-				redraw = false;
-			}
-			break;
-		}
-		if (oldImgOffset != imgOffset) {
-			redraw = true;
-		}
-		delay(2);
 	}
 	// all done
-	free(scrBuf);
+	if (scrBuf)
+		free(scrBuf);
 	dataFile.close();
 	readByte(true);
 	LedInfo.bGammaCorrection = bOldGamma;
