@@ -584,11 +584,11 @@ void loop()
 	}
 	// show battery level if on
 	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
-		//int raw;
-		//ReadBattery(&raw);
+		int raw;
+		ReadBattery(&raw);
 		//Serial.println(String("bat:") + String(raw));
 		ShowBattery(NULL);
-		if (/*raw > 800 &&*/ SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
+		if (raw > 900 && SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
 			SystemInfo.bCriticalBatteryLevel = false;
 			WriteMessage("Entering sleep mode\ndue to low battery", true, 10000);
 			Sleep(NULL);
