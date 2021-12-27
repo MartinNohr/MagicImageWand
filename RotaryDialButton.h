@@ -1,5 +1,8 @@
 #pragma once
 #include <queue>
+portMUX_TYPE clickMux = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE dialMux = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 class CRotaryDialButton {
 public:
 	enum Button { BTN_NONE, BTN_LEFT, BTN_RIGHT, BTN_CLICK, BTN_LONGPRESS, BTN0_CLICK, BTN1_CLICK, BTN0_LONGPRESS, BTN1_LONGPRESS, BTN2_LONGPRESS };
@@ -36,7 +39,7 @@ private:
     {
         if (whichButton == -1)
             return;
-        noInterrupts();
+        portENTER_CRITICAL_ISR(&timerMux);
         Button btn;
 		bool level = digitalRead(gpioNums[whichButton]);
         --m_nLongPressTimer;
@@ -62,11 +65,11 @@ private:
                 m_nLongPressTimer = 0;
             }
         }
-        interrupts();
+        portEXIT_CRITICAL_ISR(&timerMux);
     }
     // button interrupt
     static void clickHandler() {
-        noInterrupts();
+        portENTER_CRITICAL_ISR(&clickMux);
         // figure out who this was
 		if (m_nLongPressTimer == 0)
 			whichButton = -1;   // indicate this wasn't our interrupt
@@ -82,9 +85,9 @@ private:
             esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
             esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
         }
-        interrupts();
+        portEXIT_CRITICAL_ISR(&clickMux);
     }
-    // interrupt routines for the A and B rotary switche contacts
+    // interrupt routines for the A and B rotary switch contacts
     // basically it gets interrupts from the A side and then looks at B to see which direction it was going
     // there is also a counter that will require 1 or more pulses before the rotation is queued
     // Some switches pulse closed and then back to open while others just switch state, this code
@@ -92,12 +95,12 @@ private:
     // the dialspeed is how many mS to go deaf after the interrupt, this handles switch bounce as well as
     // slowing down the max rotation speed of the dial
     static void rotateHandler() {
-        noInterrupts();
+        portENTER_CRITICAL_ISR(&dialMux);
         static unsigned long lastTime = 0;
         static unsigned long lastButtonPush = 0;
         // ignore pushes if too soon since the last int
         if (millis() < lastTime + pSettings->m_nDialSpeed) {
-            interrupts();
+            portEXIT_CRITICAL_ISR(&dialMux);
             return;
         }
         lastTime = millis();
@@ -109,7 +112,7 @@ private:
         bool valA = digitalRead(gpioA);
         bool valB = digitalRead(gpioB);
 		if (valA && !pSettings->m_bToggleDial) {
-            interrupts();
+            portEXIT_CRITICAL_ISR(&dialMux);
             return;
         }
         Button btnToPush = BTN_NONE;
@@ -142,7 +145,7 @@ private:
 			btnBuf.push(btnToPush);
         }
         lastButtonPush = millis();
-        interrupts();
+        portEXIT_CRITICAL_ISR(&dialMux);
     }
 
     // public things
