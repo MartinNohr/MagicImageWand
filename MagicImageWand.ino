@@ -3335,7 +3335,25 @@ void ShowBmp(MenuItem*)
 		int imgOffset = 0;
 		int oldImgOffset;
 		bool bShowingSize = false;
+		unsigned long mSecAuto = millis();
 		while (!bDone) {
+			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
+				mSecAuto = millis();
+				// make sure not too long
+				int newOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset + 1);
+				// if <= 0 we couldn't scroll
+				if (newOffset > 0) {
+					// if no change we must be at the end, so reset it
+					if (newOffset == imgOffset) {
+						imgOffset = 0;
+					}
+					else {
+						// accept the new offset
+						imgOffset = newOffset;
+					}
+					bRedraw = true;
+				}
+			}
 			if (bRedraw) {
 				// loop through the image, y is the image width, and x is the image height
 				for (int col = 0; col < (imgHeight > 240 ? 240 : imgHeight); ++col) {
@@ -3364,8 +3382,6 @@ void ShowBmp(MenuItem*)
 				tft.pushRect(0, 0, 240, 135, scrBuf);
 				// don't draw it again until something changes
 				bRedraw = false;
-				while (ReadButton() != BTN_NONE)
-					;
 			}
 			switch (ReadButton()) {
 			case BTN_NONE:
@@ -3440,7 +3456,7 @@ void ShowBmp(MenuItem*)
 			if (oldImgOffset != imgOffset) {
 				bRedraw = true;
 			}
-			delay(2);
+			delay(1);
 		}
 	}
 	// all done

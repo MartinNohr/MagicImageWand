@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "1.99";
+const char* MIW_Version = "2.00";
 
 const char* StartFileName = "START.MIW";
 
@@ -260,6 +260,7 @@ struct SYSTEM_INFO {
     int nLightSensorDim = 4000;                 // value for the dimmest setting
     int nLightSensorBright = 100;               // value for the brightest setting
     bool bHasLightSensor = false;               // set to true if the light sensor is detected
+    int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -831,6 +832,7 @@ MenuItem DisplayMenu[] = {
     {eText,"Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
     {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
+    {eTextInt,"Preview Auto Scroll: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
