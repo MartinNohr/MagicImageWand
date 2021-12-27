@@ -3240,8 +3240,6 @@ void ShowBmp(MenuItem*)
 		bCancelMacro = bCancelRun = false;
 		return;
 	}
-	// true to use dial to select different image files
-	static bool bScrollFiles = false;
 	// true until cancel selected
 	uint16_t* scrBuf = NULL;
 	bool bOldGamma = LedInfo.bGammaCorrection;
@@ -3367,7 +3365,7 @@ void ShowBmp(MenuItem*)
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
 						// add to the display memory
-						int row = x - 5;
+						int row = x - 5;	// because display less than 144 image
 						if (row >= 0 && row < 135) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 							uint16_t sbcolor;
@@ -3389,7 +3387,7 @@ void ShowBmp(MenuItem*)
 			case BTN_B2_LONG:
 				break;
 			case BTN_RIGHT:
-				if (bScrollFiles) {
+				if (SystemInfo.bPreviewScrollFiles) {
 					if (CurrentFileIndex < FileNames.size() - 1) {
 						// stop if this is a folder
 						if (!IsFolder(CurrentFileIndex + 1)) {
@@ -3406,7 +3404,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_LEFT:
-				if (bScrollFiles) {
+				if (SystemInfo.bPreviewScrollFiles) {
 					if (CurrentFileIndex > 0) {
 						// stop if this is a folder
 						if (!IsFolder(CurrentFileIndex - 1)) {
@@ -3448,9 +3446,9 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B1_LONG:	// change scroll mode
-				bScrollFiles = !bScrollFiles;
+				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
-				WriteMessage(bScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
+				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
 				break;
 			}
 			if (oldImgOffset != imgOffset) {
@@ -4341,7 +4339,7 @@ void InfoMacro(MenuItem* menu)
 	String savedNameFilter;
 	bool bMacroChanges = false;
 	while (!done) {
-		CRotaryDialButton::Button btn;
+		CRotaryDialButton::Button btn = BTN_NONE;
 		if (redraw) {
 			ClearScreen();
 			DisplayLine(0, String(nMacroNum) + " : " + MacroInfo[nMacroNum].description, TFT_BLACK, SystemInfo.menuTextColor);
