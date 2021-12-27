@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.05";
+const char* MIW_Version = "2.06";
 
 const char* StartFileName = "START.MIW";
 
@@ -263,6 +263,7 @@ struct SYSTEM_INFO {
     int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
     int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
     bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
+    int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -840,6 +841,7 @@ MenuItem DisplayMenu[] = {
 MenuItem PreviewMenu[] = {
     {eExit,"Preview Settings"},
     {eBool,"Scroll Mode: %s",ToggleBool,&SystemInfo.bPreviewScrollFiles,0,0,0,"Files","Sideways"},
+    {eTextInt,"Top Start Offset: %d px",GetIntegerValue,&SystemInfo.nPreviewStartOffset,0,10},
     {eTextInt,"Dial Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eTextInt,"Auto Scroll Time: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
     {eTextInt,"Auto Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewAutoScrollAmount,1,240},

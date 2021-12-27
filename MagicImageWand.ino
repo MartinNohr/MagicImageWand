@@ -3359,19 +3359,20 @@ void ShowBmp(MenuItem*)
 					CRGB pixel;
 					// get to start of pixel data for this column
 					FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgOffset) * lineLength));
-					for (int x = displayWidth - 1; x >= 0; --x) {
+					for (int x = 0; x <= displayWidth - 1; ++x) {
 						// this reads three bytes
 						pixel = getRGBwithGamma();
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
-						// add to the display memory
-						int row = x - 5;	// because display less than 144 image
+						// because display less than 144 image
+						int row = x - SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < 135) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 							uint16_t sbcolor;
 							// the memory image colors are byte swapped
 							swab(&color, &sbcolor, 2);
-							scrBuf[(134 - row) * 240 + col] = sbcolor;
+							// add to the display memory
+							scrBuf[row * 240 + col] = sbcolor;
 						}
 					}
 				}
