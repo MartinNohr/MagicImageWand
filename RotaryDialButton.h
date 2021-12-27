@@ -186,12 +186,12 @@ public:
         if (gpioBtn0 != -1) {
             gpio_set_direction((gpio_num_t)gpioBtn0, GPIO_MODE_INPUT);
             gpio_set_pull_mode((gpio_num_t)gpioBtn0, GPIO_PULLUP_ONLY);
-            attachInterrupt(gpioBtn0, clickHandler, ONLOW);
+            attachInterrupt(gpioBtn0, clickHandler, FALLING);
         }
         if (gpioBtn1 != -1) {
             gpio_set_direction((gpio_num_t)gpioBtn1, GPIO_MODE_INPUT);
             gpio_set_pull_mode((gpio_num_t)gpioBtn1, GPIO_PULLUP_ONLY);
-            attachInterrupt(gpioBtn1, clickHandler, ONLOW);
+            attachInterrupt(gpioBtn1, clickHandler, FALLING);
         }
         attachInterrupt(gpioC, clickHandler, FALLING);
         attachInterrupt(gpioA, rotateHandler, CHANGE);
