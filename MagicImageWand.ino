@@ -3340,7 +3340,7 @@ void ShowBmp(MenuItem*)
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
-				int newOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset + 1);
+				int newOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset + SystemInfo.nPreviewAutoScrollAmount);
 				// if <= 0 we couldn't scroll
 				if (newOffset > 0) {
 					// if no change we must be at the end, so reset it

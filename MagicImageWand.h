@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.00";
+const char* MIW_Version = "2.01";
 
 const char* StartFileName = "START.MIW";
 
@@ -261,6 +261,7 @@ struct SYSTEM_INFO {
     int nLightSensorBright = 100;               // value for the brightest setting
     bool bHasLightSensor = false;               // set to true if the light sensor is detected
     int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
+    int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
 };
 typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -831,8 +832,15 @@ MenuItem DisplayMenu[] = {
     {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eText,"Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},
-    {eTextInt,"Preview Scroll: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
-    {eTextInt,"Preview Auto Scroll: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
+    {eExit,PreviousMenu},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem PreviewMenu[] = {
+    {eExit,"Preview Settings"},
+    {eTextInt,"Dial Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
+    {eTextInt,"Auto Scroll Time: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
+    {eTextInt,"Auto Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewAutoScrollAmount,1,240},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
@@ -842,6 +850,7 @@ MenuItem SystemMenu[] = {
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Run Screen Settings",{.menu = HomeScreenMenu}},
     {eMenu,"Dial & Button Settings",{.menu = DialMenu}},
+    {eMenu,"Preview Settings",{.menu = PreviewMenu}},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
