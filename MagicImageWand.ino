@@ -3334,6 +3334,8 @@ void ShowBmp(MenuItem*)
 		int oldImgOffset;
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
+		int startOffsetList[] = { 0,5,9 };
+		int startOffsetIndex = 0;
 		while (!bDone) {
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
@@ -3426,8 +3428,12 @@ void ShowBmp(MenuItem*)
 				bDone = true;
 				bKeepShowing = false;
 				break;
+			case BTN_B0_LONG:	// rotate row offsets
+				startOffsetIndex = (++startOffsetIndex) % (sizeof(startOffsetList) / sizeof(*startOffsetList));
+				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
+				bRedraw = true;
+				break;
 			case BTN_SELECT:	// show the bmp information
-			case BTN_B0_LONG:
 				if (bShowingSize) {
 					bShowingSize = false;
 					bRedraw = true;
