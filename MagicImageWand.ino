@@ -3357,6 +3357,10 @@ void ShowBmp(MenuItem*)
 				}
 			}
 			if (bRedraw) {
+				// this code has been optimized so on a sideways scroll it first moves the
+				// existing pixels on the display by the move amount
+				// following that the rest of the screen is read from the SD card
+				// this doubled the display speed on average when sideways scrolling
 				int startCol = 0;
 				int endCol = (imgHeight > 240 ? 240 : imgHeight);
 				uint16_t* base = scrBuf;
@@ -3381,6 +3385,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
+				// now we read the missing data from the SD card
 				// loop through the image, y is the image width, and x is the image height
 				for (int col = startCol; col < endCol; ++col) {
 					int bufpos = 0;
