@@ -874,8 +874,8 @@ void ShowMenu(struct MenuItem* menu)
 	// show line if menu has been scrolled
 	if (MenuStack.top()->offset > 0)
 		tft.fillTriangle(0, 0, 2, 0, 0, tft.fontHeight() / 3, TFT_DARKGREY);
-		//tft.drawLine(0, 0, 5, 0, menuLineActiveColor);TFT_DARKGREY
-	// show bottom line if last line is showing
+	//tft.drawLine(0, 0, 5, 0, menuLineActiveColor);TFT_DARKGREY
+// show bottom line if last line is showing
 	if (MenuStack.top()->offset + (nMenuLineCount - 1) < MenuStack.top()->menucount - 1) {
 		int ypos = tft.height() - 2 - tft.fontHeight() / 3;
 		tft.fillTriangle(0, ypos, 2, ypos, 0, ypos - tft.fontHeight() / 3, TFT_DARKGREY);
@@ -1154,7 +1154,7 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 // update the batterie default settings, 1-4 batteries
 void UpdateBatteries(MenuItem* menu, int flag)
 {
-	int batLo[4] = {  553, 1276, 1999, 2710 };
+	int batLo[4] = { 553, 1276, 1999, 2710 };
 	int batHi[4] = { 809, 1790, 2763, 4094 };
 	switch (flag) {
 	case 1:		// first time
@@ -2122,14 +2122,14 @@ void DisplayLedLightBar()
 			break;
 		}
 		switch (btn) {
-		//**** B2 long is reserved for reboot
-		//case BTN_B2_LONG:
-		//	// next mode
-		//	++BuiltinInfo.nLightBarMode;
-		//	// wrap
-		//	BuiltinInfo.nLightBarMode %= sizeof(LightBarModeText) / sizeof(*LightBarModeText);
-		//	DisplayLightBarTitle(false);
-		//	break;
+			//**** B2 long is reserved for reboot
+			//case BTN_B2_LONG:
+			//	// next mode
+			//	++BuiltinInfo.nLightBarMode;
+			//	// wrap
+			//	BuiltinInfo.nLightBarMode %= sizeof(LightBarModeText) / sizeof(*LightBarModeText);
+			//	DisplayLightBarTitle(false);
+			//	break;
 		case BTN_B0_CLICK:	// change the inc
 			++incIx;
 			incIx %= sizeof(incList) / sizeof(*incList);
@@ -3329,44 +3329,71 @@ void ShowBmp(MenuItem*)
 		bool bDone = false;
 		bool bRedraw = true;
 		bool bAllowScroll = imgHeight > 240;
-		// offset for showing the image
-		int imgOffset = 0;
-		int oldImgOffset;
+		// column offset for showing the image
+		int imgStartCol = 0;
+		int oldImgStartCol = 0;
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
+		// this is the current vertical offset
+		// TODO: init to the current value which might be between 0 and 10
 		int startOffsetList[] = { 0,5,9 };
-		int startOffsetIndex = 0;
+		int startOffsetIndex = -1;
 		while (!bDone) {
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
-				int newOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset + SystemInfo.nPreviewAutoScrollAmount);
+				int newColStart = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
 				// if <= 0 we couldn't scroll
-				if (newOffset > 0) {
+				if (newColStart > 0) {
 					// if no change we must be at the end, so reset it
-					if (newOffset == imgOffset) {
-						imgOffset = 0;
+					if (newColStart == imgStartCol) {
+						imgStartCol = 0;
 					}
 					else {
 						// accept the new offset
-						imgOffset = newOffset;
+						imgStartCol = newColStart;
 					}
 					bRedraw = true;
 				}
 			}
 			if (bRedraw) {
+				int startCol = 0;
+				int endCol = (imgHeight > 240 ? 240 : imgHeight);
+				uint16_t* base = scrBuf;
+				if (imgStartCol != oldImgStartCol) {
+					if (imgStartCol > oldImgStartCol) {
+						// move the display columns to the left
+						int diff = imgStartCol - oldImgStartCol;
+						startCol = 240 - diff;
+						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
+							// move the row
+							memmove(base, base + diff, (240 - diff) * sizeof(uint16_t));
+						}
+					}
+					else {
+						// move the display columns to the right
+						int diff = oldImgStartCol - imgStartCol;
+						startCol = 0;
+						endCol = diff;
+						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
+							// move the row
+							memmove(base + diff, base, (240 - diff) * sizeof(uint16_t));
+						}
+					}
+				}
 				// loop through the image, y is the image width, and x is the image height
-				for (int col = 0; col < (imgHeight > 240 ? 240 : imgHeight); ++col) {
+				for (int col = startCol; col < endCol; ++col) {
 					int bufpos = 0;
 					CRGB pixel;
 					// get to start of pixel data for this column
-					FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgOffset) * lineLength));
-					for (int x = 0; x <= displayWidth - 1; ++x) {
-						// this reads three bytes
+					FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgStartCol) * lineLength));
+					for (int x = 0; x < displayWidth; ++x) {
+						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();
+						// throw a pixel away if we're dividing by 2 for the 288 pixel image
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
-						// because display less than 144 image
+						// because 135 row display is less than 144 image
 						int row = x - SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < 135) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
@@ -3378,7 +3405,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				oldImgOffset = imgOffset;
+				oldImgStartCol = imgStartCol;
 				// got it all, go show it
 				tft.pushRect(0, 0, 240, 135, scrBuf);
 				// don't draw it again until something changes
@@ -3401,8 +3428,8 @@ void ShowBmp(MenuItem*)
 				}
 				else {
 					if (!bShowingSize && bAllowScroll) {
-						imgOffset -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
-						imgOffset = max(0, imgOffset);
+						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+						imgStartCol = max(0, imgStartCol);
 					}
 				}
 				break;
@@ -3418,8 +3445,8 @@ void ShowBmp(MenuItem*)
 				}
 				else {
 					if (!bShowingSize && bAllowScroll) {
-						imgOffset += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
-						imgOffset = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgOffset);
+						imgStartCol += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+						imgStartCol = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgStartCol);
 					}
 				}
 				break;
@@ -3458,7 +3485,7 @@ void ShowBmp(MenuItem*)
 				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
 				break;
 			}
-			if (oldImgOffset != imgOffset) {
+			if (oldImgStartCol != imgStartCol) {
 				bRedraw = true;
 			}
 			delay(1);
@@ -3742,7 +3769,7 @@ String MakeMIWFilename(String filename, bool addext)
 int LookUpFile(String name)
 {
 	int ix = 0;
-	for (auto &nm : FileNames) {
+	for (auto& nm : FileNames) {
 		if (name.equalsIgnoreCase(nm)) {
 			return ix;
 		}
@@ -3913,16 +3940,16 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 						case vtRGB:
 							break;
 						case vtMacroTime:
-							{
-								retval += args.toInt();
-								// older macros had seconds, newer ones need mS
-								if (retval < 20)
-									retval *= 1000;
-								++count;
-								// add a fudge factor to account for file opening/closing etc
-								retval += 300;
+						{
+							retval += args.toInt();
+							// older macros had seconds, newer ones need mS
+							if (retval < 20)
+								retval *= 1000;
+							++count;
+							// add a fudge factor to account for file opening/closing etc
+							retval += 300;
 						}
-							break;
+						break;
 						default:
 							break;
 						}
@@ -4027,7 +4054,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 						String uppername = CurrentFilename;
 						uppername.toUpperCase();
 						//find files with our extension only
-						if (uppername.endsWith(".BMP") && (!bnameFilter || MatchNameFilter(uppername,nameFilter))) {
+						if (uppername.endsWith(".BMP") && (!bnameFilter || MatchNameFilter(uppername, nameFilter))) {
 							//Serial.println("name: " + CurrentFilename);
 							FileNames.push_back(CurrentFilename);
 						}
@@ -4224,12 +4251,12 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 					line = String(SettingsVarList[ix].name) + "=" + String(*(bool*)(SettingsVarList[ix].address) ? "TRUE" : "FALSE");
 					break;
 				case vtRGB:
-					{
-						// handle the RBG colors
-						CRGB* cp = (CRGB*)(SettingsVarList[ix].address);
-						line = String(SettingsVarList[ix].name) + "=" + String(cp->r) + "," + String(cp->g) + "," + String(cp->b);
-					}
-					break;
+				{
+					// handle the RBG colors
+					CRGB* cp = (CRGB*)(SettingsVarList[ix].address);
+					line = String(SettingsVarList[ix].name) + "=" + String(cp->r) + "," + String(cp->g) + "," + String(cp->b);
+				}
+				break;
 				case vtMacroTime:
 					line = String(SettingsVarList[ix].name) + "=" + String(*(int*)(SettingsVarList[ix].address));
 					break;
@@ -4316,7 +4343,7 @@ bool GetYesNo(String msg)
 			change = true;
 			break;
 		case BTN_SELECT:
-		//case BTN_LONG:
+			//case BTN_LONG:
 			done = true;
 			break;
 		default:
@@ -4901,137 +4928,137 @@ void EraseFlash(MenuItem* menu)
 	}
 }
 
-void ReportCouldNotCreateFile(String target){
-  SendHTML_Header();
-  webpage += F("<h3>Could Not Create Uploaded File (write-protected?)</h3>"); 
-  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
-  append_page_footer();
-  SendHTML_Content();
-  SendHTML_Stop();
+void ReportCouldNotCreateFile(String target) {
+	SendHTML_Header();
+	webpage += F("<h3>Could Not Create Uploaded File (write-protected?)</h3>");
+	webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
 }
 
 FsFile UploadFile; // I would need some Help here, Martin
-void handleFileUpload(){ // upload a new file to the Filing system
-  HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
-                                            // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
-  if (uploadfile.status == UPLOAD_FILE_START)
-  {
-    String filename = uploadfile.filename;
-    String filepath = String("/");
-    if(!filename.startsWith("/")) filename = "/"+filename;
-    Serial.print("Upload File Name: "); Serial.println(filename);
-    SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
-    //UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
-	UploadFile = SD.open(filename, O_WRITE | O_CREAT);
-    filename = String();
-  }
-  else if (uploadfile.status == UPLOAD_FILE_WRITE)
-  {
-    if(UploadFile) UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
-  } 
-  else if (uploadfile.status == UPLOAD_FILE_END)
-  {
-    if(UploadFile)          // If the file was successfully created
-    {                                    
-      UploadFile.close();   // Close the file again
-      Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
-      webpage = "";
-      append_page_header();
-      webpage += F("<h3>File was successfully uploaded</h3>"); 
-      webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename+"</h2>";
-      webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>"; 
-      append_page_footer();
-      server.send(200,"text/html",webpage);
-	  // reload the file list, if not showing built-ins
-	  if (!ImgInfo.bShowBuiltInTests) {
-		  GetFileNamesFromSDorBuiltins(currentFolder);
-	  }
-    } 
-    else
-    {
-      ReportCouldNotCreateFile("upload");
-    }
-  }
+void handleFileUpload() { // upload a new file to the Filing system
+	HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
+											  // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
+	if (uploadfile.status == UPLOAD_FILE_START)
+	{
+		String filename = uploadfile.filename;
+		String filepath = String("/");
+		if (!filename.startsWith("/")) filename = "/" + filename;
+		Serial.print("Upload File Name: "); Serial.println(filename);
+		SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
+		//UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
+		UploadFile = SD.open(filename, O_WRITE | O_CREAT);
+		filename = String();
+	}
+	else if (uploadfile.status == UPLOAD_FILE_WRITE)
+	{
+		if (UploadFile) UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
+	}
+	else if (uploadfile.status == UPLOAD_FILE_END)
+	{
+		if (UploadFile)          // If the file was successfully created
+		{
+			UploadFile.close();   // Close the file again
+			Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
+			webpage = "";
+			append_page_header();
+			webpage += F("<h3>File was successfully uploaded</h3>");
+			webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename + "</h2>";
+			webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>";
+			append_page_footer();
+			server.send(200, "text/html", webpage);
+			// reload the file list, if not showing built-ins
+			if (!ImgInfo.bShowBuiltInTests) {
+				GetFileNamesFromSDorBuiltins(currentFolder);
+			}
+		}
+		else
+		{
+			ReportCouldNotCreateFile("upload");
+		}
+	}
 }
 
 
 void append_page_header() {
-  webpage  = F("<!DOCTYPE html><html>");
-  webpage += F("<head>");
-  webpage += F("<title>MagicImageWand</title>");
-  webpage += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
-  webpage += F("<style>");
-  webpage += F("body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}");
-  webpage += F("ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}");
-  webpage += F("li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}");
-  webpage += F("li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}");
-  webpage += F("li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}");
-  webpage += F("section {font-size:0.88em;}");
-  webpage += F("h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}");
-  webpage += F("h2{color:orange;font-size:1.0em;}");
-  webpage += F("h3{font-size:0.8em;}");
-  webpage += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:100%;}"); 
-  webpage += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}"); 
-  webpage += F("tr:nth-child(odd) {background-color:#eeeeee;}");
-  webpage += F(".rcorners_n {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-  webpage += F(".rcorners_m {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-  webpage += F(".rcorners_w {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-  webpage += F(".column{float:left;width:100%;height:100%;}");
-  webpage += F(".row:after{content:'';display:table;clear:both;}");
-  webpage += F("*{box-sizing:border-box;}");
-  webpage += F("footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}");
-  webpage += F("button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}");
-  webpage += F(".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}");
-  webpage += F(".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}");
-  webpage += F(".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
-  webpage += F(".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
-  webpage += F("a{font-size:75%;}");
-  webpage += F("p{font-size:75%;}");
-  webpage += F("</style></head><body><h1>MIW Server<br>"); webpage + "</h1>";
+	webpage = F("<!DOCTYPE html><html>");
+	webpage += F("<head>");
+	webpage += F("<title>MagicImageWand</title>");
+	webpage += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
+	webpage += F("<style>");
+	webpage += F("body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}");
+	webpage += F("ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}");
+	webpage += F("li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}");
+	webpage += F("li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}");
+	webpage += F("li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}");
+	webpage += F("section {font-size:0.88em;}");
+	webpage += F("h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}");
+	webpage += F("h2{color:orange;font-size:1.0em;}");
+	webpage += F("h3{font-size:0.8em;}");
+	webpage += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:100%;}");
+	webpage += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}");
+	webpage += F("tr:nth-child(odd) {background-color:#eeeeee;}");
+	webpage += F(".rcorners_n {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+	webpage += F(".rcorners_m {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+	webpage += F(".rcorners_w {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
+	webpage += F(".column{float:left;width:100%;height:100%;}");
+	webpage += F(".row:after{content:'';display:table;clear:both;}");
+	webpage += F("*{box-sizing:border-box;}");
+	webpage += F("footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}");
+	webpage += F("button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}");
+	webpage += F(".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}");
+	webpage += F(".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}");
+	webpage += F(".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
+	webpage += F(".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
+	webpage += F("a{font-size:75%;}");
+	webpage += F("p{font-size:75%;}");
+	webpage += F("</style></head><body><h1>MIW Server<br>"); webpage + "</h1>";
 }
 
-void append_page_footer(){
-  webpage += "<ul>";
-  webpage += "<li><a href='/'>Home</a></li>";
-  webpage += "<li><a href='/download'>Download</a></li>"; 
-  webpage += "<li><a href='/upload'>Upload</a></li>";
-  webpage += "<li><a href='/settings'>Settings</a></li>";
-  webpage += "</ul>";
-  webpage += "<footer>MagicImageWand ";
-  webpage += MIW_Version;
-  webpage += "</footer>";
-  webpage += "</body></html>";
+void append_page_footer() {
+	webpage += "<ul>";
+	webpage += "<li><a href='/'>Home</a></li>";
+	webpage += "<li><a href='/download'>Download</a></li>";
+	webpage += "<li><a href='/upload'>Upload</a></li>";
+	webpage += "<li><a href='/settings'>Settings</a></li>";
+	webpage += "</ul>";
+	webpage += "<footer>MagicImageWand ";
+	webpage += MIW_Version;
+	webpage += "</footer>";
+	webpage += "</body></html>";
 }
 
-void SendHTML_Header(){
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate"); 
-  server.sendHeader("Pragma", "no-cache"); 
-  server.sendHeader("Expires", "-1"); 
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN); 
-  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves. 
-  append_page_header();
-  server.sendContent(webpage);
-  webpage = "";
+void SendHTML_Header() {
+	server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+	server.sendHeader("Pragma", "no-cache");
+	server.sendHeader("Expires", "-1");
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves. 
+	append_page_header();
+	server.sendContent(webpage);
+	webpage = "";
 }
 
-void SendHTML_Content(){
-  server.sendContent(webpage);
-  webpage = "";
+void SendHTML_Content() {
+	server.sendContent(webpage);
+	webpage = "";
 }
 
-void SendHTML_Stop(){
-  server.sendContent("");
-  server.client().stop(); // Stop is needed because no content length was sent
+void SendHTML_Stop() {
+	server.sendContent("");
+	server.client().stop(); // Stop is needed because no content length was sent
 }
 
-void HomePage(){
-  SendHTML_Header();
-  webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
-  webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
-  webpage += "<a href='/settings'><button style=\"width:auto\">Settings</button></a>";
-  append_page_footer();
-  SendHTML_Content();
-  SendHTML_Stop();
+void HomePage() {
+	SendHTML_Header();
+	webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
+	webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
+	webpage += "<a href='/settings'><button style=\"width:auto\">Settings</button></a>";
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
 }
 
 void SelectInput(String heading1, String command, String arg_calling_name) {
@@ -5049,29 +5076,29 @@ void SelectInput(String heading1, String command, String arg_calling_name) {
 	SendHTML_Stop();
 }
 
-void File_Download(){ // This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
-  if (server.args() > 0 ) { // Arguments were received
-    if (server.hasArg("download")) SD_file_download(server.arg(0));
-  }
-  else SelectInput("Enter filename to download","download","download");
+void File_Download() { // This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
+	if (server.args() > 0) { // Arguments were received
+		if (server.hasArg("download")) SD_file_download(server.arg(0));
+	}
+	else SelectInput("Enter filename to download", "download", "download");
 }
 
-void ReportFileNotPresent(String target){
-  SendHTML_Header();
-  webpage += F("<h3>File does not exist</h3>"); 
-  webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
-  append_page_footer();
-  SendHTML_Content();
-  SendHTML_Stop();
+void ReportFileNotPresent(String target) {
+	SendHTML_Header();
+	webpage += F("<h3>File does not exist</h3>");
+	webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
 }
 
-void ReportSDNotPresent(){
-  SendHTML_Header();
-  webpage += F("<h3>No SD Card present</h3>"); 
-  webpage += F("<a href='/'>[Back]</a><br><br>");
-  append_page_footer();
-  SendHTML_Content();
-  SendHTML_Stop();
+void ReportSDNotPresent() {
+	SendHTML_Header();
+	webpage += F("<h3>No SD Card present</h3>");
+	webpage += F("<a href='/'>[Back]</a><br><br>");
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
 }
 
 void SD_file_download(String filename)
@@ -5091,15 +5118,15 @@ void SD_file_download(String filename)
 	else ReportSDNotPresent();
 }
 
-void IncreaseRepeatButton(){
-  // This can be for sure made into a universal function like IncreaseButton(Setting, Value)
-	//webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>&#8679;</strong></a>");
+void IncreaseRepeatButton() {
+	// This can be for sure made into a universal function like IncreaseButton(Setting, Value)
+	  //webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>&#8679;</strong></a>");
 	webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>+;</strong></a>");
 }
 
-void DecreaseRepeatButton(){
-  // This can be for sure made into a universal function like DecreaseButton(Setting, Value)
-  webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
+void DecreaseRepeatButton() {
+	// This can be for sure made into a universal function like DecreaseButton(Setting, Value)
+	webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
 }
 
 void IncRepeat()
@@ -5190,7 +5217,7 @@ void FormSettings()
 void ShowSettings() {
 	append_page_header();
 	webpage += "<h3>Current Settings</h3>";
-	webpage += String("<p>Current File: ") +currentFolder+ FileNames[CurrentFileIndex];
+	webpage += String("<p>Current File: ") + currentFolder + FileNames[CurrentFileIndex];
 	if (ImgInfo.bFixedTime) {
 		webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	}
@@ -5205,15 +5232,15 @@ void ShowSettings() {
 	server.send(200, "text/html", webpage);
 }
 
-void File_Upload(){
-  append_page_header();
-  webpage += F("<h3>Select File to Upload</h3>"); 
-  webpage += F("<FORM action='/fupload' method='post' enctype='multipart/form-data'>");
-  webpage += F("<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>");
-  webpage += F("<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>");
-  webpage += F("<a href='/'>[Back]</a><br><br>");
-  append_page_footer();
-  server.send(200, "text/html",webpage);
+void File_Upload() {
+	append_page_header();
+	webpage += F("<h3>Select File to Upload</h3>");
+	webpage += F("<FORM action='/fupload' method='post' enctype='multipart/form-data'>");
+	webpage += F("<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>");
+	webpage += F("<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>");
+	webpage += F("<a href='/'>[Back]</a><br><br>");
+	append_page_footer();
+	server.send(200, "text/html", webpage);
 }
 
 // show on leds or display
