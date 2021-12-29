@@ -3364,10 +3364,10 @@ void ShowBmp(MenuItem*)
 				int startCol = 0;
 				int endCol = (imgHeight > 240 ? 240 : imgHeight);
 				uint16_t* base = scrBuf;
+				int diff = abs(imgStartCol - oldImgStartCol);
 				if (imgStartCol != oldImgStartCol) {
 					if (imgStartCol > oldImgStartCol) {
 						// move the display columns to the left
-						int diff = imgStartCol - oldImgStartCol;
 						startCol = 240 - diff;
 						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
 							// move the row
@@ -3376,7 +3376,6 @@ void ShowBmp(MenuItem*)
 					}
 					else {
 						// move the display columns to the right
-						int diff = oldImgStartCol - imgStartCol;
 						startCol = 0;
 						endCol = diff;
 						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
