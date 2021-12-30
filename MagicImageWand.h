@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.08";
+const char* MIW_Version = "2.09";
 
 const char* StartFileName = "START.MIW";
 
@@ -164,7 +164,7 @@ CRGB* leds;
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
 const char* StripsWiringText[] = { "Middle","Serial","Outside" };
 const char* DisplayRotationText[] = { "90","180","270","0" };
-struct LED_INFO {
+typedef struct LED_INFO {
     bool bSecondController = false;
     int nLEDBrightness = 25;
     int nTotalLeds = 144;
@@ -178,14 +178,13 @@ struct LED_INFO {
     } whiteBalance = { 255,255,255 };
     //int nPixelMaxCurrent = 48;              // maximum milliamps to allow on any pixel
 };
-typedef LED_INFO LED_INFO;
 LED_INFO LedInfo;
 
 enum DIAL_IMG_FUNCTIONS { DIAL_IMG_NONE = 0, DIAL_IMG_BRIGHTNESS, DIAL_IMB_SPEED };
 const char* DialImgText[] = { "None","Brightness","Speed" };
 
 // image settings
-struct IMG_INFO {
+typedef struct IMG_INFO {
     int nFrameHold = 10;                      // default for the frame delay
     bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
     int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
@@ -213,7 +212,6 @@ struct IMG_INFO {
     int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
     int nDialDuringImgInc = 1;                // how much to change by during image display
 };
-typedef IMG_INFO IMG_INFO;
 RTC_DATA_ATTR IMG_INFO ImgInfo;
 
 RTC_DATA_ATTR int CurrentFileIndex = 0;
@@ -226,7 +224,7 @@ const char* BtnLongText[] = { "DisplayRotate","LightBar" };
 enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE, DISPLAY_DIM_MODE_TIME, DISPLAY_DIM_MODE_SENSOR };
 const char* DisplayDimModeText[] = { "None","Timer","Sensor" };
 
-struct SYSTEM_INFO {
+typedef struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
     bool bHiLiteCurrentFile = true;
@@ -265,7 +263,6 @@ struct SYSTEM_INFO {
     bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
 };
-typedef SYSTEM_INFO SYSTEM_INFO;
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
 
 enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
@@ -313,7 +310,7 @@ const char* LightBarColorKelvinText[] = {
     "High Pressure Sodium",
 };
 
-struct BUILTIN_INFO {
+typedef struct BUILTIN_INFO {
     // adjustment values for builtins
     uint8_t gHue = 0; // rotating "base color" used by many of the patterns
     // bouncing balls
@@ -389,7 +386,6 @@ struct BUILTIN_INFO {
     int nWedgeGreen = 255;
     int nWedgeBlue = 255;
 };
-typedef BUILTIN_INFO BUILTIN_INFO;
 RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
 
 // settings
@@ -397,7 +393,7 @@ bool bSdCardValid = false;              // set to true when card is found
 bool bControllerReboot = false;         // set this when controllers or led count changed
 int AdjustStripIndex(int ix);
 // get the real LED strip index from the desired index
-void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
+void SetPixel(int ix, CRGB pixel, int column = 0, int totalColumns = 1);
 int nRepeatsLeft;                         // countdown while repeating, used for BLE also
 int g = 0;                                // Variable for the Green Value
 int b = 0;                                // Variable for the Blue Value
@@ -465,7 +461,7 @@ enum eDisplayOperation {
 // we need to have a pointer reference to this in the MenuItem, the full declaration follows later
 struct BuiltInItem;
 std::vector<bool> bMenuValid;   // set to indicate menu item  is valid
-struct MenuItem {
+typedef struct MenuItem {
     enum eDisplayOperation op;
     const char* text;                   // text to display
     union {
@@ -483,16 +479,14 @@ struct MenuItem {
     void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect, can be NULL
     const char** nameList;                    // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
 };
-typedef MenuItem MenuItem;
 
 // builtins
 // built-in "files"
-struct BuiltInItem {
+typedef struct BuiltInItem {
     const char* text;
     void(*function)();
     MenuItem* menu;
 };
-typedef BuiltInItem BuiltInItem;
 extern BuiltInItem BuiltInFiles[];
 
 // some menu functions using menus
@@ -1082,13 +1076,12 @@ BuiltInItem BuiltInFiles[] = {
 RTC_DATA_ATTR int FileIndexStack[10], FileIndexStackSize = 0;
 
 // a stack for menus so we can find our way back
-struct MENUINFO {
+typedef struct MenuInfo {
     int index;      // active entry
     int offset;     // scrolled amount
     int menucount;  // how many entries in this menu
     MenuItem* menu; // pointer to the menu
 };
-typedef MENUINFO MenuInfo;
 MenuInfo* menuPtr;
 std::stack<MenuInfo*> MenuStack;
 
@@ -1154,14 +1147,13 @@ struct TEXTLINES {
 };
 std::vector<struct TEXTLINES> TextLines;
 
-struct MACRO_INFO {
+typedef struct MACRO_INFO {
 	String description;             // description of the file
 	int mSeconds;                   // total time in mSeconds
 	int pixels;                     // width in pixels
 	float length;                   // how many meters based on 1:1 ratio with nTotalLeds
 	std::vector<String> fileNames;  // list of all the filenames in this macro
 };
-typedef MACRO_INFO MACRO_INFO;
 MACRO_INFO MacroInfo[10];
 SemaphoreHandle_t macroMutex;
 TaskHandle_t Task1, Task2;

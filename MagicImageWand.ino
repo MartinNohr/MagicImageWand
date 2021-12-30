@@ -11,16 +11,16 @@
 RTC_DATA_ATTR int nBootCount = 0;
 
 // some forward references that Arduino IDE needs
-int IRAM_ATTR readByte(bool clear);
-void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf);
-uint16_t IRAM_ATTR readInt();
-uint32_t IRAM_ATTR readLong();
-void IRAM_ATTR FileSeekBuf(uint32_t place);
+int readByte(bool clear);
+void ReadAndDisplayFile(bool doingFirstHalf);
+uint16_t readInt();
+uint32_t readLong();
+void FileSeekBuf(uint32_t place);
 int FileCountOnly(int start = 0);
 
 //static const char* TAG = "lightwand";
 //esp_timer_cb_t oneshot_timer_callback(void* arg)
-void IRAM_ATTR oneshot_LED_timer_callback(void* arg)
+void oneshot_LED_timer_callback(void* arg)
 {
 	bStripWaiting = false;
 	//int64_t time_since_boot = esp_timer_get_time();
@@ -29,7 +29,7 @@ void IRAM_ATTR oneshot_LED_timer_callback(void* arg)
 }
 
 // timer called every second
-void IRAM_ATTR periodic_Second_timer_callback(void* arg)
+void periodic_Second_timer_callback(void* arg)
 {
 	if (sleepTimer)
 		--sleepTimer;
@@ -68,7 +68,7 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	CRotaryDialButton::begin(DIAL_A, DIAL_B, DIAL_BTN, 0, 35, &SystemInfo.DialSettings);
+	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, &SystemInfo.DialSettings);
 	setupSDcard();
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
@@ -1563,7 +1563,7 @@ void setupSDcard()
 }
 
 // return the pixel
-CRGB IRAM_ATTR getRGBwithGamma() {
+CRGB getRGBwithGamma() {
 	if (LedInfo.bGammaCorrection) {
 		b = gammaB[readByte(false)];
 		g = gammaG[readByte(false)];
@@ -2741,11 +2741,12 @@ void ProcessFileOrTest()
 	}
 	bIsRunning = true;
 	// clear the rest of the lines
-	if (!bRunningMacro) {
-		for (int ix = 1; ix < nMenuLineCount; ++ix)
-			DisplayLine(ix, "");
-	}
-	//DisplayCurrentFile();
+	//if (!bRunningMacro) {
+	//	for (int ix = 1; ix < nMenuLineCount; ++ix)
+	//		DisplayLine(ix, "");
+	//}
+	ClearScreen();
+	DisplayCurrentFile();
 	if (ImgInfo.startDelay) {
 		// set a timer
 		nTimerSeconds = ImgInfo.startDelay;
@@ -2957,7 +2958,7 @@ void SendFile(String Filename) {
 //#define MYBMP_BI_RLE4           2L
 //#define MYBMP_BI_BITFIELDS      3L
 
-void IRAM_ATTR ReadAndDisplayFile(bool doingFirstHalf) {
+void ReadAndDisplayFile(bool doingFirstHalf) {
 	static int totalSeconds;
 	if (doingFirstHalf)
 		totalSeconds = -1;
@@ -3283,7 +3284,6 @@ void ShowBmp(MenuItem*)
 
 		/* Check file header */
 		if (bmpType != MYBMP_BF_TYPE) {
-			free(scrBuf);
 			WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 			bKeepShowing = false;
 			break;
@@ -3306,7 +3306,6 @@ void ShowBmp(MenuItem*)
 		if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 			imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 		{
-			free(scrBuf);
 			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
 			bKeepShowing = false;
 			break;
@@ -3404,7 +3403,7 @@ void ShowBmp(MenuItem*)
 							uint16_t sbcolor;
 							// the memory image colors are byte swapped
 							swab(&color, &sbcolor, 2);
-							// add to the display memory
+							// add to the display memory, organized as rows from top to bottom in memory
 							scrBuf[row * 240 + col] = sbcolor;
 						}
 					}
@@ -3536,6 +3535,7 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 
 void ClearScreen()
 {
+	Serial.println("clear");
 	tft.fillScreen(TFT_BLACK);
 	ResetTextLines();
 }
@@ -3569,7 +3569,7 @@ void DisplayMenuLine(int line, int displine, String text)
 	}
 }
 
-uint32_t IRAM_ATTR readLong() {
+uint32_t readLong() {
 	uint32_t retValue;
 	byte incomingbyte;
 
@@ -3588,7 +3588,7 @@ uint32_t IRAM_ATTR readLong() {
 	return retValue;
 }
 
-uint16_t IRAM_ATTR readInt() {
+uint16_t readInt() {
 	byte incomingbyte;
 	uint16_t retValue = 0;
 
@@ -3605,7 +3605,7 @@ int fileindex = 0;
 int filebufsize = 0;
 uint32_t filePosition = 0;
 
-int IRAM_ATTR readByte(bool clear) {
+int readByte(bool clear) {
 	//int retbyte = -1;
 	if (clear) {
 		filebufsize = 0;
@@ -3635,7 +3635,7 @@ int IRAM_ATTR readByte(bool clear) {
 
 
 // make sure we are the right place
-void IRAM_ATTR FileSeekBuf(uint32_t place)
+void FileSeekBuf(uint32_t place)
 {
 	if (place < filePosition || place >= filePosition + filebufsize) {
 		// we need to read some more
@@ -4549,7 +4549,7 @@ int AdjustStripIndex(int ix)
 // e.g. pixel 0 will be 0 and 1, 1 will be 2 and 3, etc
 // if upside down n will be n and n-1, n-1 will be n-1 and n-2
 // column = -1 to init fade in/out values
-void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
+void SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 {
 	static int fadeStep;
 	static int fadeColumns;
@@ -4620,71 +4620,6 @@ void IRAM_ATTR SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 	if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests)
 		leds[ix2] = pixel;
 }
-
-//#define Fbattery    3700  //The default battery is 3700mv when the battery is fully charged.
-//
-//float XS = 0.00225;      //The returned reading is multiplied by this XS to get the battery voltage.
-//uint16_t MUL = 1000;
-//uint16_t MMUL = 100;
-//// read and display the battery voltage
-//void ReadBattery(MenuItem* menu)
-//{
-//	//tft.clear();
-//	uint16_t bat = analogRead(A4);
-//	Serial.println("bat: " + String(bat));
-//	DisplayLine(0, "Battery: " + String(bat));
-//	delay(1000);
-//	//uint16_t c = analogRead(13) * XS * MUL;
-//	////uint16_t d  =  (analogRead(13)*XS*MUL*MMUL)/Fbattery;
-//	//Serial.println(analogRead(13));
-//	////Serial.println((String)d);
-// //  // Serial.printf("%x",analogRead(13));
-//	//Heltec.display->drawString(0, 0, "Remaining battery still has:");
-//	//Heltec.display->drawString(0, 10, "VBAT:");
-//	//Heltec.display->drawString(35, 10, (String)c);
-//	//Heltec.display->drawString(60, 10, "(mV)");
-//	//// Heltec.display->drawString(90, 10, (String)d);
-//	//// Heltec.display->drawString(98, 10, ".";
-//	//// Heltec.display->drawString(107, 10, "%");
-//	//Heltec.display->display();
-//	//delay(2000);
-//	//Heltec.display->clear();
-// //Battery voltage read pin changed from GPIO13 to GPI37
-//	////adcStart(37);
-//	////while (adcBusy(37))
-//	////	;
-//	////Serial.printf("Battery power in GPIO 37: ");
-//	////Serial.println(analogRead(37));
-//	////uint16_t c1 = analogRead(37) * XS * MUL;
-//	////adcEnd(37);
-//	////Serial.println("Vbat: " + String(c1));
-//
-//	////delay(100);
-//
-//	//adcStart(36);
-//	//while (adcBusy(36));
-//	//Serial.printf("voltage input on GPIO 36: ");
-//	//Serial.println(analogRead(36));
-//	//uint16_t c2 = analogRead(36) * 0.769 + 150;
-//	//adcEnd(36);
-//	//Serial.println("-------------");
-//	// uint16_t c  =  analogRead(13)*XS*MUL;
-//	// Serial.println(analogRead(13));
-//	////Heltec.display->drawString(0, 0, "Vbat = ");
-//	////Heltec.display->drawString(33, 0, (String)c1);
-//	////Heltec.display->drawString(60, 0, "(mV)");
-//
-//	//Heltec.display->drawString(0, 10, "Vin   = ");
-//	//Heltec.display->drawString(33, 10, (String)c2);
-//	//Heltec.display->drawString(60, 10, "(mV)");
-//
-//	// Heltec.display->drawString(0, 0, "Remaining battery still has:");
-//	// Heltec.display->drawString(0, 10, "VBAT:");
-//	// Heltec.display->drawString(35, 10, (String)c);
-//	// Heltec.display->drawString(60, 10, "(mV)");
-//	////Heltec.display->display();
-//	////delay(2000);
-//}
 
 // grow and shrink a rainbow type pattern
 #define PI_SCALE 2
