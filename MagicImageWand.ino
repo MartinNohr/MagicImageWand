@@ -3414,6 +3414,7 @@ void ShowBmp(MenuItem*)
 				// don't draw it again until something changes
 				bRedraw = false;
 			}
+			ResetSleepAndDimTimers();
 			switch (ReadButton()) {
 			case BTN_NONE:
 			case BTN_B1_CLICK:
