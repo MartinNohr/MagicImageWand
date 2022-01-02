@@ -1869,6 +1869,7 @@ void RunningDot()
 		//FastLED.show();
 	}
 	FastLED.clear(true);
+	delay(2);
 }
 
 // random dot, moves back and forth with random timing
@@ -1899,6 +1900,7 @@ void RandomDot()
 	ShowLeds();
 	//FastLED.show();
 	FastLED.clear(true);
+	delay(2);
 }
 
 void OppositeRunningDots()
