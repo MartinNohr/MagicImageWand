@@ -19,10 +19,7 @@ public:
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
-    static portMUX_TYPE timerMux;
-    static portMUX_TYPE rotaryMux;
     static portMUX_TYPE buttonMux;
-    static bool b_TimerRunning;
     static ROTARY_DIAL_SETTINGS* pSettings;
     static volatile int m_nLongPressTimer;
     static esp_timer_handle_t periodic_LONGPRESS_timer;
@@ -44,12 +41,10 @@ private:
     // the timer callback for handling long presses
     static void periodic_LONGPRESS_timer_callback(void* arg)
     {
-        if (!b_TimerRunning)
-            return;
         // make sure this is a valid button
 		if (whichButton<0 || whichButton>CLICK_BUTTONS_COUNT)
             return;
-        portENTER_CRITICAL_ISR(&timerMux);
+        portENTER_CRITICAL_ISR(&buttonMux);
         Button btn;
 		bool level = gpio_get_level(gpioNums[whichButton]);
 		if (m_nLongPressTimer)
@@ -80,12 +75,11 @@ private:
 				m_nLongPressTimer = -1;
 			}
             else if (m_nLongPressTimer < -1) {
-                b_TimerRunning = false;
                 m_nLongPressTimer = 0;
                 esp_timer_stop(periodic_LONGPRESS_timer);
             }
         }
-        portEXIT_CRITICAL_ISR(&timerMux);
+        portEXIT_CRITICAL_ISR(&buttonMux);
     }
 
     // button interrupt
@@ -116,7 +110,6 @@ private:
             m_nLongPressTimer = pSettings->m_nLongPressTimerValue;
             esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
             esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
-            b_TimerRunning = true;
         }
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
@@ -131,11 +124,10 @@ private:
     static void rotateHandler(void* arg) {
         if (*(char*)arg != 'A')
             return;
-        portENTER_CRITICAL_ISR(&rotaryMux);
+        portENTER_CRITICAL_ISR(&buttonMux);
         // kill the long press timer for the other buttons
         m_nLongPressTimer = 0;
         whichButton = -1;
-        b_TimerRunning = false;
         esp_timer_stop(periodic_LONGPRESS_timer);
         //attachInterruptArg(gpioC, clickHandler, (void*)"C", FALLING);
 
@@ -143,7 +135,7 @@ private:
         static unsigned long lastButtonPush = 0;
         // ignore pushes if too soon since the last int
         if (millis() < lastTime + pSettings->m_nDialSpeed) {
-            portEXIT_CRITICAL_ISR(&rotaryMux);
+            portEXIT_CRITICAL_ISR(&buttonMux);
             return;
         }
         lastTime = millis();
@@ -155,7 +147,7 @@ private:
         bool valA = gpio_get_level(gpioA);
         bool valB = gpio_get_level(gpioB);
 		if (valA && !pSettings->m_bToggleDial) {
-            portEXIT_CRITICAL_ISR(&rotaryMux);
+            portEXIT_CRITICAL_ISR(&buttonMux);
             return;
         }
         Button btnToPush = BTN_NONE;
@@ -190,7 +182,7 @@ private:
             }
         }
         lastButtonPush = millis();
-        portEXIT_CRITICAL_ISR(&rotaryMux);
+        portEXIT_CRITICAL_ISR(&buttonMux);
     }
 
     // public things
@@ -320,7 +312,4 @@ esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
 CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
-bool CRotaryDialButton::b_TimerRunning = false;
-portMUX_TYPE CRotaryDialButton::timerMux = portMUX_INITIALIZER_UNLOCKED;
-portMUX_TYPE CRotaryDialButton::rotaryMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE CRotaryDialButton::buttonMux = portMUX_INITIALIZER_UNLOCKED;
