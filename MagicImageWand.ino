@@ -2642,7 +2642,7 @@ void TestLines()
 			done = true;
 			break;
 		}
-		delay(1000);
+		delay(100);
 		// might make this work to toggle blacks and whites eventually
 		//for (int ix = 0; ix < STRIPLENGTH; ++ix) {
 		//	leds[ix] = (leds[ix] == CRGB::White) ? CRGB::Black : CRGB::White;
@@ -2651,6 +2651,7 @@ void TestLines()
 		//FastLED.show();
 	}
 	FastLED.clear(true);
+	delay(2);
 }
 
 // time is in mSec
