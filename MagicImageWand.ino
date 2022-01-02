@@ -3536,7 +3536,6 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 
 void ClearScreen()
 {
-	Serial.println("clear");
 	tft.fillScreen(TFT_BLACK);
 	ResetTextLines();
 }

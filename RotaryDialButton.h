@@ -26,7 +26,8 @@ private:
     static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
     static gpio_num_t gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
     static std::queue<Button> btnBuf;
-    static const int nMaxButtons = 2;
+    static const int m_nMaxButtons = 2;
+    static volatile int m_nWaitRelease;    // this counts waits after a long press for release
 #define CLICK_BUTTONS_COUNT 3
     static gpio_num_t gpioNums[CLICK_BUTTONS_COUNT]; // only the clicks, not the rotation AB ones
     // int for which one caused the interrupt
@@ -47,7 +48,20 @@ private:
         portENTER_CRITICAL_ISR(&buttonMux);
         Button btn;
 		bool level = gpio_get_level(gpioNums[whichButton]);
-		if (m_nLongPressTimer)
+        // waiting for a release after a long press was seen
+		if (m_nWaitRelease) {
+			if (level) {
+				if (--m_nWaitRelease == 0) {
+					// we are done
+					m_nLongPressTimer = 0;
+					esp_timer_stop(periodic_LONGPRESS_timer);
+					whichButton = -1;
+				}
+            }
+			portEXIT_CRITICAL_ISR(&buttonMux);
+			return;
+        }
+        if (m_nLongPressTimer)
 			--m_nLongPressTimer;
         // if the timer counter has finished, it must be a long press
 		if (m_nLongPressTimer == 0) {
@@ -60,24 +74,28 @@ private:
                     btn = BTN2_LONGPRESS;
                 }
             }
-            if (btnBuf.size() < nMaxButtons) {
+            m_nWaitRelease = 2;
+            if (btnBuf.size() < m_nMaxButtons) {
 				btnBuf.push(btn);
             }
-			// set it so we ignore the button interrupt for one more timer time
-			m_nLongPressTimer = -1;
+            // set it so we ignore the button interrupt for one more timer time
+			//m_nLongPressTimer = -1;
 		}
         // if the button is up and the timer hasn't finished counting, it must be a short press
         else if (level) {
-			if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
+            if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
 				btn = clickBtnArray[whichButton];
-                if (btnBuf.size() < nMaxButtons)
+                if (btnBuf.size() < m_nMaxButtons) {
                     btnBuf.push(btn);
-				m_nLongPressTimer = -1;
+                    m_nLongPressTimer = 0;
+                    esp_timer_stop(periodic_LONGPRESS_timer);
+                }
+				//m_nLongPressTimer = 0;
 			}
-            else if (m_nLongPressTimer < -1) {
-                m_nLongPressTimer = 0;
-                esp_timer_stop(periodic_LONGPRESS_timer);
-            }
+            //else if (m_nLongPressTimer < -1) {
+            //    m_nLongPressTimer = 0;
+            //    esp_timer_stop(periodic_LONGPRESS_timer);
+            //}
         }
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
@@ -177,7 +195,7 @@ private:
 			//Serial.println("diff: " + String(diff) + " " + String(count));
         }
 		while (btnToPush != BTN_NONE && (btnToPush == BTN_RIGHT || btnToPush == BTN_LEFT) && count--) {
-            if (btnBuf.size() < nMaxButtons) {
+            if (btnBuf.size() < m_nMaxButtons) {
                 btnBuf.push(btnToPush);
             }
         }
@@ -296,7 +314,7 @@ public:
     static void pushButton(Button btn)
     {
         noInterrupts();
-		if (btnBuf.size() < nMaxButtons)
+		if (btnBuf.size() < m_nMaxButtons)
 			btnBuf.push(btn);
         interrupts();
     }
@@ -313,3 +331,4 @@ CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL }
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
 portMUX_TYPE CRotaryDialButton::buttonMux = portMUX_INITIALIZER_UNLOCKED;
+volatile int CRotaryDialButton::m_nWaitRelease = 0;
