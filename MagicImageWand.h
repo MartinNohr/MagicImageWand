@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.16";
+const char* MIW_Version = "2.17";
 
 const char* StartFileName = "START.MIW";
 
@@ -10,6 +10,7 @@ const char* StartFileName = "START.MIW";
 #define USE_STANDARD_SD 0
 // *****
 #define DIAL_BTN 15
+//#define DIAL_BTN 37   // for onboard PS 1.4
 #define FRAMEBUTTON 32
 // reverse A and B for some PCB or wired versions, this is set for rev 2 PCB, 0 for older PCB, and 0 for rev 3 pcb
 #define PCB_REV2 0

@@ -26,7 +26,7 @@ private:
     static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
     static gpio_num_t gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
     static std::queue<Button> btnBuf;
-    static const int m_nMaxButtons = 2;
+    static const int m_nMaxButtons = 4;
     static volatile int m_nWaitRelease;    // this counts waits after a long press for release
 #define CLICK_BUTTONS_COUNT 3
     static gpio_num_t gpioNums[CLICK_BUTTONS_COUNT]; // only the clicks, not the rotation AB ones
