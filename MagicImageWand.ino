@@ -72,8 +72,8 @@ void setup()
 	setupSDcard();
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
-	gpio_set_direction((gpio_num_t)FRAMEBUTTON, GPIO_MODE_INPUT);
-	gpio_set_pull_mode((gpio_num_t)FRAMEBUTTON, GPIO_PULLUP_ONLY);
+	gpio_set_direction((gpio_num_t)FRAMEBUTTON_GPIO, GPIO_MODE_INPUT);
+	gpio_set_pull_mode((gpio_num_t)FRAMEBUTTON_GPIO, GPIO_PULLUP_ONLY);
 	// init the onboard buttons
 	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
 	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
@@ -3135,13 +3135,13 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 			if (ImgInfo.nFramePulseCount) {
 				for (int ix = ImgInfo.nFramePulseCount; ix; --ix) {
 					// wait for press
-					while (digitalRead(FRAMEBUTTON)) {
+					while (digitalRead(FRAMEBUTTON_GPIO)) {
 						if (CheckCancel())
 							break;
 						delay(10);
 					}
 					// wait for release
-					while (!digitalRead(FRAMEBUTTON)) {
+					while (!digitalRead(FRAMEBUTTON_GPIO)) {
 						if (CheckCancel())
 							break;
 						delay(10);
@@ -5286,7 +5286,7 @@ int ReadBattery(int* raw)
 	int percent;
 	float nextLevel;
 	for (int tries = 0; tries < 5; ++tries) {
-		nextLevel = (float)analogRead(BATTERY_SENSOR);
+		nextLevel = (float)analogRead(BATTERY_SENSOR_GPIO);
 		// calculate the next value
 		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
 		// calculate the %
@@ -5467,7 +5467,7 @@ int ReadLightSensor()
 	static float eSmooth = 0.0;
 	float nextLevel;
 	for (int tries = 0; tries < 5; ++tries) {
-		nextLevel = (float)analogRead(LIGHT_SENSOR);
+		nextLevel = (float)analogRead(LIGHT_SENSOR_GPIO);
 		// calculate the next value
 		eSmooth = (alpha * eSmooth) + ((1 - alpha) * nextLevel);
 		delay(2);

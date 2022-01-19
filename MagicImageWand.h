@@ -3,26 +3,7 @@
 const char* MIW_Version = "2.17";
 
 const char* StartFileName = "START.MIW";
-
-// ***** Various switches for options are set here *****
-#define HAS_BATTERY_LEVEL 1
-// 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
-#define USE_STANDARD_SD 0
-// *****
-#define DIAL_BTN 15
-//#define DIAL_BTN 37   // for onboard PS 1.4
-#define FRAMEBUTTON 32
-// reverse A and B for some PCB or wired versions, this is set for rev 2 PCB, 0 for older PCB, and 0 for rev 3 pcb
-#define PCB_REV2 0
-#if PCB_REV2
-    #define DIAL_A 12
-    #define DIAL_B 13
-#else
-    #define DIAL_A 13
-    #define DIAL_B 12
-#endif
-#define BATTERY_SENSOR 36
-#define LIGHT_SENSOR 39
+#include "config.h"
 
 #include <ArduinoJson.h>
 const int JSON_DOC_SIZE = 5000;
