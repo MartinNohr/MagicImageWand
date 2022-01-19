@@ -19,6 +19,7 @@ public:
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
+    static volatile int m_nButtonTimer;
     static portMUX_TYPE buttonMux;
     static ROTARY_DIAL_SETTINGS* pSettings;
     static volatile int m_nLongPressTimer;
@@ -40,13 +41,23 @@ private:
     CRotaryDialButton() {
     }
     // the timer callback for handling long presses
-    static void periodic_LONGPRESS_timer_callback(void* arg)
+    static void periodic_Button_timer_callback(void* arg)
     {
         // make sure this is a valid button
 		if (whichButton<0 || whichButton>CLICK_BUTTONS_COUNT)
             return;
+        // if our timer is negative, just leave
+		if (!m_nWaitRelease && m_nButtonTimer < 0)
+            return;
+        // decrement until 0
+		if (m_nButtonTimer > 0)
+			--m_nButtonTimer;
+        // if still not 0, nothing to do
+		if (!m_nWaitRelease && m_nButtonTimer > 0)
+            return;
         portENTER_CRITICAL_ISR(&buttonMux);
         Button btn;
+        // let's get the level
 		bool level = gpio_get_level(gpioNums[whichButton]);
         // waiting for a release after a long press was seen
 		if (m_nWaitRelease) {
@@ -54,60 +65,53 @@ private:
 				if (--m_nWaitRelease == 0) {
 					// we are done
 					m_nLongPressTimer = 0;
-					esp_timer_stop(periodic_LONGPRESS_timer);
 					whichButton = -1;
 				}
             }
-			portEXIT_CRITICAL_ISR(&buttonMux);
-			return;
         }
-        if (m_nLongPressTimer)
-			--m_nLongPressTimer;
-        // if the timer counter has finished, it must be a long press
-		if (m_nLongPressTimer == 0) {
-            btn = longpressBtnArray[whichButton];
-            // check for both btn's on PCB down
-            if ((whichButton == 1 && !gpio_get_level(gpioNums[2])) || (whichButton == 2 && !gpio_get_level(gpioNums[1]))) {
-                // make sure both buttons are still down
-                delay(1000);
-                if (!gpio_get_level(gpioNums[2]) && !gpio_get_level(gpioNums[1])) {
-                    btn = BTN2_LONGPRESS;
+        else {
+            if (m_nLongPressTimer)
+                --m_nLongPressTimer;
+            // if the timer counter has finished, it must be a long press
+            if (m_nLongPressTimer == 0) {
+                btn = longpressBtnArray[whichButton];
+                // check for both btn's on PCB down
+                if ((whichButton == 1 && !gpio_get_level(gpioNums[2])) || (whichButton == 2 && !gpio_get_level(gpioNums[1]))) {
+                    // make sure both buttons are still down
+                    delay(1000);
+                    if (!gpio_get_level(gpioNums[2]) && !gpio_get_level(gpioNums[1])) {
+                        btn = BTN2_LONGPRESS;
+                    }
                 }
-            }
-            m_nWaitRelease = 2;
-            if (btnBuf.size() < m_nMaxButtons) {
-				btnBuf.push(btn);
-            }
-            // set it so we ignore the button interrupt for one more timer time
-			//m_nLongPressTimer = -1;
-		}
-        // if the button is up and the timer hasn't finished counting, it must be a short press
-        else if (level) {
-            if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
-				btn = clickBtnArray[whichButton];
+                m_nWaitRelease = 20;
                 if (btnBuf.size() < m_nMaxButtons) {
                     btnBuf.push(btn);
-                    m_nLongPressTimer = 0;
-                    esp_timer_stop(periodic_LONGPRESS_timer);
+                    m_nButtonTimer = -1;
                 }
-				//m_nLongPressTimer = 0;
-			}
-            //else if (m_nLongPressTimer < -1) {
-            //    m_nLongPressTimer = 0;
-            //    esp_timer_stop(periodic_LONGPRESS_timer);
-            //}
+                // set it so we ignore the button interrupt for one more timer time
+                //m_nLongPressTimer = -1;
+            }
+            // if the button is up and the long timer hasn't finished counting, it must be a short press
+            else if (level) {
+                if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
+                    btn = clickBtnArray[whichButton];
+                    if (btnBuf.size() < m_nMaxButtons) {
+                        btnBuf.push(btn);
+                        m_nLongPressTimer = 0;
+                        m_nButtonTimer = -1;
+                        m_nWaitRelease = 0;
+                    }
+                }
+            }
         }
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
 
     // button interrupt
     static void clickHandler(void* arg) {
-        static unsigned long whenClick = 0;
-		if (whenClick && millis() < whenClick)
+		if (m_nButtonTimer >= 0)
             return;
         portENTER_CRITICAL_ISR(&buttonMux);
-        // ignore for 30 mS
-        whenClick = millis() + 30;
         // figure out who this was
 		switch (*(char*)arg) {
 		case 'C':
@@ -125,9 +129,8 @@ private:
 		}
         // our interrupt went low, if timer not started, start it
 		if (whichButton != -1 && m_nLongPressTimer == 0) {
-            m_nLongPressTimer = pSettings->m_nLongPressTimerValue;
-            esp_timer_stop(periodic_LONGPRESS_timer);	// just in case
-            esp_timer_start_periodic(periodic_LONGPRESS_timer, 10 * 1000);
+			m_nLongPressTimer = pSettings->m_nLongPressTimerValue * 10;
+            m_nButtonTimer = 20; // wait 20 mS
         }
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
@@ -146,8 +149,8 @@ private:
         // kill the long press timer for the other buttons
         m_nLongPressTimer = 0;
         whichButton = -1;
-        esp_timer_stop(periodic_LONGPRESS_timer);
-        //attachInterruptArg(gpioC, clickHandler, (void*)"C", FALLING);
+        m_nButtonTimer = -1;
+        m_nWaitRelease = 0;
 
         static unsigned long lastTime = 0;
         static unsigned long lastButtonPush = 0;
@@ -226,13 +229,14 @@ public:
         // create a timer
         // set the interrupts
         periodic_LONGPRESS_timer_args = {
-                periodic_LONGPRESS_timer_callback,
+                periodic_Button_timer_callback,
                 /* argument specified here will be passed to timer callback function */
                 (void*)0,
                 ESP_TIMER_TASK,
                 "one-shotLONGPRESS"
         };
         esp_timer_create(&periodic_LONGPRESS_timer_args, &periodic_LONGPRESS_timer);
+        esp_timer_start_periodic(periodic_LONGPRESS_timer, 1 * 1000);
         // pinMode() doesn't work on Heltec for pin14, strange
         // load the buttons, A and B are the dial, and C is the click
         // btn0/1 are the two buttons on the TTGO, use -1 to ignore
@@ -332,3 +336,4 @@ CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[CLICK_BUTTONS_COU
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
 portMUX_TYPE CRotaryDialButton::buttonMux = portMUX_INITIALIZER_UNLOCKED;
 volatile int CRotaryDialButton::m_nWaitRelease = 0;
+volatile int CRotaryDialButton::m_nButtonTimer = -1;
