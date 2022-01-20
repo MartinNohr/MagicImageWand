@@ -164,8 +164,8 @@ private:
         }
         lastTime = millis();
         // let the switch settle down, and handle it in the timer
-        esp_timer_start_once(rotary_timer, 2000);
         m_bWaitingForRotary = true;
+        esp_timer_start_once(rotary_timer, 5000);
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
 

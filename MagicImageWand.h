@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.19";
+const char* MIW_Version = "2.20";
 
 const char* StartFileName = "START.MIW";
 #include "config.h"
@@ -210,7 +210,7 @@ typedef struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
     bool bHiLiteCurrentFile = true;
-    int nPreviewScrollCols = 120;               // now many columns to scroll with dial during preview
+    int nPreviewScrollCols = 20;                // now many columns to scroll with dial during preview
     bool bShowProgress = true;                  // show the progress bar
     bool bShowFolder = true;                    // show the path in front of the file
     int nDisplayBrightness = 50;                // this is in %
@@ -221,7 +221,7 @@ typedef struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
-    int nBatteryFullLevel = 1730;               // 100% battery
+    int nBatteryFullLevel = 1760;               // 100% battery
     int nBatteryEmptyLevel = 1230;              // 0% battery, should cause a shutdown to save the batteries
     int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
     int bSleepOnLowBattery = false;             // sleep on low battery
