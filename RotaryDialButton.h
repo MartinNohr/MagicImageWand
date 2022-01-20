@@ -90,7 +90,7 @@ private:
                     m_nButtonTimer = -1;
                 }
                 // set it so we ignore the button interrupt for one more timer time
-                //m_nLongPressTimer = -1;
+                m_nLongPressTimer = -1;
             }
             // if the button is up and the long timer hasn't finished counting, it must be a short press
             else if (level) {
