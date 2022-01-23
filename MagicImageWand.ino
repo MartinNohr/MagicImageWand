@@ -50,6 +50,7 @@ TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite
 #define BATTERY_BAR_HEIGHT 5
 TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
 
+volatile bool taskDone = false;
 void setup()
 {
 	Serial.begin(115200);
@@ -194,19 +195,17 @@ void setup()
 	MenuStack.top()->offset = 0;
 	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
 	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
-	//FastLED.addLeds<SK6812, DATA_PIN1, GRB>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
 	// create the second led controller
 	if (LedInfo.bSecondController) {
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
-		//FastLED.addLeds<SK6812, DATA_PIN2, GRB>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 	}
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
 	if (nBootCount == 0) {
-		xTaskCreatePinnedToCore(InitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
+		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
 		tft.setTextColor(SystemInfo.menuTextColor);
 		rainbow_fill();
 		tft.setTextColor(TFT_BLACK);
@@ -220,97 +219,9 @@ void setup()
 		if (msg.length()) {
 			tft.drawString(msg, 20, 110);
 		}
-		//fill_noise8(leds, 144, 2, 0, 10, 2, 0, 0, 10);
-		//FastSPI_LED.show();
-		//delay(5000);
-		//bSecondStrip = oldSecond;
-		//// Turn the LED on, then pause
-		//SetPixel(0, CRGB::Red);
-		//SetPixel(1, CRGB::Red);
-		//SetPixel(4, CRGB::Green);
-		//SetPixel(5, CRGB::Green);
-		//SetPixel(8, CRGB::Blue);
-		//SetPixel(9, CRGB::Blue);
-		//SetPixel(12, CRGB::White);
-		//SetPixel(13, CRGB::White);
-		//SetPixel(NUM_LEDS - 0, CRGB::Red);
-		//SetPixel(NUM_LEDS - 1, CRGB::Red);
-		//SetPixel(NUM_LEDS - 4, CRGB::Green);
-		//SetPixel(NUM_LEDS - 5, CRGB::Green);
-		//SetPixel(NUM_LEDS - 8, CRGB::Blue);
-		//SetPixel(NUM_LEDS - 9, CRGB::Blue);
-		//SetPixel(NUM_LEDS - 12, CRGB::White);
-		//SetPixel(NUM_LEDS - 13, CRGB::White);
-		//SetPixel(0 + NUM_LEDS, CRGB::Red);
-		//SetPixel(1 + NUM_LEDS, CRGB::Red);
-		//SetPixel(4 + NUM_LEDS, CRGB::Green);
-		//SetPixel(5 + NUM_LEDS, CRGB::Green);
-		//SetPixel(8 + NUM_LEDS, CRGB::Blue);
-		//SetPixel(9 + NUM_LEDS, CRGB::Blue);
-		//SetPixel(12 + NUM_LEDS, CRGB::White);
-		//SetPixel(13 + NUM_LEDS, CRGB::White);
-		//for (int ix = 0; ix < 255; ix += 5) {
-		//	FastLED.setBrightness(ix);
-		//	FastLED.show();
-		//	delayMicroseconds(50);
-		//}
-		//for (int ix = 255; ix >= 0; ix -= 5) {
-		//	FastLED.setBrightness(ix);
-		//	FastLED.show();
-		//	delayMicroseconds(50);
-		//}
-		//delayMicroseconds(50);
-		//FastLED.clear(true);
-		//delayMicroseconds(50);
-		//FastLED.setBrightness(nStripBrightness);
-		//delay(50);
-		//// Now turn the LED off
-		//FastLED.clear(true);
-		//delayMicroseconds(50);
-		//// run a white dot up the display and back
-		//for (int ix = 0; ix < STRIPLENGTH; ++ix) {
-		//	SetPixel(ix, CRGB::White);
-		//	if (ix)
-		//		SetPixel(ix - 1, CRGB::Black);
-		//	FastLED.show();
-		//	delayMicroseconds(50);
-		//}
-		//for (int ix = STRIPLENGTH - 1; ix >= 0; --ix) {
-		//	SetPixel(ix, CRGB::White);
-		//	if (ix)
-		//		SetPixel(ix + 1, CRGB::Black);
-		//	FastLED.show();
-		//	delayMicroseconds(50);
-		//}
 	}
-	//FastLED.clear(true);
-	//ClearScreen();
-
 	// clear the button buffer
 	CRotaryDialButton::clear();
-	/*
-		analogSetCycles(8);                   // Set number of cycles per sample, default is 8 and provides an optimal result, range is 1 - 255
-		analogSetSamples(1);                  // Set number of samples in the range, default is 1, it has an effect on sensitivity has been multiplied
-		analogSetClockDiv(1);                 // Set the divider for the ADC clock, default is 1, range is 1 - 255
-		analogSetAttenuation(ADC_11db);       // Sets the input attenuation for ALL ADC inputs, default is ADC_11db, range is ADC_0db, ADC_2_5db, ADC_6db, ADC_11db
-		//analogSetPinAttenuation(36, ADC_11db); // Sets the input attenuation, default is ADC_11db, range is ADC_0db, ADC_2_5db, ADC_6db, ADC_11db
-		analogSetPinAttenuation(37, ADC_11db);
-		// ADC_0db provides no attenuation so IN/OUT = 1 / 1 an input of 3 volts remains at 3 volts before ADC measurement
-		// ADC_2_5db provides an attenuation so that IN/OUT = 1 / 1.34 an input of 3 volts is reduced to 2.238 volts before ADC measurement
-		// ADC_6db provides an attenuation so that IN/OUT = 1 / 2 an input of 3 volts is reduced to 1.500 volts before ADC measurement
-		// ADC_11db provides an attenuation so that IN/OUT = 1 / 3.6 an input of 3 volts is reduced to 0.833 volts before ADC measurement
-	//   adcAttachPin(VP);                     // Attach a pin to ADC (also clears any other analog mode that could be on), returns TRUE/FALSE result
-	//   adcStart(VP);                         // Starts an ADC conversion on attached pin's bus
-	//   adcBusy(VP);                          // Check if conversion on the pin's ADC bus is currently running, returns TRUE/FALSE result
-	//   adcEnd(VP);
-
-		//adcAttachPin(36);
-		adcAttachPin(37);
-	*/
-	// Fill Sprite with a "transparent" colour
-	// TFT_TRANSPARENT is already defined for convenience
-	// We could also fill with any colour as "transparent" and later specify that
-	// same colour when we push the Sprite onto the screen.
 	nBootCount = 0;
 	// load the sleep timer
 	sleepTimer = SystemInfo.nSleepTime * 60;
@@ -318,32 +229,78 @@ void setup()
 	ReadMacroInfo();
 	ClearScreen();
 	DisplayCurrentFile();
+	// wait for led test to finish
+	//for (; !taskDone; delay(100)) {
+	//}
+	//xTaskCreatePinnedToCore(TaskSidewaysScrolling, "SIDEWAYS_SCROLL", 2048, NULL, 6, &Task2, 0);
 }
-
-// test the LEDS on start
-void InitTestLed(void* parameter)
+// task to test the LEDS on start
+void TaskInitTestLed(void* parameter)
 {
+	const CRGB color[3] = { CRGB::Red,CRGB::Green,CRGB::Blue };
 	// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
-	SetPixel(0, CRGB::Red);
-	SetPixel(1, CRGB::Red);
-	SetPixel(2, CRGB::Red);
-	SetPixel(143, CRGB::Red);
-	SetPixel(142, CRGB::Red);
-	SetPixel(141, CRGB::Red);
-	FastLED.show();
-	delay(100);
-	SetPixel(0, CRGB::Green);
-	SetPixel(1, CRGB::Green);
-	SetPixel(2, CRGB::Green);
-	SetPixel(143, CRGB::Green);
-	SetPixel(142, CRGB::Green);
-	SetPixel(141, CRGB::Green);
-	FastLED.show();
-	delay(100);
+	for (int cix = 0; cix < 3; ++cix) {
+		for (int px = 0; px < 3; ++px) {
+			SetPixel(px, color[cix]);
+			SetPixel(143 - px, color[cix]);
+		}
+		FastLED.show();
+		delay(100);
+	}
 	FastLED.clear(true);
 	RainbowPulse();
+	taskDone = true;
 	vTaskDelete(NULL);
 }
+
+//// task to handle the sideways scrolling, TODO: needs mux protection added
+//void TaskSidewaysScrolling(void* parameter)
+//{
+//	for (;;) {
+//		// this handles sideways scrolling of really long menu items
+//		static unsigned long ledUpdateTime = 0;
+//		if (SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_SENSOR && millis() > ledUpdateTime + 100) {
+//			ledUpdateTime = millis();
+//			LightSensorLedBrightness();
+//		}
+//		for (int ix = 0; ix < nMenuLineCount; ++ix) {
+//			//taskYIELD();
+//			int offset = TextLines[ix].nRollOffset;
+//			if (TextLines[ix].nRollLength) {
+//				//Serial.println("scroll");
+//				if (TextLines[ix].nRollOffset == 0 && TextLines[ix].nRollDirection == 0) {
+//					TextLines[ix].nRollDirection = SystemInfo.nSidewaysScrollPause;
+//					continue;
+//				}
+//				if (TextLines[ix].nRollDirection > 1) {
+//					--TextLines[ix].nRollDirection;
+//				}
+//				if (TextLines[ix].nRollDirection == 1) {
+//					++TextLines[ix].nRollOffset;
+//				}
+//				if (TextLines[ix].nRollOffset >= (TextLines[ix].nRollLength - tft.width()) && TextLines[ix].nRollDirection > 0) {
+//					TextLines[ix].nRollDirection = -SystemInfo.nSidewaysScrollPause;
+//				}
+//				if (TextLines[ix].nRollDirection < -1) {
+//					++TextLines[ix].nRollDirection;
+//				}
+//				if (TextLines[ix].nRollDirection == -1) {
+//					TextLines[ix].nRollOffset -= SystemInfo.nSidewaysScrollReverse;
+//					if (TextLines[ix].nRollOffset < 0) {
+//						TextLines[ix].nRollOffset = 0;
+//					}
+//					if (TextLines[ix].nRollOffset == 0) {
+//						TextLines[ix].nRollDirection = 0;
+//					}
+//				}
+//				if (offset != TextLines[ix].nRollOffset) {
+//					DisplayLine(ix, TextLines[ix].Line, TextLines[ix].foreColor, TextLines[ix].backColor);
+//				}
+//			}
+//		}
+//		vTaskDelay(25 / portTICK_PERIOD_MS);
+//	}
+//}
 
 // check and handle the rotary dial type
 // if either A or B is 0, then this is a toggle dial
@@ -378,6 +335,8 @@ void CheckRotaryDialType()
 		SystemInfo.DialSettings.m_bToggleDial = !bA && !bB;
 		// we shouldn't need this again
 	}
+	if (!SystemInfo.DialSettings.m_bToggleDial)
+		SystemInfo.DialSettings.m_nDialPulseCount = 2;
 	WriteMessage(String("Dial Type: ") + (SystemInfo.DialSettings.m_bToggleDial ? "Toggle" : "Pulse"), false, 1000);
 }
 
@@ -480,6 +439,7 @@ void ResetSleepAndDimTimers() {
 // this also checks the light sensor if enabled
 void MenuTextScrollSideways()
 {
+	//return;
 	// this handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
 	static unsigned long ledUpdateTime = 0;

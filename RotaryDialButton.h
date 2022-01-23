@@ -1,5 +1,6 @@
 #pragma once
 #include <queue>
+#include <ESP32Encoder.h>
 class CRotaryDialButton {
 public:
 	enum Button {
@@ -11,29 +12,27 @@ public:
 	};
     struct ROTARY_DIAL_SETTINGS {
         int m_nLongPressTimerValue; // mS for long press
-        int m_nDialPulseCount;      // how many pulse to equal one rotation click
-        int m_nDialSpeed;           // pause after each dial click
+        int m_nDialPulseCount;      // how many pulses to equal one rotation click
         bool m_bReverseDial;        // direction swapping
         bool m_bToggleDial;         // set for toggle type dial (newer PCB) and clear for pulse type dial (older PCB ones)
-        bool m_bAcceleration;       // set to accelerate fast rotations, I.E. more clicks per click when fast
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
+    static ESP32Encoder encoder;
     static volatile int m_nButtonTimer;
     static portMUX_TYPE buttonMux;
     static ROTARY_DIAL_SETTINGS* pSettings;
     static volatile int m_nLongPressTimer;
-    static esp_timer_handle_t periodic_LONGPRESS_timer, rotary_timer;
-    static esp_timer_create_args_t periodic_LONGPRESS_timer_args, rotary_timer_args;
+    static esp_timer_handle_t periodic_LONGPRESS_timer;
+    static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
     static gpio_num_t gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1;
     static std::queue<Button> btnBuf;
-    static const int m_nMaxButtons = 4;
-    static volatile bool m_bWaitingForRotary;
+    static const int m_nMaxButtons = 10;
     static volatile int m_nWaitRelease;    // this counts waits after a long press for release
 #define CLICK_BUTTONS_COUNT 3
     static gpio_num_t gpioNums[CLICK_BUTTONS_COUNT]; // only the clicks, not the rotation AB ones
     // int for which one caused the interrupt
-    static volatile int whichButton;
+    static volatile int m_nWhichButton;
     // click array for buttons
 	static Button clickBtnArray[CLICK_BUTTONS_COUNT];
 	// long press array for buttons
@@ -45,7 +44,7 @@ private:
     static void periodic_Button_timer_callback(void* arg)
     {
         // make sure this is a valid button
-		if (whichButton<0 || whichButton>CLICK_BUTTONS_COUNT)
+		if (m_nWhichButton<0 || m_nWhichButton>CLICK_BUTTONS_COUNT)
             return;
         // if our timer is negative, just leave
 		if (!m_nWaitRelease && m_nButtonTimer < 0)
@@ -59,14 +58,14 @@ private:
         portENTER_CRITICAL_ISR(&buttonMux);
         Button btn;
         // let's get the level
-		bool level = gpio_get_level(gpioNums[whichButton]);
+		bool level = gpio_get_level(gpioNums[m_nWhichButton]);
         // waiting for a release after a long press was seen
 		if (m_nWaitRelease) {
 			if (level) {
 				if (--m_nWaitRelease == 0) {
 					// we are done
 					m_nLongPressTimer = 0;
-					whichButton = -1;
+					m_nWhichButton = -1;
 				}
             }
         }
@@ -75,9 +74,9 @@ private:
                 --m_nLongPressTimer;
             // if the timer counter has finished, it must be a long press
             if (m_nLongPressTimer == 0) {
-                btn = longpressBtnArray[whichButton];
+                btn = longpressBtnArray[m_nWhichButton];
                 // check for both btn's on PCB down
-                if ((whichButton == 1 && !gpio_get_level(gpioNums[2])) || (whichButton == 2 && !gpio_get_level(gpioNums[1]))) {
+                if ((m_nWhichButton == 1 && !gpio_get_level(gpioNums[2])) || (m_nWhichButton == 2 && !gpio_get_level(gpioNums[1]))) {
                     // make sure both buttons are still down
                     delay(1000);
                     if (!gpio_get_level(gpioNums[2]) && !gpio_get_level(gpioNums[1])) {
@@ -95,7 +94,7 @@ private:
             // if the button is up and the long timer hasn't finished counting, it must be a short press
             else if (level) {
                 if (m_nLongPressTimer > 0 && m_nLongPressTimer < pSettings->m_nLongPressTimerValue - 1) {
-                    btn = clickBtnArray[whichButton];
+                    btn = clickBtnArray[m_nWhichButton];
                     if (btnBuf.size() < m_nMaxButtons) {
                         btnBuf.push(btn);
                         m_nLongPressTimer = 0;
@@ -116,106 +115,43 @@ private:
         // figure out who this was
 		switch (*(char*)arg) {
 		case 'C':
-			whichButton = 0;
+			m_nWhichButton = 0;
 			break;
 		case '0':
-			whichButton = 1;
+			m_nWhichButton = 1;
 			break;
 		case '1':
-			whichButton = 2;
+			m_nWhichButton = 2;
 			break;
 		default:
-			whichButton = -1;
+			m_nWhichButton = -1;
 			break;
 		}
         // our interrupt went low, if timer not started, start it
-		if (whichButton != -1 && m_nLongPressTimer == 0) {
+		if (m_nWhichButton != -1 && m_nLongPressTimer == 0) {
 			m_nLongPressTimer = pSettings->m_nLongPressTimerValue * 10;
             m_nButtonTimer = 20; // wait 20 mS
         }
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
 
-    // interrupt routines for the A and B rotary switch contacts
-    // basically it gets interrupts from the A side and then looks at B to see which direction it was going
-    // there is also a counter that will require 1 or more pulses before the rotation is queued
-    // Some switches pulse closed and then back to open while others just switch state, this code
-    // should work with both kinds
-    // the dialspeed is how many mS to go deaf after the interrupt, this handles switch bounce as well as
-    // slowing down the max rotation speed of the dial
-    static void rotateHandler(void* arg) {
-        //if (*(char*)arg != 'A')
-        //    return;
-        if (m_bWaitingForRotary)
-            return;
-        portENTER_CRITICAL_ISR(&buttonMux);
-        // kill the long press timer for the other buttons
-        m_nLongPressTimer = 0;
-        whichButton = -1;
-        m_nButtonTimer = -1;
-        m_nWaitRelease = 0;
-
-        static unsigned long lastTime = 0;
-        static unsigned long lastButtonPush = 0;
-        // ignore pulses if too soon since the last int
-        if (millis() < lastTime + pSettings->m_nDialSpeed) {
-            portEXIT_CRITICAL_ISR(&buttonMux);
-            return;
-        }
-        lastTime = millis();
-        // let the switch settle down, and handle it in the timer
-        m_bWaitingForRotary = true;
-        esp_timer_start_once(rotary_timer, 5000);
-        portEXIT_CRITICAL_ISR(&buttonMux);
-    }
-
-    // timer to handle final rotary dial actions
-    static void rotary_timer_callback(void* arg)
+    // pull the rotary buttons from the count
+    static void PullRotary()
     {
-        // count of buttons for when the sensitivity is reduced from nButtonSensitivity
-        static unsigned int countRight = 0;
-        static unsigned int countLeft = 0;
-        static unsigned long lastButtonPush = 0;
+        static int nPulseCount = 1;
         portENTER_CRITICAL_ISR(&buttonMux);
-        m_bWaitingForRotary = false;
-        bool valA = gpio_get_level(gpioA);
-        bool valB = gpio_get_level(gpioB);
-        if (valA && !pSettings->m_bToggleDial) {
-            portEXIT_CRITICAL_ISR(&buttonMux);
-            return;
-        }
-        Button btnToPush = BTN_NONE;
-        bool cmpBtn = pSettings->m_bReverseDial ? (valA == valB) : (valA != valB);
-        Button btn = cmpBtn ? BTN_RIGHT : BTN_LEFT;
-        // see if we are counting pulses, increment the correct one
-        if (btn == BTN_RIGHT)
-            ++countRight;
-        else if (btn == BTN_LEFT)
-            ++countLeft;
-        // if both have a value, clear
-        if (countLeft && countRight)
-            countLeft = countRight = 0;
-        // see if we have enough
-        if (countLeft >= pSettings->m_nDialPulseCount) {
-            btnToPush = BTN_LEFT;
-            countLeft = 0;
-        }
-        else if (countRight >= pSettings->m_nDialPulseCount) {
-            btnToPush = BTN_RIGHT;
-            countRight = 0;
-        }
-        unsigned long diff = millis() - lastButtonPush;
-        int count = 1;
-        if (pSettings->m_bAcceleration && diff < 100) {
-            count = 200 / diff;
-            //Serial.println("diff: " + String(diff) + " " + String(count));
-        }
-        while (btnToPush != BTN_NONE && (btnToPush == BTN_RIGHT || btnToPush == BTN_LEFT) && count--) {
+		int64_t rotateCount = encoder.getCount();
+        encoder.clearCount();
+		while (rotateCount != 0) {
             if (btnBuf.size() < m_nMaxButtons) {
-                btnBuf.push(btnToPush);
+                // make sure we only count the pulses the user wants
+                if (--nPulseCount == 0) {
+					btnBuf.push(rotateCount > 0 ? BTN_RIGHT : BTN_LEFT);
+                    nPulseCount = pSettings->m_nDialPulseCount;
+                }
             }
+            rotateCount > 0 ? --rotateCount : ++rotateCount;
         }
-        lastButtonPush = millis();
         portEXIT_CRITICAL_ISR(&buttonMux);
     }
 
@@ -226,10 +162,8 @@ public:
         pSettings = ps;
         pSettings->m_nLongPressTimerValue = 40;
         pSettings->m_nDialPulseCount = 1;
-        pSettings->m_nDialSpeed = 10;
         pSettings->m_bReverseDial = false;
         pSettings->m_bToggleDial = false;
-        pSettings->m_bAcceleration = false;
         gpioA = a;
         gpioB = b;
         gpioC = c;
@@ -239,8 +173,12 @@ public:
         gpioNums[0] = c;
         gpioNums[1] = btn0;
         gpioNums[2] = btn1;
+        // create the rotary pulse handler
+        ESP32Encoder::useInternalWeakPullResistors = UP;
+        encoder.attachHalfQuad(gpioB, gpioA);
+        // set starting count value after attaching
+        encoder.clearCount();
         // create a timer
-        // set the interrupts
         periodic_LONGPRESS_timer_args = {
                 periodic_Button_timer_callback,
                 /* argument specified here will be passed to timer callback function */
@@ -250,27 +188,12 @@ public:
         };
         esp_timer_create(&periodic_LONGPRESS_timer_args, &periodic_LONGPRESS_timer);
         esp_timer_start_periodic(periodic_LONGPRESS_timer, 1 * 1000);
-        rotary_timer_args = {
-                rotary_timer_callback,
-                /* argument specified here will be passed to timer callback function */
-                (void*)0,
-                ESP_TIMER_TASK,
-                "one-shotROTARY"
-        };
-        esp_timer_create(&rotary_timer_args, &rotary_timer);
         // pinMode() doesn't work on Heltec for pin14, strange
         // load the buttons, A and B are the dial, and C is the click
         // btn0/1 are the two buttons on the TTGO, use -1 to ignore
-        gpio_set_direction(gpioA, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(gpioA, GPIO_PULLUP_ONLY);
-        gpio_set_direction(gpioB, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(gpioB, GPIO_PULLUP_ONLY);
         gpio_set_direction(gpioC, GPIO_MODE_INPUT);
         gpio_set_pull_mode(gpioC, GPIO_PULLUP_ONLY);
-        //gpio_isr_handler_add(gpioC, clickHandler, (void*)"C");
-        //gpio_set_intr_type(gpioC, GPIO_INTR_NEGEDGE);
 		attachInterruptArg(gpioC, clickHandler, (void*)"C", FALLING);
-		attachInterruptArg(gpioA, rotateHandler, (void*)"A", CHANGE);
         if (gpioBtn0 != -1) {
             gpio_set_direction(gpioBtn0, GPIO_MODE_INPUT);
             gpio_set_pull_mode(gpioBtn0, GPIO_PULLUP_ONLY);
@@ -285,28 +208,31 @@ public:
     // see what the next button is, return None if queue empty
     static Button peek()
     {
-        noInterrupts();
+        PullRotary();
+        portENTER_CRITICAL_ISR(&buttonMux);
 		Button retval = BTN_NONE;
 		if (!btnBuf.empty())
 			retval = btnBuf.front();
-        interrupts();
+        portEXIT_CRITICAL_ISR(&buttonMux);
     }
     // get the next button and remove from the queue, return BTN_NONE if nothing there
     static Button dequeue()
     {
-        noInterrupts();
+        PullRotary();
+        portENTER_CRITICAL_ISR(&buttonMux);
         Button btn = BTN_NONE;
         if (!btnBuf.empty()) {
             btn = btnBuf.front();
             btnBuf.pop();
         }
-        interrupts();
+        portEXIT_CRITICAL_ISR(&buttonMux);
         return btn;
     }
     // wait milliseconds for a button, optionally return click or none
     // waitTime -1 means forever
     static Button waitButton(bool bClick, int waitTime = -1)
     {
+        PullRotary();
         Button ret = bClick ? BTN_CLICK : BTN_NONE;
         unsigned long nowTime = millis();
         while (waitTime == -1 || millis() < nowTime + waitTime) {
@@ -322,26 +248,28 @@ public:
     // clear the buffer
     static void clear()
     {
-        noInterrupts();
+        PullRotary();
+        portENTER_CRITICAL_ISR(&buttonMux);
         while (btnBuf.size())
             btnBuf.pop();
-        interrupts();
+        portEXIT_CRITICAL_ISR(&buttonMux);
     }
     // return the count
     static int getCount()
     {
-        noInterrupts();
+        PullRotary();
+        portENTER_CRITICAL_ISR(&buttonMux);
         int size = btnBuf.size();
-        interrupts();
+        portEXIT_CRITICAL_ISR(&buttonMux);
         return size;
     }
     // push a button
     static void pushButton(Button btn)
     {
-        noInterrupts();
-		if (btnBuf.size() < m_nMaxButtons)
+        portENTER_CRITICAL_ISR(&buttonMux);
+        if (btnBuf.size() < m_nMaxButtons)
 			btnBuf.push(btn);
-        interrupts();
+        portEXIT_CRITICAL_ISR(&buttonMux);
     }
 };
 std::queue<enum CRotaryDialButton::Button> CRotaryDialButton::btnBuf;
@@ -349,13 +277,13 @@ gpio_num_t CRotaryDialButton::gpioNums[CLICK_BUTTONS_COUNT] = { };
 gpio_num_t CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
 gpio_num_t CRotaryDialButton::gpioBtn0, CRotaryDialButton::gpioBtn1;
 volatile int CRotaryDialButton::m_nLongPressTimer;
-volatile int CRotaryDialButton::whichButton;
-esp_timer_handle_t CRotaryDialButton::periodic_LONGPRESS_timer, CRotaryDialButton::rotary_timer;
-esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args, CRotaryDialButton::rotary_timer_args;
+volatile int CRotaryDialButton::m_nWhichButton;
+esp_timer_handle_t CRotaryDialButton::periodic_LONGPRESS_timer;
+esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
 CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK };
 portMUX_TYPE CRotaryDialButton::buttonMux = portMUX_INITIALIZER_UNLOCKED;
 volatile int CRotaryDialButton::m_nWaitRelease = 0;
 volatile int CRotaryDialButton::m_nButtonTimer = -1;
-volatile bool CRotaryDialButton::m_bWaitingForRotary = false;
+ESP32Encoder CRotaryDialButton::encoder;

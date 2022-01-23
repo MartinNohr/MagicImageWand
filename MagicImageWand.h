@@ -1,9 +1,9 @@
 #pragma once
 
-const char* MIW_Version = "2.20";
+const char* MIW_Version = "2.21";
 
 const char* StartFileName = "START.MIW";
-#include "config.h"
+#include "MIWconfig.h"
 
 #include <ArduinoJson.h>
 const int JSON_DOC_SIZE = 5000;
@@ -769,8 +769,6 @@ MenuItem DialMenu[] = {
     {eExit,"Rotary Dial Settings"},
     {eBool,"Direction: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Pulse Count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseCount,1,5},
-    {eTextInt,"Rotate Speed: %d mS",GetIntegerValue,&SystemInfo.DialSettings.m_nDialSpeed,5,500},
-    {eBool,"Acceleration: %s",ToggleBool,&SystemInfo.DialSettings.m_bAcceleration,0,0,0,"On","Off"},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
     {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
     {eList,"Btn1 Long: %s",GetSelectChoice,&SystemInfo.nBtn1LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
@@ -1138,4 +1136,5 @@ typedef struct MACRO_INFO {
 };
 MACRO_INFO MacroInfo[10];
 SemaphoreHandle_t macroMutex;
+// task for LED test on startup and then for sideways scrolling
 TaskHandle_t Task1, Task2;

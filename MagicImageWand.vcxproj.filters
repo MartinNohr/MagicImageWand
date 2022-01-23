@@ -35,7 +35,7 @@
     <ClInclude Include="fonts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
+    <ClInclude Include="MIWconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
