@@ -507,7 +507,6 @@ void loop()
 	static bool didsomething = false;
 	static bool bLastSettingsMode = false;
 
-	MenuTextScrollSideways();
 	didsomething = bSettingsMode ? HandleMenus() : HandleRunMode();
 	if (SystemInfo.nSleepTime && sleepTimer == 0) {
 		// go to sleep
@@ -979,9 +978,7 @@ void GetIntegerValue(MenuItem* menu)
 			(*menu->change)(menu, 0);
 			oldVal = *(int*)menu->value;
 		}
-		while (!done && (button = ReadButton()) == BTN_NONE) {
-			MenuTextScrollSideways();
-		}
+		button = ReadButton();
 	} while (!done);
 }
 
@@ -1412,6 +1409,7 @@ bool HandleRunMode()
 // check the rotation buttons during running
 enum CRotaryDialButton::Button ReadButton()
 {
+	MenuTextScrollSideways();
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
@@ -1993,7 +1991,6 @@ void DisplayLedLightBar()
 	bool bChange = true;
 
 	while (true) {
-		MenuTextScrollSideways();
 		if (bChange) {
 			String line;
 			switch (what) {
@@ -3278,9 +3275,11 @@ void ShowBmp(MenuItem*)
 		if (imgWidth > LedInfo.nTotalLeds) {
 			displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
 		}
-		// see if this is too big for the TFT
+		// see if this is too tall for the TFT
 		if (imgWidth > 144) {
 			bHalfSize = true;
+			// also divide the width (height in the file) by 2
+			imgHeight /= 2;
 		}
 
 		/* compute the line length */
@@ -3304,7 +3303,7 @@ void ShowBmp(MenuItem*)
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
-				int newColStart = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
+				int newColStart = min((int32_t)imgHeight - 240, imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
 				// if <= 0 we couldn't scroll
 				if (newColStart > 0) {
 					// if no change we must be at the end, so reset it
@@ -3352,7 +3351,7 @@ void ShowBmp(MenuItem*)
 					int bufpos = 0;
 					CRGB pixel;
 					// get to start of pixel data for this column
-					FileSeekBuf((uint32_t)bmpOffBits + (((col * (bHalfSize ? 2 : 1)) + imgStartCol) * lineLength));
+					FileSeekBuf((uint32_t)bmpOffBits + (((col + imgStartCol) * (bHalfSize ? 2 : 1)) * lineLength));
 					for (int x = 0; x < displayWidth; ++x) {
 						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();
@@ -3412,8 +3411,8 @@ void ShowBmp(MenuItem*)
 				}
 				else {
 					if (!bShowingSize && bAllowScroll) {
-						imgStartCol += bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
-						imgStartCol = min((int32_t)imgHeight - (bHalfSize ? 480 : 240), imgStartCol);
+						imgStartCol += SystemInfo.nPreviewScrollCols;
+						imgStartCol = min((int)imgHeight - 240, imgStartCol);
 					}
 				}
 				break;
@@ -3431,6 +3430,7 @@ void ShowBmp(MenuItem*)
 				if (bShowingSize) {
 					bShowingSize = false;
 					bRedraw = true;
+					ClearScreen();
 				}
 				else {
 					ClearScreen();
@@ -3521,8 +3521,6 @@ void DisplayMenuLine(int line, int displine, String text)
 	bool hilite = MenuStack.top()->index == line;
 	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
 	if (displine >= 0 && displine < nMenuLineCount) {
-		//Serial.println("displine: " + String(displine) + " line: " + String(line));
-			//Serial.println("displine: " + String(displine) + " screen: " + TextScreenLines[displine] + " mline: " + mline);
 		if (SystemInfo.bMenuStar) {
 			DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
 		}
@@ -4352,7 +4350,6 @@ void InfoMacro(MenuItem* menu)
 			DisplayLine(6, "Click=Edit Text, Long Press=Exit, Rotate=Show Files", SystemInfo.menuTextColor);
 			redraw = false;
 		}
-		MenuTextScrollSideways();
 		switch (btn = ReadButton()) {
 		case BTN_NONE:
 		case BTN_B1_CLICK:
@@ -5357,9 +5354,7 @@ void SetFilter(MenuItem* menu)
 				tft.fillRect(x + 1, tft.fontHeight() * (y + 1) - 4, tft.textWidth(ch), (y + 2) + tft.fontHeight(), SystemInfo.menuTextColor);
 				tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_BLACK, TFT_BLACK, 1);
 			}
-			while (!done && (button = ReadButton()) == BTN_NONE) {
-				MenuTextScrollSideways();
-			}
+			button = ReadButton();
 			switch (button) {
 			case BTN_NONE:
 			case BTN_B1_CLICK:
