@@ -15,6 +15,7 @@ public:
         int m_nDialPulseCount;      // how many pulses to equal one rotation click
         bool m_bReverseDial;        // direction swapping
         bool m_bToggleDial;         // set for toggle type dial (newer PCB) and clear for pulse type dial (older PCB ones)
+        int m_nDialPulseTimer;      // how long to wait to clear multiple pulses
     };
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
@@ -139,10 +140,18 @@ private:
     static void PullRotary()
     {
         static int nPulseCount = 1;
+        static unsigned long lastTime = 0;
         portENTER_CRITICAL_ISR(&buttonMux);
 		int64_t rotateCount = encoder.getCount();
         encoder.clearCount();
 		while (rotateCount != 0) {
+            // reset the pulsecount if it has been too long since the last button
+            if (millis() > lastTime + pSettings->m_nDialPulseTimer) {
+                nPulseCount = pSettings->m_nDialPulseCount;
+            }
+            // record the time we saw a pulse
+            lastTime = millis();
+            // see if there is room in the buffer
             if (btnBuf.size() < m_nMaxButtons) {
                 // make sure we only count the pulses the user wants
                 if (--nPulseCount == 0) {
@@ -164,6 +173,7 @@ public:
         pSettings->m_nDialPulseCount = 1;
         pSettings->m_bReverseDial = false;
         pSettings->m_bToggleDial = false;
+        pSettings->m_nDialPulseTimer = 500;
         gpioA = a;
         gpioB = b;
         gpioC = c;

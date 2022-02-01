@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.22";
+const char* MIW_Version = "2.23";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -769,6 +769,7 @@ MenuItem DialMenu[] = {
     {eExit,"Rotary Dial Settings"},
     {eBool,"Direction: %s",ToggleBool,&SystemInfo.DialSettings.m_bReverseDial,0,0,0,"Reverse","Normal"},
     {eTextInt,"Pulse Count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseCount,1,5},
+    {eTextInt,"Pulse Timer: %d mS",GetIntegerValue,&SystemInfo.DialSettings.m_nDialPulseTimer,100,1000},
     {eTextInt,"Long Press count: %d",GetIntegerValue,&SystemInfo.DialSettings.m_nLongPressTimerValue,2,200},
     {eList,"Btn0 Long: %s",GetSelectChoice,&SystemInfo.nBtn0LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
     {eList,"Btn1 Long: %s",GetSelectChoice,&SystemInfo.nBtn1LongFunction,0,sizeof(BtnLongText) / sizeof(*BtnLongText) - 1,0,NULL,NULL,NULL,BtnLongText},
