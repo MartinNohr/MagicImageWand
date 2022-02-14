@@ -5331,28 +5331,33 @@ void SetFilter(MenuItem* menu)
 			DisplayLine(6, "Long press dial exits, BTN0 deletes last char, BTN0 Long clears text", SystemInfo.menuTextColor);
 		}
 		int nLetterIndex = 0;
+		// redraw screen only when necessary
+		bool bRedraw = true;
 		const int partA = 13;	// half the alphabet
 		do {
-			DisplayLine(0, nameFilter, SystemInfo.menuTextColor);
-			// draw the text
-			DisplayLine(1, letters.substring(0, partA), SystemInfo.menuTextColor);
-			DisplayLine(2, letters.substring(partA, partA * 2), SystemInfo.menuTextColor);
-			DisplayLine(3, letters.substring(partA * 2), SystemInfo.menuTextColor);
-			// figure out which letter to hilite
-			int y = nLetterIndex / partA;
-			y = constrain(y, 0, 2);
-			int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
-			char ch[2] = { 0 };
-			ch[0] = letters[nLetterIndex];
-			// the width calculation for ' ' is 0 (an error!), so we use something close
-			if (ch[0] == ' ')
-				ch[0] = '|';
-			if (SystemInfo.bMenuStar) {
-				tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, TFT_BLACK, 1);
-			}
-			else {
-				tft.fillRect(x + 1, tft.fontHeight() * (y + 1) - 4, tft.textWidth(ch), (y + 2) + tft.fontHeight(), SystemInfo.menuTextColor);
-				tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_BLACK, TFT_BLACK, 1);
+			if (bRedraw) {
+				DisplayLine(0, nameFilter, SystemInfo.menuTextColor);
+				// draw the text
+				DisplayLine(1, letters.substring(0, partA), SystemInfo.menuTextColor);
+				DisplayLine(2, letters.substring(partA, partA * 2), SystemInfo.menuTextColor);
+				DisplayLine(3, letters.substring(partA * 2), SystemInfo.menuTextColor);
+				// figure out which letter to hilite
+				int y = nLetterIndex / partA;
+				y = constrain(y, 0, 2);
+				int x = tft.textWidth(letters.substring(y * partA, nLetterIndex));
+				char ch[2] = { 0 };
+				ch[0] = letters[nLetterIndex];
+				// the width calculation for ' ' is 0 (an error!), so we use something close
+				if (ch[0] == ' ')
+					ch[0] = '|';
+				if (SystemInfo.bMenuStar) {
+					tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_WHITE, TFT_BLACK, 1);
+				}
+				else {
+					tft.fillRect(x + 1, tft.fontHeight() * (y + 1) - 4, tft.textWidth(ch), (y + 2) + tft.fontHeight(), SystemInfo.menuTextColor);
+					tft.drawChar(x + 1, tft.fontHeight() * (y + 2) - 6, letters[nLetterIndex], TFT_BLACK, TFT_BLACK, 1);
+				}
+				bRedraw = false;
 			}
 			button = ReadButton();
 			switch (button) {
@@ -5364,6 +5369,7 @@ void SetFilter(MenuItem* menu)
 				if (menu->op != eBool) {
 					bUpper = !bUpper;
 					letters = bUpper ? upperLetters : lowerLetters;
+					bRedraw = true;
 				}
 				break;
 			case BTN_LEFT:
@@ -5371,22 +5377,27 @@ void SetFilter(MenuItem* menu)
 					--nLetterIndex;
 				else
 					nLetterIndex = letters.length() - 1;
+				bRedraw = true;
 				break;
 			case BTN_RIGHT:
 				if (nLetterIndex < letters.length() - 1)
 					++nLetterIndex;
 				else
 					nLetterIndex = 0;
+				bRedraw = true;
 				break;
 			case BTN_SELECT:
 				nameFilter += letters[nLetterIndex];
+				bRedraw = true;
 				break;
 			case BTN_B0_CLICK:
 				if (nameFilter.length())
 					nameFilter = nameFilter.substring(0, nameFilter.length() - 1);
+				bRedraw = true;
 				break;
 			case BTN_B0_LONG:
 				nameFilter.clear();
+				bRedraw = true;
 				break;
 			case BTN_LONG:
 				done = true;
