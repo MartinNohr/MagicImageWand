@@ -232,7 +232,6 @@ void setup()
 	// wait for led test to finish
 	//for (; !taskDone; delay(100)) {
 	//}
-	//xTaskCreatePinnedToCore(TaskSidewaysScrolling, "SIDEWAYS_SCROLL", 2048, NULL, 6, &Task2, 0);
 }
 // task to test the LEDS on start
 void TaskInitTestLed(void* parameter)
@@ -252,55 +251,6 @@ void TaskInitTestLed(void* parameter)
 	taskDone = true;
 	vTaskDelete(NULL);
 }
-
-//// task to handle the sideways scrolling, TODO: needs mux protection added
-//void TaskSidewaysScrolling(void* parameter)
-//{
-//	for (;;) {
-//		// this handles sideways scrolling of really long menu items
-//		static unsigned long ledUpdateTime = 0;
-//		if (SystemInfo.eDisplayDimMode == DISPLAY_DIM_MODE_SENSOR && millis() > ledUpdateTime + 100) {
-//			ledUpdateTime = millis();
-//			LightSensorLedBrightness();
-//		}
-//		for (int ix = 0; ix < nMenuLineCount; ++ix) {
-//			//taskYIELD();
-//			int offset = TextLines[ix].nRollOffset;
-//			if (TextLines[ix].nRollLength) {
-//				//Serial.println("scroll");
-//				if (TextLines[ix].nRollOffset == 0 && TextLines[ix].nRollDirection == 0) {
-//					TextLines[ix].nRollDirection = SystemInfo.nSidewaysScrollPause;
-//					continue;
-//				}
-//				if (TextLines[ix].nRollDirection > 1) {
-//					--TextLines[ix].nRollDirection;
-//				}
-//				if (TextLines[ix].nRollDirection == 1) {
-//					++TextLines[ix].nRollOffset;
-//				}
-//				if (TextLines[ix].nRollOffset >= (TextLines[ix].nRollLength - tft.width()) && TextLines[ix].nRollDirection > 0) {
-//					TextLines[ix].nRollDirection = -SystemInfo.nSidewaysScrollPause;
-//				}
-//				if (TextLines[ix].nRollDirection < -1) {
-//					++TextLines[ix].nRollDirection;
-//				}
-//				if (TextLines[ix].nRollDirection == -1) {
-//					TextLines[ix].nRollOffset -= SystemInfo.nSidewaysScrollReverse;
-//					if (TextLines[ix].nRollOffset < 0) {
-//						TextLines[ix].nRollOffset = 0;
-//					}
-//					if (TextLines[ix].nRollOffset == 0) {
-//						TextLines[ix].nRollDirection = 0;
-//					}
-//				}
-//				if (offset != TextLines[ix].nRollOffset) {
-//					DisplayLine(ix, TextLines[ix].Line, TextLines[ix].foreColor, TextLines[ix].backColor);
-//				}
-//			}
-//		}
-//		vTaskDelay(25 / portTICK_PERIOD_MS);
-//	}
-//}
 
 // check and handle the rotary dial type
 // if either A or B is 0, then this is a toggle dial
@@ -439,7 +389,6 @@ void ResetSleepAndDimTimers() {
 // this also checks the light sensor if enabled
 void MenuTextScrollSideways()
 {
-	//return;
 	// this handles sideways scrolling of really long menu items
 	static unsigned long menuUpdateTime = 0;
 	static unsigned long ledUpdateTime = 0;
@@ -3593,7 +3542,6 @@ int readByte(bool clear) {
 	//    retbyte = dataFile.read();
 	//return retbyte;
 }
-
 
 // make sure we are the right place
 void FileSeekBuf(uint32_t place)

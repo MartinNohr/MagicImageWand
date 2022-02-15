@@ -1138,4 +1138,4 @@ typedef struct MACRO_INFO {
 MACRO_INFO MacroInfo[10];
 SemaphoreHandle_t macroMutex;
 // task for LED test on startup and then for sideways scrolling
-TaskHandle_t Task1, Task2;
+TaskHandle_t Task1;
