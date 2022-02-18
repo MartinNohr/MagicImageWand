@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.24";
+const char* MIW_Version = "2.25";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -90,7 +90,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 // functions
 void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);
 void SetDisplayBrightness(int val);
-void DisplayCurrentFile(bool path = true);
+void DisplayCurrentFile(bool bShowPath = true, bool bFirstOnly = false);
 void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
@@ -196,7 +196,16 @@ typedef struct IMG_INFO {
 };
 RTC_DATA_ATTR IMG_INFO ImgInfo;
 
-RTC_DATA_ATTR int CurrentFileIndex = 0;
+// a stack to hold the file indexes as we navigate folders, put it in RTC memory for waking from sleep
+typedef struct FILEINDEXINFO {
+    int nFileIndex;     // current file index
+    int nFileCursor;    // used when scrolling cursor, IE current file not always on top
+};
+#define FILEINDEXSTACKSIZE 10
+RTC_DATA_ATTR FILEINDEXINFO FileIndexStack[FILEINDEXSTACKSIZE];
+RTC_DATA_ATTR int FileIndexStackSize = 0;
+// hold the current information
+RTC_DATA_ATTR FILEINDEXINFO currentFileIndex = { 0,0 };
 
 // functions that btn0 long press can map to
 enum BTN_LONG_FUNCTIONS { BTN_LONG_ROTATION = 0, BTN_LONG_LIGHTBAR };
@@ -244,6 +253,7 @@ typedef struct SYSTEM_INFO {
     int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
     bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
+    bool bKeepFileOnTopLine = false;            // keep the active file on the top line
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
 
@@ -384,12 +394,12 @@ int r = 0;                                // Variable for the Red Value
 constexpr auto NEXT_FOLDER_CHAR = '>';
 constexpr auto PREVIOUS_FOLDER_CHAR = '<';
 String currentFolder = "/";
-RTC_DATA_ATTR char sleepFolder[50];     // a place to save the folder during sleeping
-int lastFileIndex = 0;                  // save between switching of internal and SD
+RTC_DATA_ATTR char sleepFolder[50];       // a place to save the folder during sleeping
+FILEINDEXINFO lastFileIndex = { 0,0 };    // save between switching of internal and SD
 String lastFolder = "/";
 std::vector<String> FileNames;
 String nameFilter;
-bool bnameFilter = false;                   // set this true to enable the filters set in nameFilter
+bool bnameFilter = false;                 // set this true to enable the filters set in nameFilter
 bool bSettingsMode = false;               // set true when settings are displayed
 bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
@@ -455,11 +465,12 @@ typedef struct MenuItem {
     long min;                           // the minimum value, also used for ifequal
     long max;                           // the maximum value, also size to compare for if
     int decimals;                       // 0 for int, 1 for 0.1
-    const char* on;                           // text for boolean true
-    const char* off;                          // text for boolean false
+    const char* on;                     // text for boolean true
+    const char* off;                    // text for boolean false
     // flag is 1 for first time, 0 for changes, and -1 for last call, bools only call this with -1
     void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect, can be NULL
-    const char** nameList;                    // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
+    const char** nameList;              // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
+    char* cHelpText;                    // a place to put some menu help
 };
 
 // builtins
@@ -532,7 +543,7 @@ const saveValues saveValueList[] = {
     {&ImgInfo,sizeof(ImgInfo)},
     {&BuiltinInfo,sizeof(BuiltinInfo)},
     {&SystemInfo,sizeof(SystemInfo)},
-    {&CurrentFileIndex,sizeof(CurrentFileIndex)},
+    {&currentFileIndex.nFileIndex,sizeof(currentFileIndex.nFileIndex)},
 };
 
 // Gramma Correction (Defalt Gamma = 2.8)
@@ -779,10 +790,11 @@ MenuItem DialMenu[] = {
     {eTerminate}
 };
 MenuItem HomeScreenMenu[] = {
-    {eExit,"Home Screen Settings"},
+    {eExit,"Run Screen Settings"},
     {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
+    {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No"},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eExit,PreviousMenu},
@@ -1052,9 +1064,6 @@ BuiltInItem BuiltInFiles[] = {
     {"Two Dots",OppositeRunningDots},
     {"Wedge",TestWedge,WedgeMenu},
 };
-
-// a stack to hold the file indexes as we navigate folders, put it in RTC memory for waking from sleep
-RTC_DATA_ATTR int FileIndexStack[10], FileIndexStackSize = 0;
 
 // a stack for menus so we can find our way back
 typedef struct MenuInfo {

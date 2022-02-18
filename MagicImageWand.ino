@@ -585,15 +585,15 @@ void RunMenus(int button)
 				}
 				break;
 			case eBuiltinOptions: // find it in builtins
-				if (BuiltInFiles[CurrentFileIndex].menu != NULL) {
+				if (BuiltInFiles[currentFileIndex.nFileIndex].menu != NULL) {
 					MenuStack.top()->index = MenuStack.top()->index;
 					MenuStack.push(new MenuInfo);
-					MenuStack.top()->menu = BuiltInFiles[CurrentFileIndex].menu;
+					MenuStack.top()->menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
 					MenuStack.top()->index = 0;
 					MenuStack.top()->offset = 0;
 				}
 				else {
-					WriteMessage("No settings available for:\n" + String(BuiltInFiles[CurrentFileIndex].text));
+					WriteMessage("No settings available for:\n" + String(BuiltInFiles[currentFileIndex.nFileIndex].text));
 				}
 				bMenuChanged = true;
 				break;
@@ -681,7 +681,7 @@ void ShowMenu(struct MenuItem* menu)
 		// only displayable menu items should be in this switch
 		line[0] = '\0';
 		int val;
-		bool exists;
+		bool exists = false;
 		switch (menu->op) {
 		case eTextInt:
 		case eText:
@@ -698,7 +698,7 @@ void ShowMenu(struct MenuItem* menu)
 			}
 			else {
 				if (menu->op == eTextCurrentFile) {
-					sprintf(line, menu->text, MakeMIWFilename(FileNames[CurrentFileIndex], false).c_str());
+					sprintf(line, menu->text, MakeMIWFilename(FileNames[currentFileIndex.nFileIndex], false).c_str());
 				}
 				else {
 					strcpy(line, menu->text);
@@ -740,9 +740,9 @@ void ShowMenu(struct MenuItem* menu)
 			break;
 		case eBuiltinOptions:
 			// for builtins only show if available
-			if (BuiltInFiles[CurrentFileIndex].menu != NULL) {
+			if (BuiltInFiles[currentFileIndex.nFileIndex].menu != NULL) {
 				bMenuValid[menix] = true;
-				sprintf(line, menu->text, BuiltInFiles[CurrentFileIndex].text);
+				sprintf(line, menu->text, BuiltInFiles[currentFileIndex.nFileIndex].text);
 				++y;
 			}
 			break;
@@ -805,7 +805,7 @@ void ToggleFilesBuiltin(MenuItem* menu)
 {
 	// clear filenames list
 	bool lastval = ImgInfo.bShowBuiltInTests;
-	int oldIndex = CurrentFileIndex;
+	FILEINDEXINFO oldIndex = currentFileIndex;
 	String oldFolder = currentFolder;
 	if (menu != NULL) {
 		ToggleBool(menu);
@@ -822,7 +822,7 @@ void ToggleFilesBuiltin(MenuItem* menu)
 		GetFileNamesFromSDorBuiltins(currentFolder);
 	}
 	// restore indexes
-	CurrentFileIndex = lastFileIndex;
+	currentFileIndex = lastFileIndex;
 	lastFileIndex = oldIndex;
 	currentFolder = lastFolder;
 	lastFolder = oldFolder;
@@ -1293,26 +1293,37 @@ bool HandleRunMode()
 {
 	bool bRedraw = false;
 	bool didsomething = true;
-	int oldFileIndex = CurrentFileIndex;
+	int maxMenuLine = nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 2 : 1);
 	switch (ReadButton()) {
 	case BTN_SELECT:
 		bCancelRun = bCancelMacro = false;
 		ProcessFileOrTest();
+		DisplayCurrentFile();
 		break;
 	case BTN_RIGHT:
-		if (SystemInfo.bAllowMenuWrap || (CurrentFileIndex < FileNames.size() - 1))
-			++CurrentFileIndex;
-		if (CurrentFileIndex >= FileNames.size())
-			CurrentFileIndex = 0;
-		if (oldFileIndex != CurrentFileIndex)
+		if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor < maxMenuLine) {
+			++currentFileIndex.nFileCursor;
+			// pin to max
+			currentFileIndex.nFileCursor = min(currentFileIndex.nFileCursor, (int)FileNames.size() - 1);
+		}
+		// increase the current file index
+		if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex < FileNames.size() - 1))
+			++currentFileIndex.nFileIndex;
+		if (currentFileIndex.nFileIndex >= FileNames.size())
+			currentFileIndex.nFileIndex = 0;
+		//if (oldFileIndex != CurrentFileIndex)
 			DisplayCurrentFile();
 		break;
 	case BTN_LEFT:
-		if (SystemInfo.bAllowMenuWrap || (CurrentFileIndex > 0))
-			--CurrentFileIndex;
-		if (CurrentFileIndex < 0)
-			CurrentFileIndex = FileNames.size() - 1;
-		if (oldFileIndex != CurrentFileIndex)
+		if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor > 0) {
+			--currentFileIndex.nFileCursor;
+		}
+		// decrease the current file index
+		if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex > 0))
+			--currentFileIndex.nFileIndex;
+		if (currentFileIndex.nFileIndex < 0)
+			currentFileIndex.nFileIndex = FileNames.size() - 1;
+		//if (oldFileIndex != CurrentFileIndex)
 			DisplayCurrentFile();
 		break;
 		//case btnShowFiles:
@@ -1325,7 +1336,7 @@ bool HandleRunMode()
 		bSettingsMode = true;
 		break;
 	case BTN_B0_CLICK:
-		if (IsFolder(CurrentFileIndex)) {
+		if (IsFolder(currentFileIndex.nFileIndex)) {
 			CRotaryDialButton::pushButton(BTN_SELECT);
 		}
 		else {
@@ -2595,21 +2606,22 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 	leds[ledNo].fadeToBlackBy(fadeValue);
 }
 
-// push file index on stack to save
-void PushFileIndex(int ix)
+// push file index and cursor offset on stack to save
+void PushFileIndex()
 {
-	if (FileIndexStackSize < sizeof(FileIndexStack)) {
-		FileIndexStack[FileIndexStackSize++] = ix;
+	if (FileIndexStackSize < FILEINDEXSTACKSIZE) {
+		FileIndexStack[FileIndexStackSize] = currentFileIndex;
+		++FileIndexStackSize;
 	}
 }
 
-// pop the file index from the saved stack
-int PopFileIndex()
+// pop the file index and cursor offset from the saved stack
+void PopFileIndex()
 {
 	if (FileIndexStackSize) {
-		return FileIndexStack[--FileIndexStackSize];
+		--FileIndexStackSize;
+		currentFileIndex = FileIndexStack[FileIndexStackSize];
 	}
-	return 0;
 }
 
 // run file or built-in
@@ -2620,9 +2632,12 @@ void ProcessFileOrTest()
 	unsigned long recordingTimeStart = 0;                // holds the start time for the current recording part
 	String line;
 	// let's see if this is a folder command
-	String tmp = FileNames[CurrentFileIndex];
+	String tmp = FileNames[currentFileIndex.nFileIndex];
 	if (tmp[0] == NEXT_FOLDER_CHAR) {
-		PushFileIndex(CurrentFileIndex);
+		PushFileIndex();
+		// clear new one
+		FILEINDEXINFO fix = { 0,0 };
+		currentFileIndex = fix;
 		tmp = tmp.substring(1);
 		// change folder, reload files
 		currentFolder += tmp + "/";
@@ -2636,13 +2651,13 @@ void ProcessFileOrTest()
 		// change folder, reload files
 		currentFolder = tmp;
 		GetFileNamesFromSDorBuiltins(currentFolder);
-		CurrentFileIndex = PopFileIndex();
+		PopFileIndex();
 		DisplayCurrentFile();
 		return;
 	}
 	if (bRecordingMacro) {
 		// get the starting name, the index will change for chaining, but the macro file has to have the start
-		strcpy(FileToShow, FileNames[CurrentFileIndex].c_str());
+		strcpy(FileToShow, FileNames[currentFileIndex.nFileIndex].c_str());
 		// tag the start time
 		recordingTimeStart = millis();
 		recordingTime = 0;
@@ -2655,7 +2670,7 @@ void ProcessFileOrTest()
 	//		DisplayLine(ix, "");
 	//}
 	ClearScreen();
-	DisplayCurrentFile();
+	DisplayCurrentFile(true, true);
 	if (ImgInfo.startDelay) {
 		// set a timer
 		nTimerSeconds = ImgInfo.startDelay;
@@ -2667,10 +2682,10 @@ void ProcessFileOrTest()
 		}
 		DisplayLine(3, "");
 	}
-	int chainCount = ImgInfo.bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
+	int chainCount = ImgInfo.bChainFiles ? FileCountOnly(currentFileIndex.nFileIndex) : 1;
 	int chainFileCount = chainCount;
 	int chainRepeatCount = ImgInfo.bChainFiles ? ImgInfo.nChainRepeats : 1;
-	int lastFileIndex = CurrentFileIndex;
+	int lastFileIndex = currentFileIndex.nFileIndex;
 	// don't allow chaining for built-ins, although maybe we should
 	if (ImgInfo.bShowBuiltInTests) {
 		chainCount = 1;
@@ -2684,12 +2699,12 @@ void ProcessFileOrTest()
 	line = "";
 	while (chainRepeatCount-- > 0) {
 		while (chainCount-- > 0) {
-			DisplayCurrentFile();
+			DisplayCurrentFile(true, true);
 			if (ImgInfo.bChainFiles && !ImgInfo.bShowBuiltInTests) {
 				line = "Remaining: " + String(chainCount + 1);
 				DisplayLine(4, line, SystemInfo.menuTextColor);
-				if (CurrentFileIndex < chainFileCount - 1) {
-					line = "Next: " + FileNames[CurrentFileIndex + 1];
+				if (currentFileIndex.nFileIndex < chainFileCount - 1) {
+					line = "Next: " + FileNames[currentFileIndex.nFileIndex + 1];
 				}
 				else {
 					line = "";
@@ -2712,14 +2727,14 @@ void ProcessFileOrTest()
 				if (ImgInfo.bShowBuiltInTests) {
 					DisplayLine(4, "Running (long cancel)", SystemInfo.menuTextColor);
 					// run the test
-					(*BuiltInFiles[CurrentFileIndex].function)();
+					(*BuiltInFiles[currentFileIndex.nFileIndex].function)();
 				}
 				else {
 					if (ImgInfo.nRepeatCountMacro > 1 && bRunningMacro) {
 						DisplayLine(4, String("Macro Repeats: ") + String(nMacroRepeatsLeft), SystemInfo.menuTextColor);
 					}
 					// output the file
-					SendFile(FileNames[CurrentFileIndex]);
+					SendFile(FileNames[currentFileIndex.nFileIndex]);
 				}
 				if (bCancelRun) {
 					break;
@@ -2751,9 +2766,9 @@ void ProcessFileOrTest()
 			// see if we are chaining, if so, get the next file, if a folder we're done
 			if (ImgInfo.bChainFiles) {
 				// grab the next file
-				if (CurrentFileIndex < FileNames.size() - 1)
-					++CurrentFileIndex;
-				if (IsFolder(CurrentFileIndex))
+				if (currentFileIndex.nFileIndex < FileNames.size() - 1)
+					++currentFileIndex.nFileIndex;
+				if (IsFolder(currentFileIndex.nFileIndex))
 					break;
 				// handle any chain delay
 				for (int dly = ImgInfo.nChainDelay; dly > 0 && !CheckCancel(); --dly) {
@@ -2763,7 +2778,7 @@ void ProcessFileOrTest()
 				}
 				// check for chain wait for keypress
 				if (chainCount && ImgInfo.bChainWaitKey) {
-					DisplayLine(2, "Click: " + FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
+					DisplayLine(2, "Click: " + FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
 					bool waitNext = true;
 					int wbtn;
 					while (waitNext) {
@@ -2794,8 +2809,8 @@ void ProcessFileOrTest()
 			break;
 		}
 		// start again
-		CurrentFileIndex = lastFileIndex;
-		chainCount = ImgInfo.bChainFiles ? FileCountOnly(CurrentFileIndex) : 1;
+		currentFileIndex.nFileIndex = lastFileIndex;
+		chainCount = ImgInfo.bChainFiles ? FileCountOnly(currentFileIndex.nFileIndex) : 1;
 		if (ImgInfo.repeatDelay && (nRepeatsLeft > 1) || chainRepeatCount >= 1) {
 			FastLED.clear(true);
 			// start timer
@@ -2810,19 +2825,19 @@ void ProcessFileOrTest()
 		}
 	}
 	if (ImgInfo.bChainFiles)
-		CurrentFileIndex = lastFileIndex;
+		currentFileIndex.nFileIndex = lastFileIndex;
 	FastLED.clear(true);
 	bIsRunning = false;
 	if (!bRunningMacro) {
 		ClearScreen();
-		DisplayCurrentFile();
+		DisplayCurrentFile(true, true);
 	}
 	if (bRecordingMacro) {
 		// write the time for this macro into the file
 		time_t now = time(NULL);
 		recordingTime = millis() - recordingTimeStart;
 		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false, true);
-		DisplayCurrentFile(SystemInfo.bShowFolder);
+		DisplayCurrentFile(SystemInfo.bShowFolder, true);
 	}
 	// clear buttons
 	CRotaryDialButton::clear();
@@ -2883,7 +2898,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 
 	/* Check file header */
 	if (bmpType != MYBMP_BF_TYPE) {
-		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+		WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 		return;
 	}
 
@@ -2911,7 +2926,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 	{
-		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 		return;
 	}
 	int displayWidth = imgWidth;
@@ -3142,9 +3157,9 @@ void ShowBmp(MenuItem*)
 {
 	if (ImgInfo.bShowBuiltInTests) {
 		bCancelMacro = bCancelRun = false;
-		if (BuiltInFiles[CurrentFileIndex].function) {
+		if (BuiltInFiles[currentFileIndex.nFileIndex].function) {
 			ShowLeds(1);    // get ready for preview
-			(*BuiltInFiles[CurrentFileIndex].function)();
+			(*BuiltInFiles[currentFileIndex.nFileIndex].function)();
 			ShowLeds(2);    // go back to normal
 		}
 		bCancelMacro = bCancelRun = false;
@@ -3156,7 +3171,7 @@ void ShowBmp(MenuItem*)
 	LedInfo.bGammaCorrection = false;
 	bool bKeepShowing = true;
 	while (bKeepShowing) {
-		String fn = currentFolder + FileNames[CurrentFileIndex];
+		String fn = currentFolder + FileNames[currentFileIndex.nFileIndex];
 		// make sure this is a bmp file, if not just quietly go away
 		String tmp = fn.substring(fn.length() - 3);
 		tmp.toLowerCase();
@@ -3177,7 +3192,7 @@ void ShowBmp(MenuItem*)
 		dataFile = SD.open(fn);
 		// if the file is not available, give up
 		if (!dataFile.available()) {
-			WriteMessage("failed to open: " + currentFolder + FileNames[CurrentFileIndex], true);
+			WriteMessage("failed to open: " + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 			bKeepShowing = false;
 			break;
 		}
@@ -3193,7 +3208,7 @@ void ShowBmp(MenuItem*)
 
 		/* Check file header */
 		if (bmpType != MYBMP_BF_TYPE) {
-			WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+			WriteMessage(String("Invalid BMP:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 			bKeepShowing = false;
 			break;
 		}
@@ -3215,7 +3230,7 @@ void ShowBmp(MenuItem*)
 		if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 			imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 		{
-			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[CurrentFileIndex], true);
+			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 			bKeepShowing = false;
 			break;
 		}
@@ -3333,10 +3348,10 @@ void ShowBmp(MenuItem*)
 				break;
 			case BTN_RIGHT:
 				if (SystemInfo.bPreviewScrollFiles) {
-					if (CurrentFileIndex < FileNames.size() - 1) {
+					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
 						// stop if this is a folder
-						if (!IsFolder(CurrentFileIndex + 1)) {
-							++CurrentFileIndex;
+						if (!IsFolder(currentFileIndex.nFileIndex + 1)) {
+							++currentFileIndex.nFileIndex;
 							bDone = true;
 						}
 					}
@@ -3350,10 +3365,10 @@ void ShowBmp(MenuItem*)
 				break;
 			case BTN_LEFT:
 				if (SystemInfo.bPreviewScrollFiles) {
-					if (CurrentFileIndex > 0) {
+					if (currentFileIndex.nFileIndex > 0) {
 						// stop if this is a folder
-						if (!IsFolder(CurrentFileIndex - 1)) {
-							--CurrentFileIndex;
+						if (!IsFolder(currentFileIndex.nFileIndex - 1)) {
+							--currentFileIndex.nFileIndex;
 							bDone = true;
 						}
 					}
@@ -3384,7 +3399,7 @@ void ShowBmp(MenuItem*)
 				else {
 					ClearScreen();
 					DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
-					DisplayLine(1, FileNames[CurrentFileIndex], SystemInfo.menuTextColor);
+					DisplayLine(1, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
 					float walk = (float)imgHeight / (float)imgWidth;
 					DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
 					DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
@@ -3573,52 +3588,63 @@ bool IsFolder(int index)
 }
 
 // show the current file
-void DisplayCurrentFile(bool path)
+// bShowPath adds path in front, bFirstOnly does top line of current file only, used for running
+void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 {
+	bool bOldShowNextFiles;
+	int nOldFileCursor;
+	// save the current settings
+	if (bFirstOnly) {
+		nOldFileCursor = currentFileIndex.nFileCursor;
+		currentFileIndex.nFileCursor = 0;
+		bOldShowNextFiles = SystemInfo.bShowNextFiles;
+		SystemInfo.bShowNextFiles = false;
+	}
+	// fix the offset in case no extra files are wanted on the display
+	if (!SystemInfo.bShowNextFiles)
+		currentFileIndex.nFileCursor = 0;
 	bool bShowFolder = SystemInfo.bShowFolder;
 	// always show the path for previous folder
-	if (FileNames[CurrentFileIndex][0] == PREVIOUS_FOLDER_CHAR || currentFolder == "/")
+	if (FileNames[currentFileIndex.nFileIndex][0] == PREVIOUS_FOLDER_CHAR || currentFolder == "/")
 		bShowFolder = true;
-	//String name = FileNames[CurrentFileIndex];
-	//String upper = name;
-	//upper.toUpperCase();
- //   if (upper.endsWith(".BMP"))
- //       name = name.substring(0, name.length() - 4);
-	//tft.setTextColor(TFT_BLACK, menuTextColor);
+	// display the current file with the correct hilite
 	if (ImgInfo.bShowBuiltInTests) {
 		if (SystemInfo.bHiLiteCurrentFile) {
-			DisplayLine(0, FileNames[CurrentFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
+			DisplayLine(currentFileIndex.nFileCursor, FileNames[currentFileIndex.nFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
 		}
 		else {
-			DisplayLine(0, FileNames[CurrentFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
+			DisplayLine(currentFileIndex.nFileCursor, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
 		}
 	}
 	else {
 		if (bSdCardValid) {
-			String name = ((path && bShowFolder) ? currentFolder : "") + FileNames[CurrentFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : "");
+			String name = ((bShowPath && bShowFolder) ? currentFolder : "") + FileNames[currentFileIndex.nFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : "");
 			if (SystemInfo.bHiLiteCurrentFile) {
-				DisplayLine(0, name, TFT_BLACK, SystemInfo.menuTextColor);
+				DisplayLine(currentFileIndex.nFileCursor, name, TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(0, name, SystemInfo.menuTextColor, TFT_BLACK);
+				DisplayLine(currentFileIndex.nFileCursor, name, SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {
 			WriteMessage("No SD Card or Files", true);
 			ImgInfo.bShowBuiltInTests = true;
 			GetFileNamesFromSDorBuiltins("/");
-			DisplayCurrentFile(path);
+			DisplayCurrentFile(bShowPath);
 			return;
 		}
 	}
+	// fill in the rest of the files if wanted
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
-		for (int ix = 1; ix < nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
-			if (ix + CurrentFileIndex >= FileNames.size()) {
-				DisplayLine(ix, "", SystemInfo.menuTextColor);
+		for (int ix = 0; ix < nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
+			// skip the current one, we already did it above
+			if (ix == currentFileIndex.nFileCursor)
+				continue;
+			String fn;
+			if (currentFileIndex.nFileIndex + ix - currentFileIndex.nFileCursor < FileNames.size()) {
+				fn = FileNames[currentFileIndex.nFileIndex + ix - currentFileIndex.nFileCursor];
 			}
-			else {
-				DisplayLine(ix, "  " + FileNames[CurrentFileIndex + ix], SystemInfo.menuTextColor);
-			}
+			DisplayLine(ix, "  " + fn, SystemInfo.menuTextColor);
 		}
 	}
 	// if recording put a red digit at the top right
@@ -3629,6 +3655,10 @@ void DisplayCurrentFile(bool path)
 	tft.setTextColor(SystemInfo.menuTextColor);
 	// for debugging keypresses
 	//DisplayLine(3, String(nButtonDowns) + " " + nButtonUps);
+	if (bFirstOnly) {
+		currentFileIndex.nFileCursor = nOldFileCursor;
+		SystemInfo.bShowNextFiles = bOldShowNextFiles;
+	}
 }
 
 void ShowProgressBar(int percent)
@@ -3754,7 +3784,7 @@ bool ProcessConfigFile(String filename)
 								int ix = args.lastIndexOf('/');
 								folder = args.substring(0, ix + 1);
 								name = args.substring(ix + 1);
-								int oldFileIndex = CurrentFileIndex;
+								int oldFileIndex = currentFileIndex.nFileIndex;
 								// save the old folder if necessary
 								String oldFolder;
 								if (!ImgInfo.bShowBuiltInTests && !currentFolder.equalsIgnoreCase(folder)) {
@@ -3765,7 +3795,7 @@ bool ProcessConfigFile(String filename)
 								// search for the file in the list
 								int which = LookUpFile(name);
 								if (which >= 0) {
-									CurrentFileIndex = which;
+									currentFileIndex.nFileIndex = which;
 									// call the process routine
 									strcpy(FileToShow, name.c_str());
 									if (!bRunningMacro)
@@ -3776,7 +3806,7 @@ bool ProcessConfigFile(String filename)
 									currentFolder = oldFolder;
 									GetFileNamesFromSDorBuiltins(currentFolder);
 								}
-								CurrentFileIndex = oldFileIndex;
+								currentFileIndex.nFileIndex = oldFileIndex;
 							}
 							break;
 							case vtRGB:
@@ -3915,7 +3945,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 	// first empty the current file names
 	FileNames.clear();
 	if (nBootCount == 0)
-		CurrentFileIndex = 0;
+		currentFileIndex.nFileIndex = 0;
 	if (!ImgInfo.bShowBuiltInTests) {
 		String startfile;
 		if (dir.length() > 1)
@@ -4080,20 +4110,20 @@ void SaveStartFile(MenuItem* menu)
 void EraseAssociatedFile(MenuItem* menu)
 {
 	String filepath;
-	filepath = currentFolder + MakeMIWFilename(FileNames[CurrentFileIndex], true);
+	filepath = currentFolder + MakeMIWFilename(FileNames[currentFileIndex.nFileIndex], true);
 
 	if (GetYesNo(("Erase " + filepath + "?").c_str()))
-		WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), true, false, false);
+		WriteOrDeleteConfigFile(FileNames[currentFileIndex.nFileIndex].c_str(), true, false, false);
 }
 
 void SaveAssociatedFile(MenuItem* menu)
 {
-	WriteOrDeleteConfigFile(FileNames[CurrentFileIndex].c_str(), false, false, false);
+	WriteOrDeleteConfigFile(FileNames[currentFileIndex.nFileIndex].c_str(), false, false, false);
 }
 
 void LoadAssociatedFile(MenuItem* menu)
 {
-	String name = FileNames[CurrentFileIndex];
+	String name = FileNames[currentFileIndex.nFileIndex];
 	name = MakeMIWFilename(name, true);
 	if (ProcessConfigFile(name)) {
 		WriteMessage(String("Processed:\n") + name);
@@ -4725,15 +4755,15 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 			else if (!ledonly) {
 				prefs.getBytes(prefsImgInfo, &ImgInfo, sizeof(ImgInfo));
 				prefs.getBytes(prefsBuiltInInfo, &BuiltinInfo, sizeof(BuiltinInfo));
-				int savedFileIndex = CurrentFileIndex;
+				int savedFileIndex = currentFileIndex.nFileIndex;
 				// we don't know the folder path, so just reset the folder level
 				currentFolder = "/";
 				setupSDcard();
 				GetFileNamesFromSDorBuiltins(currentFolder);
-				CurrentFileIndex = savedFileIndex;
+				currentFileIndex.nFileIndex = savedFileIndex;
 				// make sure file index isn't too big
-				if (CurrentFileIndex >= FileNames.size()) {
-					CurrentFileIndex = 0;
+				if (currentFileIndex.nFileIndex >= FileNames.size()) {
+					currentFileIndex.nFileIndex = 0;
 				}
 				// set the brightness values since they might have changed
 				SetDisplayBrightness(SystemInfo.nDisplayBrightness);
@@ -5064,7 +5094,7 @@ void FormSettings()
 void ShowSettings() {
 	append_page_header();
 	webpage += "<h3>Current Settings</h3>";
-	webpage += String("<p>Current File: ") + currentFolder + FileNames[CurrentFileIndex];
+	webpage += String("<p>Current File: ") + currentFolder + FileNames[currentFileIndex.nFileIndex];
 	if (ImgInfo.bFixedTime) {
 		webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	}
