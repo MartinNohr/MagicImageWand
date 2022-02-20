@@ -221,7 +221,7 @@ typedef struct SYSTEM_INFO {
     bool bHiLiteCurrentFile = true;
     int nPreviewScrollCols = 20;                // now many columns to scroll with dial during preview
     bool bShowProgress = true;                  // show the progress bar
-    bool bShowFolder = true;                    // show the path in front of the file
+    bool bShowFolder = false;                   // show the path in front of the file
     int nDisplayBrightness = 50;                // this is in %
     bool bAllowMenuWrap = false;                // allows menus to wrap around from end and start instead of pinning
     bool bShowNextFiles = true;                 // show the next files in the main display
