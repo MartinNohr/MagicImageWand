@@ -525,7 +525,7 @@ void RunMenus(int button)
 			switch (button) {
 			case BTN_B0_LONG:	// handle help if there is any
 				if (MenuStack.top()->menu[ix].cHelpText) {
-					WriteMessage(MenuStack.top()->menu[ix].cHelpText, false, -1);
+					WriteMessage(MenuStack.top()->menu[ix].cHelpText, false, -1, true);
 				}
 				bMenuChanged = true;
 				break;
@@ -3450,6 +3450,7 @@ void ShowBmp(MenuItem*)
 	bCancelRun = bCancelMacro = false;
 }
 
+// display a line in selected colors and clear to the end of the line
 void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
 	if (line >= 0 && line < nMenuLineCount) {
@@ -3702,10 +3703,54 @@ void ShowProgressBar(int percent)
 	}
 }
 
+// insert newlines into a string so it doesn't wrap in the middle of words when displayed
+// existing newlines are honored
+String FormatMultiLine(String& input)
+{
+	String output;
+	int lineWidth = 0;
+	int lastInputSpace = 0;
+	int lastOutputSpace = 0;
+	int lastOutputStart = 0;
+	// look for spaces and add words to the output, when each line is too long start a new line
+	for (int inIx = 0; inIx < input.length(); ++inIx) {
+		switch (input[inIx]) {
+		case '\n':
+			// flush the line
+			output += '\n';
+			lastOutputStart = output.length();
+			break;
+		case ' ':
+			output += input[inIx];
+			// mark the space location so we can go back
+			lastInputSpace = inIx;
+			lastOutputSpace = output.length();
+			break;
+		default:
+			// check the width after adding this character
+			output += input[inIx];
+			lineWidth = tft.textWidth(output.substring(lastOutputStart));
+			if (lineWidth > tft.width()) {
+				// too wide, backup
+				output = output.substring(0, lastOutputSpace);
+				// add a newline to the output
+				output += '\n';
+				inIx = lastInputSpace;
+				lastOutputStart = output.length();
+			}
+			break;
+		}
+	}
+	return output;
+}
+
 // display message on first line, if wait is -1, wait for a key press
-void WriteMessage(String txt, bool error, int wait)
+void WriteMessage(String txt, bool error, int wait, bool process)
 {
 	ClearScreen();
+	if (process) {
+		txt = FormatMultiLine(txt);
+	}
 	if (error) {
 		txt = "**" + txt + "**";
 		tft.setTextColor(TFT_RED);

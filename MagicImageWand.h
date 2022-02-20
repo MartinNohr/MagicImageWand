@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.26";
+const char* MIW_Version = "2.27";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -94,7 +94,7 @@ void DisplayCurrentFile(bool bShowPath = true, bool bFirstOnly = false);
 void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
-void WriteMessage(String txt, bool error = false, int wait = 2000);
+void WriteMessage(String txt, bool error = false, int wait = 2000, bool process = false);
 void BarberPole();
 void TestBouncingBalls();
 void CheckerBoard();
@@ -853,9 +853,9 @@ MenuItem SystemMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-const char* HelpImageColumnTime = "How many mSeconds\nto display each column\non the LEDS";
-const char* HelpImageTime = "How many seconds\nto display the entire\nimage on the LEDS";
-const char* HelpImageFade = "Columns that fade up at\nstart and down at end";
+const char* HelpImageColumnTime = "How many mSeconds to display each column on the LEDS";
+const char* HelpImageTime = "How many seconds to display the entire image on the LEDS";
+const char* HelpImageFade = "Columns that fade up at start and down at end";
 MenuItem ImageMenu[] = {
     {eExit,"Image Settings"},
     {eBool,"Timing Type: %s",ToggleBool,&ImgInfo.bFixedTime,0,0,0,"Image","Column"},
@@ -1008,8 +1008,8 @@ MenuItem MacroMenuSimple[] = {
     // make sure this one is last
     {eTerminate}
 };
-const char* HelpMainMain = "Simple menu shows\nonly commonly used\ncommands";
-const char* HelpMainImages = "Toggles between SD\nfiles and built-in\npatterns";
+const char* HelpMainMain = "Simple menu shows only commonly used commands";
+const char* HelpMainImages = "Toggles between SD files and built-in patterns";
 const char* HelpMainPreview = "Displays the BMP";
 MenuItem MainMenu[] = {
     {eBool,"Main Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full",NULL,NULL,HelpMainMain},
