@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.25";
+const char* MIW_Version = "2.26";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -470,7 +470,7 @@ typedef struct MenuItem {
     // flag is 1 for first time, 0 for changes, and -1 for last call, bools only call this with -1
     void(*change)(MenuItem*, int flag); // call for each change, example: brightness change show effect, can be NULL
     const char** nameList;              // used for multichoice of items, example wiring mode, .max should be count-1 and .min=0
-    char* cHelpText;                    // a place to put some menu help
+    const char* cHelpText;              // a place to put some menu help
 };
 
 // builtins
@@ -503,6 +503,7 @@ void UpdateBatteries(MenuItem* menu, int flag);
 void UpdateDisplayRotation(MenuItem* menu, int flag);
 void UpdateDisplayDimMode(MenuItem* menu, int flag);
 void SetMenuColor(MenuItem* menu);
+void UpdateKeepOnTop(MenuItem* menu, int flag);
 void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
 void UpdateWiringMode(MenuItem* menu, int flag);
@@ -794,7 +795,7 @@ MenuItem HomeScreenMenu[] = {
     {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
-    {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No"},
+    {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No",UpdateKeepOnTop},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eExit,PreviousMenu},
@@ -852,16 +853,19 @@ MenuItem SystemMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+const char* HelpImageColumnTime = "How many mSeconds\nto display each column\non the LEDS";
+const char* HelpImageTime = "How many seconds\nto display the entire\nimage on the LEDS";
+const char* HelpImageFade = "Columns that fade up at\nstart and down at end";
 MenuItem ImageMenu[] = {
     {eExit,"Image Settings"},
     {eBool,"Timing Type: %s",ToggleBool,&ImgInfo.bFixedTime,0,0,0,"Image","Column"},
     {eIfEqual,"",NULL,&ImgInfo.bFixedTime,false},
-        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
+        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500,0,NULL,NULL,NULL,NULL,HelpImageColumnTime},
     {eElse},
-        {eTextInt,"Image Time: %d S",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120},
+        {eTextInt,"Image Time: %d S",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120,0,NULL,NULL,NULL,NULL,HelpImageTime},
     {eEndif},
     {eTextInt,"Start Delay: %d.%d S",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
-    {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255},
+    {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255,0,NULL,NULL,NULL,NULL,HelpImageFade},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
     {eList,"Running Dial: %s",GetSelectChoice,&ImgInfo.nDialDuringImgAction,0,sizeof(DialImgText) / sizeof(*DialImgText) - 1,0,NULL,NULL,NULL,DialImgText},
 	{eIfIntEqual,"",NULL,&ImgInfo.nDialDuringImgAction,DIAL_IMG_NONE},
@@ -939,7 +943,7 @@ MenuItem RepeatMenu[] = {
     {eTerminate}
 };
 MenuItem EepromMenu[] = {
-    {eExit,"Saved Values"},
+    {eExit,"Saved Settings"},
     {eBool,"Autoload Settings: %s",ToggleBool,&bAutoLoadSettings,0,0,0,"On","Off"},
     {eText,"Save Current Settings",SaveEepromSettings},
     {eText,"Load Saved Settings",LoadEepromSettings},
@@ -1004,16 +1008,19 @@ MenuItem MacroMenuSimple[] = {
     // make sure this one is last
     {eTerminate}
 };
+const char* HelpMainMain = "Simple menu shows\nonly commonly used\ncommands";
+const char* HelpMainImages = "Toggles between SD\nfiles and built-in\npatterns";
+const char* HelpMainPreview = "Displays the BMP";
 MenuItem MainMenu[] = {
-    {eBool,"Main Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full"},
-    {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-Ins","SD Card BMP"},
+    {eBool,"Main Menu: %s",ToggleFilesBuiltin,&SystemInfo.bSimpleMenu,0,0,0,"Simple","Full",NULL,NULL,HelpMainMain},
+    {eBool,"Images: %s",ToggleFilesBuiltin,&ImgInfo.bShowBuiltInTests,0,0,0,"Built-Ins","SD Card BMP",NULL,NULL,HelpMainImages},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
         {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,false},
-            {eText,"Preview BMP",ShowBmp},
+            {eText,"Preview BMP",ShowBmp,NULL,0,0,0,NULL,NULL,NULL,NULL,HelpMainPreview},
         {eEndif},
     {eEndif},
     {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,true},
-        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500},
+        {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500,0,NULL,NULL,NULL,NULL,HelpImageColumnTime},
         {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
         {eMenu,"Macros: #%d",{.menu = MacroMenuSimple},&ImgInfo.nCurrentMacro},
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},

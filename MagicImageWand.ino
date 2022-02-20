@@ -504,6 +504,8 @@ void loop()
 	}
 }
 
+// do something from the menu depending on the button argument
+// only two buttons are actually handled, SELECT and HELP
 void RunMenus(int button)
 {
 	// save this so we can see if we need to save a new changed value
@@ -516,94 +518,100 @@ void RunMenus(int button)
 	for (int ix = 0; !gotmatch && MenuStack.top()->menu[ix].op != eTerminate; ++ix) {
 		// see if this is one is valid
 		if (!bMenuValid[ix]) {
-			continue;
+			continue;	// and don't increment menix
 		}
-		//Serial.println("menu button: " + String(button));
-		if (button == BTN_SELECT && menuix == MenuStack.top()->index) {
-			//Serial.println("got match " + String(menuix) + " " + String(MenuStack.top()->index));
+		if (menuix == MenuStack.top()->index) {
 			gotmatch = true;
-			//Serial.println("clicked on menu");
-			// got one, service it
-			switch (MenuStack.top()->menu[ix].op) {
-			case eTerminate:	// not used, tell compiler
-			case eIfEqual:
-			case eIfIntEqual:
-			case eElse:
-			case eEndif:
-				break;
-			case eText:
-			case eTextInt:
-			case eTextCurrentFile:
-			case eBool:
-			case eList:
+			switch (button) {
+			case BTN_B0_LONG:	// handle help if there is any
+				if (MenuStack.top()->menu[ix].cHelpText) {
+					WriteMessage(MenuStack.top()->menu[ix].cHelpText, false, -1);
+				}
 				bMenuChanged = true;
-				if (MenuStack.top()->menu[ix].change != NULL) {
-					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
-				}
-				if (MenuStack.top()->menu[ix].function) {
-					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
-				}
-				if (MenuStack.top()->menu[ix].change != NULL) {
-					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
-				}
 				break;
-			case eMacroList:
-				bMenuChanged = true;
-				if (MenuStack.top()->menu[ix].change != NULL) {
-					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
-				}
-				if (MenuStack.top()->menu[ix].function) {
-					(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
-				}
-				if (MenuStack.top()->menu[ix].change != NULL) {
-					(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
-				}
-				bExit = true;
-				// if there is a value, set the min value in it
-				if (MenuStack.top()->menu[ix].value) {
-					*(int*)MenuStack.top()->menu[ix].value = MenuStack.top()->menu[ix].min;
-				}
-				break;
-			case eMenu:
-				if (MenuStack.top()->menu) {
-					oldMenu = MenuStack.top();
-					MenuStack.push(new MenuInfo);
-					MenuStack.top()->menu = oldMenu->menu[ix].menu;
+			case BTN_SELECT:	// handle selection
+				// got one, service it
+				switch (MenuStack.top()->menu[ix].op) {
+				case eTerminate:	// not used, tell compiler
+				case eIfEqual:
+				case eIfIntEqual:
+				case eElse:
+				case eEndif:
+					break;
+				case eText:
+				case eTextInt:
+				case eTextCurrentFile:
+				case eBool:
+				case eList:
 					bMenuChanged = true;
-					MenuStack.top()->index = 0;
-					MenuStack.top()->offset = 0;
-					//Serial.println("change menu");
-					// check if the new menu is an eMacroList and if it has a value, if it does, set the index to it
-					if (MenuStack.top()->menu->op == eMacroList && MenuStack.top()->menu->value) {
-						int ix = *(int*)MenuStack.top()->menu->value;
-						MenuStack.top()->index = ix;
-						// adjust offset if necessary
-						if (ix > 4) {
-							MenuStack.top()->offset = ix - 4;
+					if (MenuStack.top()->menu[ix].change != NULL) {
+						(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
+					}
+					if (MenuStack.top()->menu[ix].function) {
+						(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
+					}
+					if (MenuStack.top()->menu[ix].change != NULL) {
+						(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
+					}
+					break;
+				case eMacroList:
+					bMenuChanged = true;
+					if (MenuStack.top()->menu[ix].change != NULL) {
+						(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], 1);
+					}
+					if (MenuStack.top()->menu[ix].function) {
+						(*MenuStack.top()->menu[ix].function)(&MenuStack.top()->menu[ix]);
+					}
+					if (MenuStack.top()->menu[ix].change != NULL) {
+						(*MenuStack.top()->menu[ix].change)(&MenuStack.top()->menu[ix], -1);
+					}
+					bExit = true;
+					// if there is a value, set the min value in it
+					if (MenuStack.top()->menu[ix].value) {
+						*(int*)MenuStack.top()->menu[ix].value = MenuStack.top()->menu[ix].min;
+					}
+					break;
+				case eMenu:
+					if (MenuStack.top()->menu) {
+						oldMenu = MenuStack.top();
+						MenuStack.push(new MenuInfo);
+						MenuStack.top()->menu = oldMenu->menu[ix].menu;
+						bMenuChanged = true;
+						MenuStack.top()->index = 0;
+						MenuStack.top()->offset = 0;
+						//Serial.println("change menu");
+						// check if the new menu is an eMacroList and if it has a value, if it does, set the index to it
+						if (MenuStack.top()->menu->op == eMacroList && MenuStack.top()->menu->value) {
+							int ix = *(int*)MenuStack.top()->menu->value;
+							MenuStack.top()->index = ix;
+							// adjust offset if necessary
+							if (ix > 4) {
+								MenuStack.top()->offset = ix - 4;
+							}
 						}
 					}
+					break;
+				case eBuiltinOptions: // find it in builtins
+					if (BuiltInFiles[currentFileIndex.nFileIndex].menu != NULL) {
+						MenuStack.top()->index = MenuStack.top()->index;
+						MenuStack.push(new MenuInfo);
+						MenuStack.top()->menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
+						MenuStack.top()->index = 0;
+						MenuStack.top()->offset = 0;
+					}
+					else {
+						WriteMessage("No settings available for:\n" + String(BuiltInFiles[currentFileIndex.nFileIndex].text));
+					}
+					bMenuChanged = true;
+					break;
+				case eExit: // go back a level
+					bExit = true;
+					break;
+				case eReboot:
+					WriteMessage("Rebooting in 2 seconds\nHold button for factory reset", false, 2000);
+					ESP.restart();
+					break;
 				}
-				break;
-			case eBuiltinOptions: // find it in builtins
-				if (BuiltInFiles[currentFileIndex.nFileIndex].menu != NULL) {
-					MenuStack.top()->index = MenuStack.top()->index;
-					MenuStack.push(new MenuInfo);
-					MenuStack.top()->menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
-					MenuStack.top()->index = 0;
-					MenuStack.top()->offset = 0;
-				}
-				else {
-					WriteMessage("No settings available for:\n" + String(BuiltInFiles[currentFileIndex.nFileIndex].text));
-				}
-				bMenuChanged = true;
-				break;
-			case eExit: // go back a level
-				bExit = true;
-				break;
-			case eReboot:
-				WriteMessage("Rebooting in 2 seconds\nHold button for factory reset", false, 2000);
-				ESP.restart();
-				break;
 			}
 		}
 		++menuix;
@@ -1057,6 +1065,12 @@ void UpdateStripWhiteBalanceB(MenuItem* menu, int flag)
 	}
 }
 
+// remember to clear the cursor spot or the display might act strange
+void UpdateKeepOnTop(MenuItem* menu, int flag)
+{
+	currentFileIndex.nFileCursor = 0;
+}
+
 // update the batterie default settings, 1-4 batteries
 void UpdateBatteries(MenuItem* menu, int flag)
 {
@@ -1205,12 +1219,15 @@ bool HandleMenus()
 	int lastMenu = MenuStack.top()->index;
 	int lastMenuCount = MenuStack.top()->menucount;
 	bool lastRecording = bRecordingMacro;
+	//MenuItem* pCurrentMenu = &MenuStack.top()->menu[MenuStack.top()->index];
 	switch (button) {
 	case BTN_B0_CLICK:	// go back a menu level if we can
 		UpMenuLevel(false);
 		break;
-	case BTN_B0_LONG:	// go back to the top menu
-		UpMenuLevel(true);
+	case BTN_B0_LONG:	// look for help
+		//UpMenuLevel(true);	// go back to the top menu
+		RunMenus(button);
+		bMenuChanged = true;
 		break;
 	case BTN_B1_LONG:
 		button = BTN_SELECT;
@@ -3605,7 +3622,7 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 		currentFileIndex.nFileCursor = 0;
 	bool bShowFolder = SystemInfo.bShowFolder;
 	// always show the path for previous folder
-	if (FileNames[currentFileIndex.nFileIndex][0] == PREVIOUS_FOLDER_CHAR || currentFolder == "/")
+	if (SystemInfo.bKeepFileOnTopLine && (FileNames[currentFileIndex.nFileIndex][0] == PREVIOUS_FOLDER_CHAR || currentFolder == "/"))
 		bShowFolder = true;
 	// display the current file with the correct hilite
 	if (ImgInfo.bShowBuiltInTests) {
@@ -3618,7 +3635,12 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 	}
 	else {
 		if (bSdCardValid) {
+			// show the current file
 			String name = ((bShowPath && bShowFolder) ? currentFolder : "") + FileNames[currentFileIndex.nFileIndex] + (ImgInfo.bMirrorPlayImage ? "><" : "");
+			// prepend the path if this is the scrolling type list for subfolders
+			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor == 0 && name[0] == PREVIOUS_FOLDER_CHAR) {
+				name = currentFolder + name;
+			}
 			if (SystemInfo.bHiLiteCurrentFile) {
 				DisplayLine(currentFileIndex.nFileCursor, name, TFT_BLACK, SystemInfo.menuTextColor);
 			}
@@ -3630,21 +3652,22 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 			WriteMessage("No SD Card or Files", true);
 			ImgInfo.bShowBuiltInTests = true;
 			GetFileNamesFromSDorBuiltins("/");
-			DisplayCurrentFile(bShowPath);
+			DisplayCurrentFile(bShowPath, bFirstOnly);
 			return;
 		}
 	}
 	// fill in the rest of the files if wanted
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
 		for (int ix = 0; ix < nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
-			// skip the current one, we already did it above
+			// skip the current one unless previous folder, we already did it above
 			if (ix == currentFileIndex.nFileCursor)
 				continue;
 			String fn;
 			if (currentFileIndex.nFileIndex + ix - currentFileIndex.nFileCursor < FileNames.size()) {
 				fn = FileNames[currentFileIndex.nFileIndex + ix - currentFileIndex.nFileCursor];
+				fn = (SystemInfo.bShowFolder || (ix == 0 && fn[0] == PREVIOUS_FOLDER_CHAR) ? currentFolder : "") + fn;
 			}
-			DisplayLine(ix, "  " + fn, SystemInfo.menuTextColor);
+			DisplayLine(ix, (SystemInfo.bKeepFileOnTopLine ? "  " : "") + fn, SystemInfo.menuTextColor);
 		}
 	}
 	// if recording put a red digit at the top right
@@ -3679,7 +3702,7 @@ void ShowProgressBar(int percent)
 	}
 }
 
-// display message on first line
+// display message on first line, if wait is -1, wait for a key press
 void WriteMessage(String txt, bool error, int wait)
 {
 	ClearScreen();
@@ -3693,7 +3716,14 @@ void WriteMessage(String txt, bool error, int wait)
 	tft.setCursor(0, tft.fontHeight());
 	tft.setTextWrap(true);
 	tft.print(txt);
-	delay(wait);
+	if (wait == -1) {
+		// wait for a key
+		while (ReadButton() == BTN_NONE)
+			delay(10);
+	}
+	else {
+		delay(wait);
+	}
 	tft.setTextColor(TFT_WHITE);
 }
 
