@@ -1796,7 +1796,7 @@ void RunningDot()
 			SetPixel(ix, CRGB(r, g, b));
 			ShowLeds();
 			//FastLED.show();
-			delay(ImgInfo.nFrameHold);
+			delay(max(1, ImgInfo.nFrameHold));
 		}
 		// remember the last one, turn it off
 		SetPixel(LedInfo.nTotalLeds - 1, CRGB::Black);
@@ -1879,7 +1879,7 @@ void OppositeRunningDots()
 			SetPixel(ix, CRGB(r, g, b));
 			ShowLeds();
 			//FastLED.show();
-			delay(ImgInfo.nFrameHold);
+			delay(max(1, ImgInfo.nFrameHold));
 		}
 	}
 }
@@ -2270,7 +2270,7 @@ int RollDownRollOver(int inc)
 }
 
 void TestTwinkle() {
-	TwinkleRandom(ImgInfo.nFrameHold, BuiltinInfo.bTwinkleOnlyOne);
+	TwinkleRandom(max(5, ImgInfo.nFrameHold), BuiltinInfo.bTwinkleOnlyOne);
 }
 void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	time_t start = time(NULL);
@@ -2292,7 +2292,7 @@ void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 
 void TestCylon()
 {
-	CylonBounce(BuiltinInfo.nCylonEyeRed, BuiltinInfo.nCylonEyeGreen, BuiltinInfo.nCylonEyeBlue, BuiltinInfo.nCylonEyeSize, ImgInfo.nFrameHold, 50);
+	CylonBounce(BuiltinInfo.nCylonEyeRed, BuiltinInfo.nCylonEyeGreen, BuiltinInfo.nCylonEyeBlue, BuiltinInfo.nCylonEyeSize, max(5, ImgInfo.nFrameHold), 50);
 }
 void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay)
 {
@@ -2367,7 +2367,8 @@ void TestConfetti()
 	BuiltinInfo.gHue = 0;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(max(5, ImgInfo.nFrameHold));
 			if (BuiltinInfo.bConfettiCycleHue)
 				++BuiltinInfo.gHue;
 			confetti();
@@ -2395,7 +2396,8 @@ void TestJuggle()
 {
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(max(5, ImgInfo.nFrameHold));
 			juggle();
 			ShowLeds();
 			//FastLED.show();
@@ -2427,7 +2429,8 @@ void TestSine()
 	BuiltinInfo.gHue = BuiltinInfo.nSineStartingHue;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(max(5, ImgInfo.nFrameHold));
 			sinelon();
 			ShowLeds();
 			//FastLED.show();
@@ -2453,7 +2456,8 @@ void TestBpm()
 	BuiltinInfo.gHue = 0;
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(ImgInfo.nFrameHold);
 			bpm();
 			ShowLeds();
 			//FastLED.show();
@@ -2463,6 +2467,7 @@ void TestBpm()
 			break;
 		}
 	}
+	FastLED.clear(true);
 }
 
 void bpm()
@@ -2498,7 +2503,8 @@ void TestRainbow()
 	FadeInOut(BuiltinInfo.nRainbowFadeTime * 100, true);
 	bool done = false;
 	while (!done) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(ImgInfo.nFrameHold);
 			if (BuiltinInfo.bRainbowCycleHue)
 				++BuiltinInfo.gHue;
 			FillRainbow(leds, LedInfo.nTotalLeds, BuiltinInfo.gHue, BuiltinInfo.nRainbowHueDelta);
@@ -2629,7 +2635,8 @@ void TestDisc()
 	bool done = false;
 	Serial.println("hold: " + String(ImgInfo.nFrameHold));
 	for (int col = 0; col < 144; ) {
-		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+		EVERY_N_MILLISECONDS_I(timerObj, 0) {
+			timerObj.setPeriod(ImgInfo.nFrameHold);
 			// go get a column
 			disc(col++);
 			ShowLeds();
