@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.27";
+const char* MIW_Version = "2.28";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -105,6 +105,7 @@ void OppositeRunningDots();
 void TestTwinkle();
 void TestMeteor();
 void TestCylon();
+void TestDisc();
 void TestRainbow();
 void TestJuggle();
 void TestSine();
@@ -1056,6 +1057,7 @@ BuiltInItem BuiltInFiles[] = {
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
+    {"Disc",TestDisc},
     {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},

@@ -2623,6 +2623,40 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 	leds[ledNo].fadeToBlackBy(fadeValue);
 }
 
+// display discs (circles)
+void TestDisc()
+{
+	bool done = false;
+	Serial.println("hold: " + String(ImgInfo.nFrameHold));
+	for (int col = 0; col < 144; ) {
+		EVERY_N_MILLISECONDS(ImgInfo.nFrameHold) {
+			// go get a column
+			disc(col++);
+			ShowLeds();
+		}
+		if (CheckCancel()) {
+			done = true;
+			break;
+		}
+	}
+	FastLED.clear(true);
+}
+
+// calculate and fill a column
+// h,k is col,row of circle center
+// r is radius
+void disc(int col)
+{
+	int h, k;
+	k = h = 144 / 2 - 1;
+	int r = 144 / 2 - 1;
+	// find the circle boundaries from y=k +/- sqrt(r*r-(x-h)*(x-h)
+	int root = sqrt(r * r - ((col - h) * (col - h)));
+	for (uint16_t row = 0; row < 144; ++row) {
+		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(255, 255, 255) : CRGB::Black);
+	}
+}
+
 // push file index and cursor offset on stack to save
 void PushFileIndex()
 {
