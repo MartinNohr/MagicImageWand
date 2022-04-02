@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.33";
+const char* MIW_Version = "2.34";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -503,6 +503,7 @@ void SaveEepromSettings(MenuItem* menu);
 void LoadEepromSettings(MenuItem* menu);
 void ShowWhiteBalance(MenuItem* menu);
 void GetIntegerValue(MenuItem* menu);
+void GetIntegerValueHue(MenuItem* menu);
 void GetSelectChoice(MenuItem* menu);
 void ToggleBool(MenuItem* menu);
 void ToggleFilesBuiltin(MenuItem* menu);
@@ -636,7 +637,7 @@ MenuItem CheckerBoardMenu[] = {
 MenuItem RainbowMenu[] = {
     {eExit,"Rainbow"},
     {eTextInt,"Fade Time: %d.%d S",GetIntegerValue,&BuiltinInfo.nRainbowFadeTime,0,100,1},
-    {eTextInt,"Starting Hue: %d",GetIntegerValue,&BuiltinInfo.nRainbowInitialHue,0,255},
+    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nRainbowInitialHue,0,255},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bRainbowCycleHue,0,0,0,"Yes","No"},
     {eTextInt,"Hue Delta Size: %d",GetIntegerValue,&BuiltinInfo.nRainbowHueDelta,1,255},
     {eBool,"Add Glitter: %s",ToggleBool,&BuiltinInfo.bRainbowAddGlitter,0,0,0,"Yes","No"},
@@ -680,7 +681,7 @@ MenuItem WedgeMenu[] = {
 };
 MenuItem SineMenu[] = {
     {eExit,"Sine"},
-    {eTextInt,"Starting Hue: %d",GetIntegerValue,&BuiltinInfo.nSineStartingHue,0,255},
+    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nSineStartingHue,0,255},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bSineCycleHue,0,0,0,"Yes","No"},
     {eTextInt,"Speed: %d",GetIntegerValue,&BuiltinInfo.nSineSpeed,1,500},
     {eExit,PreviousMenu},
@@ -698,7 +699,7 @@ MenuItem BpmMenu[] = {
 MenuItem CirclesMenu[] = {
     {eExit,"Circles"},
     {eTextInt,"Diameter: %d",GetIntegerValue,&BuiltinInfo.nCirclesDiameter,0,LedInfo.nTotalLeds},
-    {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nCirclesHue,0,255},
+    {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nCirclesHue,0,255},
     {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nCirclesSaturation,0,255},
     {eTextInt,"Count: %d",GetIntegerValue,&BuiltinInfo.nCirclesCount,1,255},
     {eTextInt,"Gap Columns: %d",GetIntegerValue,&BuiltinInfo.nCirclesGap,0,100},
@@ -745,7 +746,7 @@ MenuItem LedLightBarMenu[] = {
         {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
     {eEndif},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_HSV},
-        {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllHue,0,255},
+        {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nDisplayAllHue,0,255},
         {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllSaturation,0,255},
         {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255},
     {eEndif},
@@ -1073,9 +1074,9 @@ BuiltInItem BuiltInFiles[] = {
     {"Beats",TestBpm,BpmMenu},
     {"Bouncy Balls",TestBouncingBalls,BouncingBallsMenu},
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
+    {"Circles",TestCircles,CirclesMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
-    {"Circles",TestCircles,CirclesMenu},
     {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},

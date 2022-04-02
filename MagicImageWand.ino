@@ -872,6 +872,18 @@ void UpdateWiringMode(MenuItem* menu, int flag)
 // get integer values
 void GetIntegerValue(MenuItem* menu)
 {
+	GetIntegerValueHelper(menu, false);
+}
+
+// get integer values while showing HUE
+void GetIntegerValueHue(MenuItem* menu)
+{
+	GetIntegerValueHelper(menu, true);
+}
+
+// get integer values and sometimes show other values like hue
+void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
+{
 	ClearScreen();
 	// -1 means to reset to original
 	int stepSize = 1;
@@ -931,7 +943,15 @@ void GetIntegerValue(MenuItem* menu)
 		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
 		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100), true);
 		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
-		DisplayLine(0, line, SystemInfo.menuTextColor);
+		// get the hue value
+		if (bShowHue) {
+			CHSV hue = CHSV(*(int*)menu->value, 255, 255);
+			CRGB rgb = CRGB(hue);
+			DisplayLine(0, line, tft.color565(rgb.r, rgb.g, rgb.b));
+		}
+		else {
+			DisplayLine(0, line, SystemInfo.menuTextColor);
+		}
 		sprintf(valstr, fmt, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
 		DisplayLine(3, String("Value: ") + valstr, SystemInfo.menuTextColor);
 		sprintf(valstr, fmt, stepSize / (int)pow10(menu->decimals), stepSize % (int)pow10(menu->decimals));
