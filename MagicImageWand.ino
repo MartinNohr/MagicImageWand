@@ -453,6 +453,7 @@ void loop()
 {
 	static LED_INFO LedInfoSaved;
 	static SYSTEM_INFO SystemInfoSaved;
+	static BUILTIN_INFO BuiltinInfoSaved;
 	static bool didsomething = false;
 	static bool bLastSettingsMode = false;
 
@@ -464,12 +465,16 @@ void loop()
 	if (bSettingsMode && !bLastSettingsMode) {
 		memcpy(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo));
 		memcpy(&LedInfoSaved, &LedInfo, sizeof(LedInfo));
+		memcpy(&BuiltinInfoSaved, &BuiltinInfo, sizeof(BuiltinInfo));
 	}
 	if (!bSettingsMode && bLastSettingsMode) {
 		if (memcmp(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo))) {
 			// make sure that the lcd dim is less than the bright
 			if (SystemInfo.nDisplayDimValue > SystemInfo.nDisplayBrightness)
 				SystemInfo.nDisplayDimValue = SystemInfo.nDisplayBrightness;
+			SaveLoadSettings(true, false, true, true);
+		}
+		if (memcmp(&BuiltinInfoSaved, &BuiltinInfo, sizeof(BuiltinInfo))) {
 			SaveLoadSettings(true, false, true, true);
 		}
 	}
@@ -2629,20 +2634,37 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 	leds[ledNo].fadeToBlackBy(fadeValue);
 }
 
-// display discs (circles)
-void TestDisc()
+// display circles
+void TestCircles()
 {
 	bool done = false;
-	for (int col = 0; col < 144; ) {
-		EVERY_N_MILLISECONDS_I(timerObj, 0) {
-			timerObj.setPeriod(ImgInfo.nFrameHold);
-			// go get a column
-			disc(col++);
-			ShowLeds();
+	for (int count = 0; count < BuiltinInfo.nCirclesCount; ++count) {
+		for (int col = 0; col < 144; ) {
+			EVERY_N_MILLISECONDS_I(timerObj, 0) {
+				timerObj.setPeriod(ImgInfo.nFrameHold);
+				// go get a column
+				Circles(col++);
+				ShowLeds();
+			}
+			if (CheckCancel()) {
+				done = true;
+				break;
+			}
 		}
-		if (CheckCancel()) {
-			done = true;
-			break;
+		// see if we need any gaps
+		for (int gap = 0; gap < BuiltinInfo.nCirclesGap; ) {
+			EVERY_N_MILLISECONDS_I(timerObj, 0) {
+				timerObj.setPeriod(ImgInfo.nFrameHold);
+				for (uint16_t row = 0; row < LedInfo.nTotalLeds; ++row) {
+					SetPixel(row, CRGB::Black);
+				}
+				ShowLeds();
+				++gap;
+			}
+			if (CheckCancel()) {
+				done = true;
+				break;
+			}
 		}
 	}
 	FastLED.clear(true);
@@ -2651,16 +2673,16 @@ void TestDisc()
 // calculate and fill a column
 // h,k is col,row of circle center
 // r is radius
-void disc(int col)
+void Circles(int col)
 {
 	int h, k;
 	k = LedInfo.nTotalLeds / 2 - 1;
-	h = BuiltinInfo.nDiscDiameter / 2 - 1;
-	int r = BuiltinInfo.nDiscDiameter / 2 - 1;
+	h = BuiltinInfo.nCirclesDiameter / 2 - 1;
+	int r = BuiltinInfo.nCirclesDiameter / 2 - 1;
 	// find the circle boundaries from y=k +/- sqrt(r*r-(x-h)*(x-h))
 	int root = sqrt(r * r - ((col - h) * (col - h)));
 	for (uint16_t row = 0; row < LedInfo.nTotalLeds; ++row) {
-		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(CHSV(BuiltinInfo.nDiscHue, BuiltinInfo.nDiscSaturation, 255)) : CRGB::Black);
+		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(CHSV(BuiltinInfo.nCirclesHue, BuiltinInfo.nCirclesSaturation, 255)) : CRGB::Black);
 	}
 }
 
@@ -4859,6 +4881,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 		// we always do these since they are hardware related
 		prefs.putBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
 		prefs.putBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
+		prefs.putBytes(prefsBuiltinInfo, &BuiltinInfo, sizeof(BuiltinInfo));
 	}
 	else {
 		// load things
@@ -4889,6 +4912,7 @@ bool SaveLoadSettings(bool save, bool autoloadonly, bool ledonly, bool nodisplay
 			// these are always done
 			prefs.getBytes(prefsLedInfo, &LedInfo, sizeof(LedInfo));
 			prefs.getBytes(prefsSystemInfo, &SystemInfo, sizeof(SystemInfo));
+			prefs.getBytes(prefsBuiltinInfo, &BuiltinInfo, sizeof(BuiltinInfo));
 		}
 		else {
 			retvalue = false;

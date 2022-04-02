@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.31";
+const char* MIW_Version = "2.32";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -58,6 +58,7 @@ const char* prefsVersion = "version";
 const char* prefsBuiltInInfo = "builtininfo";
 const char* prefsImgInfo = "imginfo";
 const char* prefsLedInfo = "ledinfo";
+const char* prefsBuiltinInfo = "builtininfo";
 const char* prefsSystemInfo = "systeminfo";
 const char* prefsAutoload = "autoload";
 // rotary dial values
@@ -105,7 +106,7 @@ void OppositeRunningDots();
 void TestTwinkle();
 void TestMeteor();
 void TestCylon();
-void TestDisc();
+void TestCircles();
 void TestRainbow();
 void TestJuggle();
 void TestSine();
@@ -378,10 +379,12 @@ typedef struct BUILTIN_INFO {
     int nWedgeRed = 255;
     int nWedgeGreen = 255;
     int nWedgeBlue = 255;
-    // disc data
-    int nDiscDiameter = 144;
-    int nDiscHue = 0;
-    int nDiscSaturation = 255;
+    // circles data
+    int nCirclesDiameter = 144;
+    int nCirclesHue = 0;
+    int nCirclesSaturation = 255;
+    int nCirclesCount = 1;
+    int nCirclesGap = 0;    // space after each circle
 };
 RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
 
@@ -692,11 +695,13 @@ MenuItem BpmMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-MenuItem DiscMenu[] = {
-    {eExit,"Disc"},
-    {eTextInt,"Diameter: %d",GetIntegerValue,&BuiltinInfo.nDiscDiameter,0,LedInfo.nTotalLeds},
-    {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nDiscHue,0,255},
-    {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDiscSaturation,0,255},
+MenuItem CirclesMenu[] = {
+    {eExit,"Circles"},
+    {eTextInt,"Diameter: %d",GetIntegerValue,&BuiltinInfo.nCirclesDiameter,0,LedInfo.nTotalLeds},
+    {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nCirclesHue,0,255},
+    {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nCirclesSaturation,0,255},
+    {eTextInt,"Count: %d",GetIntegerValue,&BuiltinInfo.nCirclesCount,1,255},
+    {eTextInt,"Gap Columns: %d",GetIntegerValue,&BuiltinInfo.nCirclesGap,0,100},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
@@ -1070,7 +1075,7 @@ BuiltInItem BuiltInFiles[] = {
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
-    {"Disc",TestDisc,DiscMenu},
+    {"Disc",TestCircles,CirclesMenu},
     {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},
