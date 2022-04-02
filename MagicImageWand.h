@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.32";
+const char* MIW_Version = "2.33";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -1075,7 +1075,7 @@ BuiltInItem BuiltInFiles[] = {
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
-    {"Disc",TestCircles,CirclesMenu},
+    {"Circles",TestCircles,CirclesMenu},
     {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},

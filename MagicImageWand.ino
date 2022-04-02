@@ -2639,7 +2639,7 @@ void TestCircles()
 {
 	bool done = false;
 	for (int count = 0; count < BuiltinInfo.nCirclesCount; ++count) {
-		for (int col = 0; col < 144; ) {
+		for (int col = 0; col < BuiltinInfo.nCirclesDiameter; ) {
 			EVERY_N_MILLISECONDS_I(timerObj, 0) {
 				timerObj.setPeriod(ImgInfo.nFrameHold);
 				// go get a column
