@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.29";
+const char* MIW_Version = "2.30";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -378,6 +378,10 @@ typedef struct BUILTIN_INFO {
     int nWedgeRed = 255;
     int nWedgeGreen = 255;
     int nWedgeBlue = 255;
+    // disc data
+    int nDiscDiameter = 144;
+    int nDiscHue = 0;
+    int nDiscSaturation = 255;
 };
 RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
 
@@ -684,6 +688,15 @@ MenuItem BpmMenu[] = {
     {eExit,"Beats"},
     {eTextInt,"Beats per minute: %d",GetIntegerValue,&BuiltinInfo.nBpmBeatsPerMinute,1,300},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bBpmCycleHue,0,0,0,"Yes","No"},
+    {eExit,PreviousMenu},
+    // make sure this one is last
+    {eTerminate}
+};
+MenuItem DiscMenu[] = {
+    {eExit,"Disc"},
+    {eTextInt,"Diameter: %d",GetIntegerValue,&BuiltinInfo.nDiscDiameter,0,LedInfo.nTotalLeds},
+    {eTextInt,"Hue: %d",GetIntegerValue,&BuiltinInfo.nDiscHue,0,255},
+    {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDiscSaturation,0,255},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
@@ -1057,7 +1070,7 @@ BuiltInItem BuiltInFiles[] = {
     {"CheckerBoard",CheckerBoard,CheckerBoardMenu},
     {"Confetti",TestConfetti,ConfettiMenu},
     {"Cylon Eye",TestCylon,CylonEyeMenu},
-    {"Disc",TestDisc},
+    {"Disc",TestDisc,DiscMenu},
     {"Juggle",TestJuggle},
     {"Lines",TestLines,LinesMenu},
     {"Meteor",TestMeteor,MeteorMenu},

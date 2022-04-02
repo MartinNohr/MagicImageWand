@@ -2633,7 +2633,6 @@ void fadeToBlack(int ledNo, byte fadeValue) {
 void TestDisc()
 {
 	bool done = false;
-	Serial.println("hold: " + String(ImgInfo.nFrameHold));
 	for (int col = 0; col < 144; ) {
 		EVERY_N_MILLISECONDS_I(timerObj, 0) {
 			timerObj.setPeriod(ImgInfo.nFrameHold);
@@ -2655,12 +2654,12 @@ void TestDisc()
 void disc(int col)
 {
 	int h, k;
-	k = h = 144 / 2 - 1;
-	int r = 144 / 2 - 1;
+	k = h = LedInfo.nTotalLeds / 2 - 1;
+	int r = BuiltinInfo.nDiscDiameter / 2 - 1;
 	// find the circle boundaries from y=k +/- sqrt(r*r-(x-h)*(x-h)
 	int root = sqrt(r * r - ((col - h) * (col - h)));
-	for (uint16_t row = 0; row < 144; ++row) {
-		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(255, 255, 255) : CRGB::Black);
+	for (uint16_t row = 0; row < BuiltinInfo.nDiscDiameter; ++row) {
+		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(CHSV(BuiltinInfo.nDiscHue, BuiltinInfo.nDiscSaturation, 255)) : CRGB::Black);
 	}
 }
 
