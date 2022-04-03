@@ -1003,25 +1003,6 @@ void UpdateStripBrightness(MenuItem* menu, int flag)
 	}
 }
 
-void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
-{
-	switch (flag) {
-	case 1:		// first time
-		for (int ix = 0; ix < 64; ++ix) {
-			SetPixel(ix, CRGB::White);
-		}
-		FastLED.show();
-		break;
-	case 0:		// every change
-		FastLED.setTemperature(CRGB(*(int*)menu->value, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
-		FastLED.show();
-		break;
-	case -1:	// last time
-		FastLED.clear(true);
-		break;
-	}
-}
-
 void UpdateControllers(MenuItem* menu, int flag)
 {
 	if (LedInfo.bSecondController)
@@ -1048,6 +1029,46 @@ void UpdateTotalLeds(MenuItem* menu, int flag)
 			//WriteMessage("Reboot needed\nto take effect", false, 1000);
 			bControllerReboot = true;
 		}
+		break;
+	}
+}
+
+void UpdateStripHue(MenuItem* menu, int flag)
+{
+	CHSV hue = CHSV(*(int*)menu->value, 255, 255);
+	CRGB rgb = CRGB(hue);
+	switch (flag) {
+	case 1:		// first time
+		for (int ix = 0; ix < 64; ++ix) {
+			SetPixel(ix, rgb);
+		}
+		FastLED.show();
+		break;
+	case 0:		// every change
+		FastLED.setTemperature(rgb);
+		FastLED.show();
+		break;
+	case -1:	// last time
+		FastLED.clear(true);
+		break;
+	}
+}
+
+void UpdateStripWhiteBalanceR(MenuItem* menu, int flag)
+{
+	switch (flag) {
+	case 1:		// first time
+		for (int ix = 0; ix < 64; ++ix) {
+			SetPixel(ix, CRGB::White);
+		}
+		FastLED.show();
+		break;
+	case 0:		// every change
+		FastLED.setTemperature(CRGB(*(int*)menu->value, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
+		FastLED.show();
+		break;
+	case -1:	// last time
+		FastLED.clear(true);
 		break;
 	}
 }

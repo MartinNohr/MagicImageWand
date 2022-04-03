@@ -517,6 +517,7 @@ void UpdateTotalLeds(MenuItem* menu, int flag);
 void UpdateControllers(MenuItem* menu, int flag);
 void UpdateWiringMode(MenuItem* menu, int flag);
 void UpdateStripBrightness(MenuItem* menu, int flag);
+void UpdateStripHue(MenuItem* menu, int flag);
 //void UpdatePixelMaxCurrent(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceR(MenuItem* menu, int flag);
 void UpdateStripWhiteBalanceG(MenuItem* menu, int flag);
@@ -637,7 +638,7 @@ MenuItem CheckerBoardMenu[] = {
 MenuItem RainbowMenu[] = {
     {eExit,"Rainbow"},
     {eTextInt,"Fade Time: %d.%d S",GetIntegerValue,&BuiltinInfo.nRainbowFadeTime,0,100,1},
-    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nRainbowInitialHue,0,255},
+    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nRainbowInitialHue,0,255,0,NULL,NULL,UpdateStripHue},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bRainbowCycleHue,0,0,0,"Yes","No"},
     {eTextInt,"Hue Delta Size: %d",GetIntegerValue,&BuiltinInfo.nRainbowHueDelta,1,255},
     {eBool,"Add Glitter: %s",ToggleBool,&BuiltinInfo.bRainbowAddGlitter,0,0,0,"Yes","No"},
@@ -681,7 +682,7 @@ MenuItem WedgeMenu[] = {
 };
 MenuItem SineMenu[] = {
     {eExit,"Sine"},
-    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nSineStartingHue,0,255},
+    {eTextInt,"Starting Hue: %d",GetIntegerValueHue,&BuiltinInfo.nSineStartingHue,0,255,0,NULL,NULL,UpdateStripHue},
     {eBool,"Cycle Hue: %s",ToggleBool,&BuiltinInfo.bSineCycleHue,0,0,0,"Yes","No"},
     {eTextInt,"Speed: %d",GetIntegerValue,&BuiltinInfo.nSineSpeed,1,500},
     {eExit,PreviousMenu},
@@ -699,7 +700,7 @@ MenuItem BpmMenu[] = {
 MenuItem CirclesMenu[] = {
     {eExit,"Circles"},
     {eTextInt,"Diameter: %d",GetIntegerValue,&BuiltinInfo.nCirclesDiameter,0,LedInfo.nTotalLeds},
-    {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nCirclesHue,0,255},
+	{eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nCirclesHue,0,255,0,NULL,NULL,UpdateStripHue},
     {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nCirclesSaturation,0,255},
     {eTextInt,"Count: %d",GetIntegerValue,&BuiltinInfo.nCirclesCount,1,255},
     {eTextInt,"Gap Columns: %d",GetIntegerValue,&BuiltinInfo.nCirclesGap,0,100},
@@ -746,9 +747,9 @@ MenuItem LedLightBarMenu[] = {
         {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
     {eEndif},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_HSV},
-        {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nDisplayAllHue,0,255},
+        {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nDisplayAllHue,0,255,0,NULL,NULL,UpdateStripHue},
         {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllSaturation,0,255},
-        {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255},
+        {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255,0,NULL,NULL,UpdateStripBrightness},
     {eEndif},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_KELVIN},
 		{eList,"Temp: %s",GetSelectChoice,&BuiltinInfo.nColorTemperature,0,sizeof(LightBarColorKelvinText) / sizeof(*LightBarColorKelvinText) - 1,0,NULL,NULL,NULL,LightBarColorKelvinText},
