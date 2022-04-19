@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.34";
+const char* MIW_Version = "2.35";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -384,7 +384,8 @@ typedef struct BUILTIN_INFO {
     int nCirclesHue = 0;
     int nCirclesSaturation = 255;
     int nCirclesCount = 1;
-    int nCirclesGap = 0;    // space after each circle
+    int nCirclesGap = 0;        // space after each circle
+    bool bCirclesFill = true;   // fill the circle
 };
 RTC_DATA_ATTR BUILTIN_INFO BuiltinInfo;
 
@@ -704,6 +705,7 @@ MenuItem CirclesMenu[] = {
     {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nCirclesSaturation,0,255},
     {eTextInt,"Count: %d",GetIntegerValue,&BuiltinInfo.nCirclesCount,1,255},
     {eTextInt,"Gap Columns: %d",GetIntegerValue,&BuiltinInfo.nCirclesGap,0,100},
+    {eBool,"Fill Circle: %s",ToggleBool,&BuiltinInfo.bCirclesFill,0,0,0,"Yes","No"},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}

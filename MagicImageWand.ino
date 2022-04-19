@@ -2723,7 +2723,16 @@ void Circles(int col)
 	// find the circle boundaries from y=k +/- sqrt(r*r-(x-h)*(x-h))
 	int root = sqrt(r * r - ((col - h) * (col - h)));
 	for (uint16_t row = 0; row < LedInfo.nTotalLeds; ++row) {
-		SetPixel(row, (row >= (k - root) && row <= (k + root)) ? CRGB(CHSV(BuiltinInfo.nCirclesHue, BuiltinInfo.nCirclesSaturation, 255)) : CRGB::Black);
+		bool show;
+		if (BuiltinInfo.bCirclesFill) {
+			// light everything inside the circle
+			show = (row >= (k - root) && row <= (k + root));
+		}
+		else {
+			// only light the circle
+			show = (row == (k - root) || row == (k + root));
+		}
+		SetPixel(row, show ? CRGB(CHSV(BuiltinInfo.nCirclesHue, BuiltinInfo.nCirclesSaturation, 255)) : CRGB::Black);
 	}
 }
 
