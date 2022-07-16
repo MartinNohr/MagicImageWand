@@ -3346,11 +3346,13 @@ void ShowBmp(MenuItem*)
 			break;
 		}
 		// get a buffer if we don't already have one
+		uint32_t scrBufSize = tft.width() * tftTall * sizeof(uint16_t);
 		if (scrBuf == NULL)
 			scrBuf = (uint16_t*)calloc(tft.width() * tftTall, sizeof(uint16_t));
 		if (scrBuf == NULL) {
 			WriteMessage("Not enough memory", true, 5000);
 			bKeepShowing = false;
+			scrBufSize = 0;
 			break;
 		}
 		if (dataFile.isOpen())
@@ -3362,6 +3364,8 @@ void ShowBmp(MenuItem*)
 			bKeepShowing = false;
 			break;
 		}
+		// clear the buffer and the screen
+		memset(scrBuf, 0, scrBufSize);
 		ClearScreen();
 		// clear the file cache buffer
 		readByte(true);
@@ -3428,6 +3432,16 @@ void ShowBmp(MenuItem*)
 		// TODO: init to the current value which might be between 0 and 10
 		int startOffsetList[] = { 0,5,9 };
 		int startOffsetIndex = -1;
+#if TTGO_T == 4
+		DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
+		DisplayLine(11, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
+		float walk = (float)imgHeight / (float)imgWidth;
+		DisplayLine(13, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
+		DisplayLine(14, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
+		// calculate display time
+		float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+		DisplayLine(15, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
+#endif
 		while (!bDone) {
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
@@ -3504,16 +3518,6 @@ void ShowBmp(MenuItem*)
 				tft.pushRect(0, 0, 240, tftTall, scrBuf);
 				// don't draw it again until something changes
 				bRedraw = false;
-#if TTGO_T == 4
-				DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
-				DisplayLine(11, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
-				float walk = (float)imgHeight / (float)imgWidth;
-				DisplayLine(13, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
-				DisplayLine(14, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
-				// calculate display time
-				float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
-				DisplayLine(15, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
-#endif
 			}
 			ResetSleepAndDimTimers();
 			switch (ReadButton()) {
@@ -3587,6 +3591,8 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 #endif
+			case BTN_RIGHT_LONG:
+			case BTN_LEFT_LONG:
 			case BTN_B1_LONG:	// change scroll mode
 				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
