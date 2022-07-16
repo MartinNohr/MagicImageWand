@@ -3504,6 +3504,16 @@ void ShowBmp(MenuItem*)
 				tft.pushRect(0, 0, 240, tftTall, scrBuf);
 				// don't draw it again until something changes
 				bRedraw = false;
+#if TTGO_T == 4
+				DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
+				DisplayLine(11, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
+				float walk = (float)imgHeight / (float)imgWidth;
+				DisplayLine(13, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
+				DisplayLine(14, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
+				// calculate display time
+				float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+				DisplayLine(15, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
+#endif
 			}
 			ResetSleepAndDimTimers();
 			switch (ReadButton()) {
@@ -3555,6 +3565,7 @@ void ShowBmp(MenuItem*)
 				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
 				bRedraw = true;
 				break;
+#if TTGO_T == 1
 			case BTN_SELECT:	// show the bmp information
 				if (bShowingSize) {
 					bShowingSize = false;
@@ -3575,6 +3586,7 @@ void ShowBmp(MenuItem*)
 					bRedraw = false;
 				}
 				break;
+#endif
 			case BTN_B1_LONG:	// change scroll mode
 				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
