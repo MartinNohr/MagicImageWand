@@ -1449,6 +1449,7 @@ bool HandleRunMode()
 	case BTN_B1_CLICK:
 		break;
 	case BTN_B1_LONG:
+	case BTN_LEFT_RIGHT_LONG:
 		CallBtnLongFunction(SystemInfo.nBtn1LongFunction);
 		bRedraw = true;
 		break;
@@ -3525,6 +3526,12 @@ void ShowBmp(MenuItem*)
 			case BTN_B1_CLICK:
 			case BTN_B2_LONG:
 				break;
+			case BTN_RIGHT_LONG:
+				if (!bShowingSize && bAllowScroll) {
+					imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+					imgStartCol = max(0, imgStartCol);
+				}
+				break;
 			case BTN_RIGHT:
 				if (SystemInfo.bPreviewScrollFiles) {
 					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
@@ -3540,6 +3547,12 @@ void ShowBmp(MenuItem*)
 						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 						imgStartCol = max(0, imgStartCol);
 					}
+				}
+				break;
+			case BTN_LEFT_LONG:
+				if (!bShowingSize && bAllowScroll) {
+					imgStartCol += SystemInfo.nPreviewScrollCols;
+					imgStartCol = min((int)imgHeight - 240, imgStartCol);
 				}
 				break;
 			case BTN_LEFT:
@@ -3591,8 +3604,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 #endif
-			case BTN_RIGHT_LONG:
-			case BTN_LEFT_LONG:
+			case BTN_LEFT_RIGHT_LONG:
 			case BTN_B1_LONG:	// change scroll mode
 				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
