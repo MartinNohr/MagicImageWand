@@ -94,6 +94,22 @@ private:
                         btn = BTN_LEFT_RIGHT_LONG;
                     }
                 }
+                // check for both left and center T4 btn's down
+                if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[3]))) {
+                    // make sure both buttons are still down
+                    delay(1000);
+                    if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[3])) {
+                        btn = BTN0_CLICK;
+                    }
+                }
+                // check for both right and center T4 btn's down
+                if ((m_nWhichButton == 4 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[4]))) {
+                    // make sure both buttons are still down
+                    delay(1000);
+                    if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[4])) {
+                        btn = BTN1_CLICK;
+                    }
+                }
                 m_nWaitRelease = 20;
                 if (btnBuf.size() < m_nMaxButtons) {
                     btnBuf.push(btn);
