@@ -2,8 +2,8 @@
 // ***** Various switches for options are set here *****
 
 // use TTGO T 1 or 4, define only one
-#define TTGO_T 1
-//#define TTGO_T 4
+//#define TTGO_T 1
+#define TTGO_T 4
 
 // also remember to change User_Setup_Select.h correctly
 // use one of these in that file

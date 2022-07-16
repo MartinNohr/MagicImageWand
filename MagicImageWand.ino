@@ -3363,7 +3363,6 @@ void ShowBmp(MenuItem*)
 			break;
 		}
 		ClearScreen();
-		memset(scrBuf, 0, tft.width() * tft.height() * sizeof(uint16_t));
 		// clear the file cache buffer
 		readByte(true);
 		uint16_t bmpType = readInt();
