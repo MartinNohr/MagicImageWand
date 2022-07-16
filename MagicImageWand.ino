@@ -69,7 +69,11 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(TFT_ENABLE, ledChannel);
-	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, &SystemInfo.DialSettings);
+#if TTGO_T == 1
+	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
+#elif TTGO_T == 4
+	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)-1, (gpio_num_t)38, (gpio_num_t)39, &SystemInfo.DialSettings);
+#endif
 	setupSDcard();
 	//gpio_set_direction((gpio_num_t)LED, GPIO_MODE_OUTPUT);
 	//digitalWrite(LED, HIGH);
@@ -119,7 +123,11 @@ void setup()
 	SystemInfo.bCriticalBatteryLevel = false;
 	server.begin();
 	tft.setFreeFont(&Dialog_bold_16);
+#if TTGO_T == 1
 	SystemInfo.nDisplayRotation = 3;
+#elif TTGO_T == 4
+	SystemInfo.nDisplayRotation = 0;
+#endif
 	tft.setTextSize(1);
 	tft.setTextPadding(tft.width());
 	SetScreenRotation(SystemInfo.nDisplayRotation);
@@ -1266,6 +1274,13 @@ bool HandleMenus()
 	int lastMenuCount = MenuStack.top()->menucount;
 	bool lastRecording = bRecordingMacro;
 	//MenuItem* pCurrentMenu = &MenuStack.top()->menu[MenuStack.top()->index];
+	int btnRepeatCount = 1;
+	switch (button) {
+	case BTN_LEFT_LONG:
+	case BTN_RIGHT_LONG:
+		btnRepeatCount = 5;
+		break;
+	}
 	switch (button) {
 	case BTN_B0_CLICK:	// go back a menu level if we can
 		UpMenuLevel(false);
@@ -1282,34 +1297,40 @@ bool HandleMenus()
 		RunMenus(button);
 		bMenuChanged = true;
 		break;
+	case BTN_RIGHT_LONG:
 	case BTN_RIGHT:
-		if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index < MenuStack.top()->menucount - 1) {
-			++MenuStack.top()->index;
-		}
-		if (MenuStack.top()->index >= MenuStack.top()->menucount) {
-			MenuStack.top()->index = 0;
-			bMenuChanged = true;
-			MenuStack.top()->offset = 0;
-		}
-		// see if we need to scroll the menu
-		if (MenuStack.top()->index - MenuStack.top()->offset > (nMenuLineCount - 1)) {
-			if (MenuStack.top()->offset < MenuStack.top()->menucount - nMenuLineCount) {
-				++MenuStack.top()->offset;
+		while (btnRepeatCount--) {
+			if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index < MenuStack.top()->menucount - 1) {
+				++MenuStack.top()->index;
+			}
+			if (MenuStack.top()->index >= MenuStack.top()->menucount) {
+				MenuStack.top()->index = 0;
+				bMenuChanged = true;
+				MenuStack.top()->offset = 0;
+			}
+			// see if we need to scroll the menu
+			if (MenuStack.top()->index - MenuStack.top()->offset > (nMenuLineCount - 1)) {
+				if (MenuStack.top()->offset < MenuStack.top()->menucount - nMenuLineCount) {
+					++MenuStack.top()->offset;
+				}
 			}
 		}
 		break;
+	case BTN_LEFT_LONG:
 	case BTN_LEFT:
-		if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index > 0) {
-			--MenuStack.top()->index;
-		}
-		if (MenuStack.top()->index < 0) {
-			MenuStack.top()->index = MenuStack.top()->menucount - 1;
-			bMenuChanged = true;
-			MenuStack.top()->offset = MenuStack.top()->menucount - nMenuLineCount;
-		}
-		// see if we need to adjust the offset
-		if (MenuStack.top()->offset && MenuStack.top()->index < MenuStack.top()->offset) {
-			--MenuStack.top()->offset;
+		while (btnRepeatCount--) {
+			if (SystemInfo.bAllowMenuWrap || MenuStack.top()->index > 0) {
+				--MenuStack.top()->index;
+			}
+			if (MenuStack.top()->index < 0) {
+				MenuStack.top()->index = MenuStack.top()->menucount - 1;
+				bMenuChanged = true;
+				MenuStack.top()->offset = MenuStack.top()->menucount - nMenuLineCount;
+			}
+			// see if we need to adjust the offset
+			if (MenuStack.top()->offset && MenuStack.top()->index < MenuStack.top()->offset) {
+				--MenuStack.top()->offset;
+			}
 		}
 		break;
 	case BTN_LONG:
@@ -1357,37 +1378,51 @@ bool HandleRunMode()
 	bool bRedraw = false;
 	bool didsomething = true;
 	int maxMenuLine = nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 2 : 1);
-	switch (ReadButton()) {
+	CRotaryDialButton::Button button = ReadButton();
+	int btnRepeatCount = 1;
+	switch (button) {
+	case BTN_LEFT_LONG:
+	case BTN_RIGHT_LONG:
+		btnRepeatCount = 5;
+		break;
+	}
+	switch (button) {
 	case BTN_SELECT:
 		bCancelRun = bCancelMacro = false;
 		ProcessFileOrTest();
 		DisplayCurrentFile();
 		break;
+	case BTN_RIGHT_LONG:
 	case BTN_RIGHT:
-		if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor < maxMenuLine) {
-			++currentFileIndex.nFileCursor;
-			// pin to max
-			currentFileIndex.nFileCursor = min(currentFileIndex.nFileCursor, (int)FileNames.size() - 1);
+		while (btnRepeatCount--) {
+			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor < maxMenuLine) {
+				++currentFileIndex.nFileCursor;
+				// pin to max
+				currentFileIndex.nFileCursor = min(currentFileIndex.nFileCursor, (int)FileNames.size() - 1);
+			}
+			// increase the current file index
+			if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex < FileNames.size() - 1))
+				++currentFileIndex.nFileIndex;
+			if (currentFileIndex.nFileIndex >= FileNames.size())
+				currentFileIndex.nFileIndex = 0;
 		}
-		// increase the current file index
-		if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex < FileNames.size() - 1))
-			++currentFileIndex.nFileIndex;
-		if (currentFileIndex.nFileIndex >= FileNames.size())
-			currentFileIndex.nFileIndex = 0;
 		//if (oldFileIndex != CurrentFileIndex)
-			DisplayCurrentFile();
+		DisplayCurrentFile();
 		break;
+	case BTN_LEFT_LONG:
 	case BTN_LEFT:
-		if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor > 0) {
-			--currentFileIndex.nFileCursor;
+		while (btnRepeatCount--) {
+			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor > 0) {
+				--currentFileIndex.nFileCursor;
+			}
+			// decrease the current file index
+			if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex > 0))
+				--currentFileIndex.nFileIndex;
+			if (currentFileIndex.nFileIndex < 0)
+				currentFileIndex.nFileIndex = FileNames.size() - 1;
 		}
-		// decrease the current file index
-		if (SystemInfo.bAllowMenuWrap || (currentFileIndex.nFileIndex > 0))
-			--currentFileIndex.nFileIndex;
-		if (currentFileIndex.nFileIndex < 0)
-			currentFileIndex.nFileIndex = FileNames.size() - 1;
 		//if (oldFileIndex != CurrentFileIndex)
-			DisplayCurrentFile();
+		DisplayCurrentFile();
 		break;
 		//case btnShowFiles:
 		//	bShowBuiltInTests = !bShowBuiltInTests;
@@ -3300,6 +3335,7 @@ void ShowBmp(MenuItem*)
 	bool bOldGamma = LedInfo.bGammaCorrection;
 	LedInfo.bGammaCorrection = false;
 	bool bKeepShowing = true;
+	int tftTall = _min(144, tft.height());
 	while (bKeepShowing) {
 		String fn = currentFolder + FileNames[currentFileIndex.nFileIndex];
 		// make sure this is a bmp file, if not just quietly go away
@@ -3311,7 +3347,7 @@ void ShowBmp(MenuItem*)
 		}
 		// get a buffer if we don't already have one
 		if (scrBuf == NULL)
-			scrBuf = (uint16_t*)calloc(tft.width() * tft.height(), sizeof(uint16_t));
+			scrBuf = (uint16_t*)calloc(tft.width() * tftTall, sizeof(uint16_t));
 		if (scrBuf == NULL) {
 			WriteMessage("Not enough memory", true, 5000);
 			bKeepShowing = false;
@@ -3424,7 +3460,7 @@ void ShowBmp(MenuItem*)
 					if (imgStartCol > oldImgStartCol) {
 						// move the display columns to the left
 						startCol = 240 - diff;
-						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
+						for (int mrow = 0; mrow < tftTall; ++mrow, base += 240) {
 							// move the row
 							memmove(base, base + diff, (240 - diff) * sizeof(uint16_t));
 						}
@@ -3433,7 +3469,7 @@ void ShowBmp(MenuItem*)
 						// move the display columns to the right
 						startCol = 0;
 						endCol = diff;
-						for (int mrow = 0; mrow < 135; ++mrow, base += 240) {
+						for (int mrow = 0; mrow < tftTall; ++mrow, base += 240) {
 							// move the row
 							memmove(base + diff, base, (240 - diff) * sizeof(uint16_t));
 						}
@@ -3452,9 +3488,9 @@ void ShowBmp(MenuItem*)
 						// throw a pixel away if we're dividing by 2 for the 288 pixel image
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
-						// because 135 row display is less than 144 image
+						// because tftTall (might be 135) row display is less than 144 image
 						int row = x - SystemInfo.nPreviewStartOffset;
-						if (row >= 0 && row < 135) {
+						if (row >= 0 && row < tftTall) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 							uint16_t sbcolor;
 							// the memory image colors are byte swapped
@@ -3466,7 +3502,7 @@ void ShowBmp(MenuItem*)
 				}
 				oldImgStartCol = imgStartCol;
 				// got it all, go show it
-				tft.pushRect(0, 0, 240, 135, scrBuf);
+				tft.pushRect(0, 0, 240, tftTall, scrBuf);
 				// don't draw it again until something changes
 				bRedraw = false;
 			}

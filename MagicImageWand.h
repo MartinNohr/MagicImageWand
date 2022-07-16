@@ -46,7 +46,11 @@ String file_size(int bytes){
 #include <FastLED.h>
 #include <Preferences.h>
 #include "RotaryDialButton.h"
-#include <TFT_eSPI.h>
+#if TTGO_T == 1
+    #include <TFT_eSPI.h>
+#elif TTGO_T == 4
+    #include <TFT_eSPI.h>
+#endif
 #include <vector>
 #include <stack>
 //#include <fonts/GFXFF/FreeMono18pt7b.h>
@@ -80,7 +84,9 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 #define BTN_SELECT      CRotaryDialButton::BTN_CLICK
 #define BTN_NONE        CRotaryDialButton::BTN_NONE
 #define BTN_LEFT        CRotaryDialButton::BTN_LEFT
+#define BTN_LEFT_LONG   CRotaryDialButton::BTN_LEFT_LONG
 #define BTN_RIGHT       CRotaryDialButton::BTN_RIGHT
+#define BTN_RIGHT_LONG  CRotaryDialButton::BTN_RIGHT_LONG
 #define BTN_LONG        CRotaryDialButton::BTN_LONGPRESS
 #define BTN_B0_CLICK    CRotaryDialButton::BTN0_CLICK
 #define BTN_B0_LONG     CRotaryDialButton::BTN0_LONGPRESS
@@ -139,9 +145,6 @@ bool CheckCancel(bool bLeaveButton = false);
 
 bool bAutoLoadSettings = false;
 
-// LED controller pins
-#define DATA_PIN1 2
-#define DATA_PIN2 17
 // The array of leds, up to 512
 CRGB* leds;
 // 0 feed from center, 1 serial from end, 2 from outsides
@@ -224,7 +227,11 @@ typedef struct SYSTEM_INFO {
     int nPreviewScrollCols = 20;                // now many columns to scroll with dial during preview
     bool bShowProgress = true;                  // show the progress bar
     bool bShowFolder = false;                   // show the path in front of the file
+#if TTGO_T == 1
     int nDisplayBrightness = 50;                // this is in %
+#elif TTGO_T == 4
+    int nDisplayBrightness = 75;                // this is in %
+#endif
     bool bAllowMenuWrap = false;                // allows menus to wrap around from end and start instead of pinning
     bool bShowNextFiles = true;                 // show the next files in the main display
     bool bShowDuringBmpFile = false;            // set this to display the bmp on the LCD and the LED during BMP display
@@ -244,7 +251,11 @@ typedef struct SYSTEM_INFO {
     int eDisplayDimMode = DISPLAY_DIM_MODE_NONE;// 0 is none, 1 is dimtime, 2 is light sensor
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
+#if TTGO_T == 1
     int nDisplayRotation = 1;                   // rotates display 0, 180, 90, 270
+#elif TTGO_T == 4
+    int nDisplayRotation = 0;                   // rotates display 0, 180, 90, 270
+#endif
     int nBtn0LongFunction = BTN_LONG_ROTATION;  // function that long btn0 performs
     int nBtn1LongFunction = BTN_LONG_LIGHTBAR;  // function that long btn1 performs
     bool bSimpleMenu = false;                   // full or simple menu
@@ -254,7 +265,11 @@ typedef struct SYSTEM_INFO {
     int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
     int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
     bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
+#if TTGO_T == 1
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
+#elif TTGO_T == 4
+    int nPreviewStartOffset = 0;                // how many pixels to offset the start, the display is only 135, not 144
+#endif
     bool bKeepFileOnTopLine = false;            // keep the active file on the top line
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -538,12 +553,6 @@ void ShowBattery(MenuItem* menu);
 void SetFilter(MenuItem* menu);
 void ShowLightSensor(MenuItem* menu);
 //void UpdateFilter(MenuItem* menu, int flag);
-
-// SD details
-#define SDcsPin    33  // GPIO33
-#define SDSckPin   25  // GIPO25
-#define SDMisoPin  27  // GPIO27
-#define SDMosiPin  26  // GPIO26
 
 struct saveValues {
     void* val;
