@@ -53,15 +53,16 @@ TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "Battery
 volatile bool taskDone = false;
 void setup()
 {
-	Serial.begin(115200);
-	delay(10);
-	Serial.print("setup() is running on core ");
-	Serial.println(xPortGetCoreID());
-	// create a mutex
-	macroMutex = xSemaphoreCreateMutex();
 	// init the display
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
+
+	Serial.begin(115200);
+	delay(10);
+	//Serial.print("setup() is running on core ");
+	//Serial.println(xPortGetCoreID());
+	// create a mutex
+	macroMutex = xSemaphoreCreateMutex();
 
 	// configure LCD PWM functionalitites
 	pinMode(TFT_ENABLE, OUTPUT);
@@ -215,10 +216,11 @@ void setup()
 	if (nBootCount == 0) {
 		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
 		tft.setTextColor(SystemInfo.menuTextColor);
-		rainbow_fill();
+		grey_fill();
 		tft.setTextColor(TFT_BLACK);
 		tft.setFreeFont(&Irish_Grover_Regular_24);
 		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
+		tft.drawRect(1, 1, tft.width() - 2, tft.height() - 2, SystemInfo.menuTextColor);
 		tft.drawString("Magic Image Wand", 5, 10);
 		tft.setFreeFont(&Dialog_bold_16);
 		tft.drawString(String("Version ") + MIW_Version, 20, 70);
@@ -4898,22 +4900,23 @@ void TestWedge()
 //		delay(1);
 //	}
 //}
+
+#if 0
 // #########################################################################
 // Fill screen with a rainbow pattern
 // #########################################################################
-byte red = 31;
-byte green = 0;
-byte blue = 0;
-byte state = 0;
-unsigned int colour = red << 11; // Colour order is RGB 5+6+5 bits each
-
 void rainbow_fill()
 {
+	byte red = 31;
+	byte green = 0;
+	byte blue = 0;
+	byte state = 0;
+	unsigned int color = red << 11; // Colour order is RGB 5+6+5 bits each
 	// The colours and state are not initialised so the start colour changes each time the function is called
 
-	for (int i = 319; i >= 0; i--) {
+	for (int i = tft.height() - 1; i >= 0; i--) {
 		// Draw a vertical line 1 pixel wide in the selected colour
-		tft.drawFastHLine(0, i, tft.width(), colour); // in this example tft.width() returns the pixel width of the display
+		tft.drawFastHLine(0, i, tft.width(), color); // in this example tft.width() returns the pixel width of the display
 		// This is a "state machine" that ramps up/down the colour brightnesses in sequence
 		switch (state) {
 		case 0:
@@ -4959,8 +4962,21 @@ void rainbow_fill()
 			}
 			break;
 		}
-		colour = red << 11 | green << 5 | blue;
+		color = red << 11 | green << 5 | blue;
 	}
+}
+#endif
+
+// fill the screen with grey
+void grey_fill()
+{
+	//for (int ix = 0; ix < tft.width(); ++ix) {
+	//	if (ix % 2)
+	//		tft.drawFastVLine(ix, 0, tft.height(), TFT_LIGHTGREY);
+	//	else
+	//		tft.drawFastVLine(ix + 1, 0, tft.height(), TFT_DARKGREY);
+	//}
+	tft.fillRect(0, 0, tft.width(), tft.height(), TFT_DARKGREY);
 }
 
 // draw a progress bar
