@@ -58,7 +58,8 @@ void setup()
 	tft.fillScreen(TFT_BLACK);
 
 	Serial.begin(115200);
-	delay(10);
+	while (!Serial) {
+	}
 	//Serial.print("setup() is running on core ");
 	//Serial.println(xPortGetCoreID());
 	// create a mutex
@@ -181,7 +182,6 @@ void setup()
 #if !HAS_BATTERY_LEVEL
 	SystemInfo.bShowBatteryLevel = false;
 #endif
-	GetFileNamesFromSDorBuiltins(currentFolder);
 	tft.setFreeFont(&Dialog_bold_16);
 	tft.setTextColor(SystemInfo.menuTextColor);
 	// get our text line sprite ready
@@ -229,6 +229,12 @@ void setup()
 		if (msg.length()) {
 			tft.drawString(msg, 20, 110);
 		}
+		for (int cnt = 0; cnt < 400; ++cnt) {
+			if (ReadButton() != BTN_NONE) {
+				break;
+			}
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+		}
 	}
 	// clear the button buffer
 	CRotaryDialButton::clear();
@@ -237,11 +243,12 @@ void setup()
 	sleepTimer = SystemInfo.nSleepTime * 60;
 	// read the macro data
 	ReadMacroInfo();
+	GetFileNamesFromSDorBuiltins(currentFolder);
 	ClearScreen();
 	DisplayCurrentFile();
 	// wait for led test to finish
-	//for (; !taskDone; delay(100)) {
-	//}
+	for (; !taskDone; delay(100)) {
+	}
 }
 // task to test the LEDS on start
 void TaskInitTestLed(void* parameter)
@@ -254,7 +261,7 @@ void TaskInitTestLed(void* parameter)
 			SetPixel(143 - px, color[cix]);
 		}
 		FastLED.show();
-		delay(100);
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 	FastLED.clear(true);
 	RainbowPulse();
@@ -303,12 +310,18 @@ void CheckRotaryDialType()
 // read the macro info from the files if we didn't find the json file first
 void ReadMacroInfo()
 {
-	FsFile file;
 	if (SD.exists(MACRO_JSON_FILE)) {
-		//WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 		// read the file
+#if USE_STANDARD_SD
+		SDFile file;
+		file = SD.open(MACRO_JSON_FILE);
+		if (file) {
+#else
+		FsFile file;
 		file = SD.open(MACRO_JSON_FILE);
 		if (file.getError() == 0) {
+#endif
+		//WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
 			//StaticJsonDocument<JSON_DOC_SIZE> doc;
 			DynamicJsonDocument doc(JSON_DOC_SIZE);
 			String input = file.readString();
@@ -335,7 +348,11 @@ void ReadMacroInfo()
 			file.close();
 		}
 		else {
+#if USE_STANDARD_SD
+			WriteMessage(String("failed to open: ") + MACRO_JSON_FILE, true);
+#else
 			WriteMessage(String("failed to open: ") + MACRO_JSON_FILE + " error: " + String(file.getError()), true);
+#endif
 		}
 	}
 	else {
@@ -356,9 +373,15 @@ void ReadMacroInfo()
 // save the macro info in json to a file called macro.json
 void SaveMacroInfo()
 {
+#if USE_STANDARD_SD
+	SDFile file;
+	file = SD.open(MACRO_JSON_FILE, FILE_WRITE);
+	if (file) {
+#else
 	FsFile file;
 	file = SD.open(MACRO_JSON_FILE, O_WRITE | O_CREAT | O_TRUNC);
 	if (file.getError() == 0) {
+#endif
 		DynamicJsonDocument doc(JSON_DOC_SIZE);
 		//StaticJsonDocument<JSON_DOC_SIZE> doc;
 		for (int ix = 0; ix < 10; ++ix) {
@@ -378,12 +401,16 @@ void SaveMacroInfo()
 		}
 		char output[JSON_DOC_SIZE];
 		serializeJsonPretty(doc, output);
-		file.write(output, strlen(output));
+		file.write((uint8_t*)output, strlen(output));
 		file.close();
 	}
 	else {
 		// something went wrong
+#if USE_STANDARD_SD
+		WriteMessage(String("failed to open: ") + MACRO_JSON_FILE, true);
+#else
 		WriteMessage(String("failed to open: ") + MACRO_JSON_FILE + " error: " + String(file.getError()), true);
+#endif
 	}
 }
 
@@ -2566,9 +2593,7 @@ void bpm()
 		++BuiltinInfo.gHue;
 }
 
-void FillRainbow(struct CRGB* pFirstLED, int numToFill,
-	uint8_t initialhue,
-	int deltahue)
+void FillRainbow(struct CRGB* pFirstLED, int numToFill, uint8_t initialhue, int deltahue)
 {
 	CHSV hsv;
 	hsv.hue = initialhue;
@@ -3358,7 +3383,11 @@ void ShowBmp(MenuItem*)
 			scrBufSize = 0;
 			break;
 		}
+#if USE_STANDARD_SD
+		if (dataFile)
+#else
 		if (dataFile.isOpen())
+#endif
 			dataFile.close();
 		dataFile = SD.open(fn);
 		// if the file is not available, give up
@@ -4425,12 +4454,13 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 	else {
 		String line;
 #if USE_STANDARD_SD
-		File file = SD.open(filepath.c_str(), bRecordingMacro ? FILE_APPEND : FILE_WRITE);
+		SDFile file = SD.open(filepath.c_str(), bRecordingMacro ? FILE_APPEND : FILE_WRITE);
+		if (file) {
 #else
 		FsFile file = SD.open(filepath.c_str(), bRecordingMacro ? (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
-#endif
-		//Serial.println("file: " + filepath + " " + String(remove) + " " + String(startfile) + " recording " + String(bRecordingMacro));
 		if (file.getError() == 0) {
+#endif
+			//Serial.println("file: " + filepath + " " + String(remove) + " " + String(startfile) + " recording " + String(bRecordingMacro));
 			// loop through the var list
 			for (int ix = 0; ix < sizeof(SettingsVarList) / sizeof(*SettingsVarList); ++ix) {
 				switch (SettingsVarList[ix].type) {
@@ -5085,7 +5115,12 @@ void ReportCouldNotCreateFile(String target) {
 	SendHTML_Stop();
 }
 
-FsFile UploadFile; // I would need some Help here, Martin
+#if USE_STANDARD_SD
+SDFile UploadFile;
+#else
+FsFile UploadFile;
+#endif
+
 void handleFileUpload() { // upload a new file to the Filing system
 	HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
 											  // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
@@ -5096,8 +5131,11 @@ void handleFileUpload() { // upload a new file to the Filing system
 		if (!filename.startsWith("/")) filename = "/" + filename;
 		Serial.print("Upload File Name: "); Serial.println(filename);
 		SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
-		//UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
+#if USE_STANDARD_SD
+		UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
+#else
 		UploadFile = SD.open(filename, O_WRITE | O_CREAT);
+#endif
 		filename = String();
 	}
 	else if (uploadfile.status == UPLOAD_FILE_WRITE)
@@ -5252,13 +5290,21 @@ void ReportSDNotPresent() {
 void SD_file_download(String filename)
 {
 	if (bSdCardValid) {
+#if USE_STANDARD_SD
+		SDFile download = SD.open("/" + filename);
+#else
 		FsFile download = SD.open("/" + filename);
+#endif
 		if (download) {
 			server.sendHeader("Content-Type", "text/text");
 			server.sendHeader("Content-Disposition", "attachment; filename=" + filename);
 			server.sendHeader("Connection", "close");
 			//server.streamFile(download, "application/octet-stream");
+#if USE_STANDARD_SD
 			server.streamFile(download, "image/bmp");
+#else
+			server.streamFileX(download, "image/bmp");
+#endif
 			download.close();
 		}
 		else ReportFileNotPresent("download");

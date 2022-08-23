@@ -8,3 +8,4 @@
 #define NULL
 #define NULL ((void *)0)
 #define EVERY_N_MILLISECONDS(N) EVERY_N_MILLIS(N)
+#define USE_STANDARD_SD

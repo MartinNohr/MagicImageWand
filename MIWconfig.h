@@ -11,7 +11,7 @@
 //#include <User_Setups/Setup25_TTGO_T_Display.h>    // Setup file for ESP32 and TTGO T-Display ST7789V SPI bus TFT
 
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
-#define USE_STANDARD_SD 0
+#define USE_STANDARD_SD 1
 // reverse A and B for some PCB or wired versions, this is set for rev 2 PCB, 0 for older PCB, and 0 for rev 3 pcb
 #define ROTARY_DIAL_REVERSE 0
 // The push button setting, set to 1 for onboard PS version 1.4

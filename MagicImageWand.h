@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.36";
+const char* MIW_Version = "2.37";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -27,10 +27,18 @@ const char* MACRO_JSON_FILE = "/macro.json";
 #include <WiFiClient.h>
 #include <WiFiAP.h>
 #include <WebServer.h>
+#include "WebServerX.h"
 String wifiMacs = "MIW-" + WiFi.macAddress();
 const char *ssid = wifiMacs.c_str();
 const char *password = "12345678"; // not critical stuff, therefore simple password is enough
+
+// we need to change the file handling for exFat, the name function is different than standard SD lib
+#if USE_STANDARD_SD
 WebServer server(80);
+#else
+WebServerX server(80);
+#endif
+
 String webpage = "";
 char localIpAddress[16];
 
