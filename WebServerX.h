@@ -1,12 +1,13 @@
 #pragma once
-#include "C:\Users\marti\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.6\libraries\WebServer\src\WebServer.h"
+#include <WebServer.h>
 #include <SdFatConfig.h>
 #include <sdfat.h>
 class WebServerX :
     public WebServer
 {
     public:
-		WebServerX(int port = 80) {  };
+		WebServerX(int port = 80) :WebServer{ port } {}
+        // We have to use getName becuase .name() from SD does not exist in SdFat
         size_t streamFileX(FsFile& file, const String& contentType) {
             char name[100];
             file.getName(name, sizeof(name) - 1);
