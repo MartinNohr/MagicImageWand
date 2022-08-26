@@ -7,7 +7,7 @@ class WebServerX :
 {
     public:
 		WebServerX(int port = 80) :WebServer{ port } {}
-        // We have to use getName becuase .name() from SD does not exist in SdFat
+        // We have to use getName because .name() from SD does not exist in SdFat
         size_t streamFileX(FsFile& file, const String& contentType) {
             char name[100];
             file.getName(name, sizeof(name) - 1);

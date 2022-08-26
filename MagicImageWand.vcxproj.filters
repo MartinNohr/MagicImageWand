@@ -21,6 +21,7 @@
     <None Include="Release\MagicImageWand.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="HTMLPage.htm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.MagicImageWand.vsarduino.h">

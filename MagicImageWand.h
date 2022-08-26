@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.38";
+const char* MIW_Version = "2.39";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -888,7 +888,8 @@ MenuItem SystemMenu[] = {
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
-    {eText,"IP: %s",NULL,&localIpAddress},
+    {eText,"Net: %s",NULL,ssid},
+    {eText,"Homepage: %s",NULL,localIpAddress},
     {eText,"Reset All Settings",FactorySettings},
     {eExit,PreviousMenu},
     // make sure this one is last

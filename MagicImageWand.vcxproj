@@ -108,6 +108,9 @@
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="HTMLPage.htm">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="MagicImageWand.ino">
       <FileType>CppCode</FileType>
     </None>
