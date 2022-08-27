@@ -5169,38 +5169,40 @@ void handleFileUpload() { // upload a new file to the Filing system
 
 
 void append_page_header() {
-	webpage = F("<!DOCTYPE html><html>");
-	webpage += F("<head>");
-	webpage += F("<title>MagicImageWand</title>");
-	webpage += F("<meta name='viewport' content='user-scalable=yes,initial-scale=1.0,width=device-width'>");
-	webpage += F("<style>");
-	webpage += F("body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}");
-	webpage += F("ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}");
-	webpage += F("li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}");
-	webpage += F("li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}");
-	webpage += F("li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}");
-	webpage += F("section {font-size:0.88em;}");
-	webpage += F("h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}");
-	webpage += F("h2{color:orange;font-size:1.0em;}");
-	webpage += F("h3{font-size:0.8em;}");
-	webpage += F("table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:100%;}");
-	webpage += F("th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}");
-	webpage += F("tr:nth-child(odd) {background-color:#eeeeee;}");
-	webpage += F(".rcorners_n {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-	webpage += F(".rcorners_m {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-	webpage += F(".rcorners_w {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}");
-	webpage += F(".column{float:left;width:100%;height:100%;}");
-	webpage += F(".row:after{content:'';display:table;clear:both;}");
-	webpage += F("*{box-sizing:border-box;}");
-	webpage += F("footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}");
-	webpage += F("button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}");
-	webpage += F(".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}");
-	webpage += F(".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}");
-	webpage += F(".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
-	webpage += F(".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}");
-	webpage += F("a{font-size:75%;}");
-	webpage += F("p{font-size:75%;}");
-	webpage += F("</style></head><body><h1>MIW Server<br>"); webpage + "</h1>";
+	webpage = "<!DOCTYPE html><html>";
+	webpage += "<head>";
+	webpage += "<title>MagicImageWand</title>";
+	webpage += "<META name='viewport' content='width=device-width, initial-scale=1.0'>";
+	webpage += "<style>";
+	webpage += "body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}";
+	webpage += "ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}";
+	webpage += "li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}";
+	webpage += "li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}";
+	webpage += "li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}";
+	webpage += "section {font-size:0.88em;}";
+	webpage += "h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}";
+	webpage += "h2{color:orange;font-size:1.0em;}";
+	webpage += "h3{font-size:0.8em;}";
+	webpage += "table{font-family:arial,sans-serif;font-size:0.9em;border-collapse:collapse;width:100%;}";
+	webpage += "th,td {border:0.06em solid #dddddd;text-align:left;padding:0.3em;border-bottom:0.06em solid #dddddd;}";
+	webpage += "tr:nth-child(odd) {background-color:#eeeeee;}";
+	webpage += ".rcorners_n {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}";
+	webpage += ".rcorners_m {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}";
+	webpage += ".rcorners_w {border-radius:0.2em;background:#CCCCCC;padding:0.3em 0.3em;width:100%;color:white;font-size:75%;}";
+	webpage += ".column{float:left;width:100%;height:100%;}";
+	webpage += ".row:after{content:'';display:table;clear:both;}";
+	webpage += "*{box-sizing:border-box;}";
+	webpage += "footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}";
+	webpage += "button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}";
+	webpage += ".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}";
+	webpage += ".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}";
+	webpage += ".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}";
+	webpage += ".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}";
+	webpage += "a{font-size:75%;}";
+	webpage += "p{font-size:75%;}";
+	webpage += "</style></head><body>";
+	webpage += "<body><h1>MIW Server<br>";
+	webpage + "</h1>";
 }
 
 void append_page_footer() {
@@ -5762,3 +5764,40 @@ void LightSensorLedBrightness()
 //void UpdateFilter(MenuItem* menu, int flag)
 //{
 //}
+
+// show the update bin file progress
+void ShowUpdateProgress(size_t x, size_t total)
+{
+	ShowProgressBar(x * 100 / total);
+}
+// see if there is an update bin file in the SD slot
+void CheckUpdateBin(MenuItem* menu)
+{
+	const char* binFileName = "/MagicImageWand.bin";
+	if (SD.exists(binFileName)) {
+		if (GetYesNo("Load New Firmware?")) {
+			ClearScreen();
+			DisplayLine(2, "loading...");
+			File binFile = SD.open(binFileName);
+			if (binFile) {
+				size_t binSize = binFile.size();
+				//Serial.println("size: " + String(binSize));
+				Update.begin(binSize);
+				Update.onProgress(ShowUpdateProgress);
+				size_t bytesWritten = Update.writeStream(binFile);
+				//Serial.println("written: " + String(bytesWritten));
+				Update.end();
+				binFile.close();
+				ClearScreen();
+				if (GetYesNo("Delete BIN file?")) {
+					SD.remove(binFileName);
+				}
+				ClearScreen();
+				ESP.restart();
+			}
+		}
+	}
+	else {
+		WriteMessage("MagicImageFile.BIN missing", true);
+	}
+}

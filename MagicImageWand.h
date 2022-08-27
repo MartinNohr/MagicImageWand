@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.39";
+const char* MIW_Version = "2.40";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -13,6 +13,7 @@ const char* MACRO_JSON_FILE = "/macro.json";
 //#include <BLEUtils.h>
 //#include <BLEServer.h>
 //#include <BLE2902.h>
+#include <Update.h>
 
 #include <time.h>
 #if USE_STANDARD_SD
@@ -516,6 +517,7 @@ typedef struct BuiltInItem {
 extern BuiltInItem BuiltInFiles[];
 
 // some menu functions using menus
+void CheckUpdateBin(MenuItem* menu);
 void FactorySettings(MenuItem* menu);
 void EraseFlash(MenuItem* menu);
 void EraseStartFile(MenuItem* menu);
@@ -890,6 +892,7 @@ MenuItem SystemMenu[] = {
 #endif
     {eText,"Net: %s",NULL,ssid},
     {eText,"Homepage: %s",NULL,localIpAddress},
+    {eText,"New Version BIN file",CheckUpdateBin},
     {eText,"Reset All Settings",FactorySettings},
     {eExit,PreviousMenu},
     // make sure this one is last
