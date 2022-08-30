@@ -1,7 +1,7 @@
 /*
  Name:		MagicImageWand.ino
  Created:	12/18/2020 6:12:01 PM
- Author:	Martin
+ Author:	Martin Nohr
 */
 
 #include "MagicImageWand.h"
@@ -216,7 +216,8 @@ void setup()
 	if (nBootCount == 0) {
 		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
 		tft.setTextColor(SystemInfo.menuTextColor);
-		grey_fill();
+		//grey_fill();
+		rainbow_fill();
 		tft.setTextColor(TFT_BLACK);
 		tft.setFreeFont(&Irish_Grover_Regular_24);
 		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
@@ -254,17 +255,19 @@ void setup()
 void TaskInitTestLed(void* parameter)
 {
 	const CRGB color[3] = { CRGB::Red,CRGB::Green,CRGB::Blue };
-	// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
-	for (int cix = 0; cix < 3; ++cix) {
-		for (int px = 0; px < 3; ++px) {
-			SetPixel(px, color[cix]);
-			SetPixel(143 - px, color[cix]);
-		}
-		FastLED.show();
-		vTaskDelay(100 / portTICK_PERIOD_MS);
-	}
+	//// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
+	//for (int cix = 0; cix < 3; ++cix) {
+	//	for (int px = 0; px < 3; ++px) {
+	//		SetPixel(px, color[cix]);
+	//		SetPixel(143 - px, color[cix]);
+	//	}
+	//	FastLED.show();
+	//	vTaskDelay(100 / portTICK_PERIOD_MS);
+	//}
 	FastLED.clear(true);
-	RainbowPulse();
+	//RainbowPulse();
+	if (SystemInfo.bInitTest)
+		TestLEDs(500);
 	taskDone = true;
 	vTaskDelete(NULL);
 }
@@ -4931,7 +4934,6 @@ void TestWedge()
 //	}
 //}
 
-#if 0
 // #########################################################################
 // Fill screen with a rainbow pattern
 // #########################################################################
@@ -4995,19 +4997,18 @@ void rainbow_fill()
 		color = red << 11 | green << 5 | blue;
 	}
 }
-#endif
 
-// fill the screen with grey
-void grey_fill()
-{
-	//for (int ix = 0; ix < tft.width(); ++ix) {
-	//	if (ix % 2)
-	//		tft.drawFastVLine(ix, 0, tft.height(), TFT_LIGHTGREY);
-	//	else
-	//		tft.drawFastVLine(ix + 1, 0, tft.height(), TFT_DARKGREY);
-	//}
-	tft.fillRect(0, 0, tft.width(), tft.height(), TFT_DARKGREY);
-}
+//// fill the screen with grey
+//void grey_fill()
+//{
+//	//for (int ix = 0; ix < tft.width(); ++ix) {
+//	//	if (ix % 2)
+//	//		tft.drawFastVLine(ix, 0, tft.height(), TFT_LIGHTGREY);
+//	//	else
+//	//		tft.drawFastVLine(ix + 1, 0, tft.height(), TFT_DARKGREY);
+//	//}
+//	tft.fillRect(0, 0, tft.width(), tft.height(), TFT_DARKGREY);
+//}
 
 // draw a progress bar
 void DrawProgressBar(int x, int y, int dx, int dy, int percent, bool rect)
@@ -5800,4 +5801,27 @@ void CheckUpdateBin(MenuItem* menu)
 	else {
 		WriteMessage("MagicImageFile.BIN missing", true);
 	}
+}
+
+void TestLEDs(int delay)
+{
+	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
+		leds[i] = CRGB(127, 0, 0);
+	}
+	FastLED.show();
+	vTaskDelay(delay / portTICK_PERIOD_MS);
+	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
+		leds[i] = CRGB(0, 127, 0);
+	}
+	FastLED.show();
+	vTaskDelay(delay / portTICK_PERIOD_MS);
+	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
+		leds[i] = CRGB(0, 0, 127);
+	}
+	FastLED.show();
+	vTaskDelay(delay / portTICK_PERIOD_MS);
+	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
+		leds[i] = CRGB(0, 0, 0);
+	}
+	FastLED.show();
 }

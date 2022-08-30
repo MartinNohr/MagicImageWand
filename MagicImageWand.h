@@ -1,11 +1,12 @@
 #pragma once
 
-const char* MIW_Version = "2.40";
+const char* MIW_Version = "2.41";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
-
+#include <ArtnetWifi.h>
 #include <ArduinoJson.h>
+
 const int JSON_DOC_SIZE = 5000;
 const char* MACRO_JSON_FILE = "/macro.json";
 
@@ -281,6 +282,7 @@ typedef struct SYSTEM_INFO {
     int nPreviewStartOffset = 0;                // how many pixels to offset the start, the display is only 135, not 144
 #endif
     bool bKeepFileOnTopLine = false;            // keep the active file on the top line
+    bool bInitTest = true;                      // test the LED's on boot
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
 
@@ -890,6 +892,7 @@ MenuItem SystemMenu[] = {
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
+    {eBool,"Startup LED test: %s",ToggleBool,&SystemInfo.bInitTest,0,0,0,"On","Off"},
     {eText,"Net: %s",NULL,ssid},
     {eText,"Homepage: %s",NULL,localIpAddress},
     {eText,"New Version BIN file",CheckUpdateBin},
