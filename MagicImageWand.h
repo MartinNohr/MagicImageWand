@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.41";
+const char* MIW_Version = "2.42";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -283,8 +283,21 @@ typedef struct SYSTEM_INFO {
 #endif
     bool bKeepFileOnTopLine = false;            // keep the active file on the top line
     bool bInitTest = true;                      // test the LED's on boot
+    // ArtNet DMX variables
+    bool bRunArtNetDMX = false;                 // set to run the ArtNet WiFi DMX protocol
+    char cArtNetName[20] = "MIW_ARTNET_DMX";    // ArtNet name
+    char cNetworkName[40] = "";                 // the network to connect to
+    char cNetworkPassword[40] = "";             // network password
+    bool bStartUniverseOne = false;             // some controllers need 1, others 0 (false)
+    //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
+
+// Art-Net variables
+ArtnetWifi artnet;
+// Art-Net settings
+String ArtNetLocalIP;
+bool bArtNetActive = false;
 
 enum LIGHT_BAR_MODES { LBMODE_HSV = 0, LBMODE_RGB, LBMODE_KELVIN };
 const char* LightBarModeText[] = { "HSV","RGB","Kelvin" };
@@ -498,8 +511,8 @@ typedef struct MenuItem {
         BuiltInItem* builtin;           // builtin items
     };
     const void* value;                  // associated variable
-    long min;                           // the minimum value, also used for ifequal
-    long max;                           // the maximum value, also size to compare for if
+    long min;                           // the minimum value, also used for ifequal, min length for string
+    long max;                           // the maximum value, also size to compare for if, max length for string
     int decimals;                       // 0 for int, 1 for 0.1
     const char* on;                     // text for boolean true
     const char* off;                    // text for boolean false
@@ -566,6 +579,8 @@ void ShowBattery(MenuItem* menu);
 void SetFilter(MenuItem* menu);
 void ShowLightSensor(MenuItem* menu);
 //void UpdateFilter(MenuItem* menu, int flag);
+void GetStringName(MenuItem* menu);
+void GetNetworkName(MenuItem* menu);
 
 struct saveValues {
     void* val;
@@ -882,16 +897,31 @@ MenuItem PreviewMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
+MenuItem ArtnetMenu[] = {
+    {eExit,"ArtNet Settings"},
+    {eBool,"Enable: %s",ToggleBool,&SystemInfo.bRunArtNetDMX,0,0,0,"Yes","No"},
+    {eBool,"Status: %s",NULL,&bArtNetActive,0,0,0,"Running","Stopped"},
+    {eText,"IP: %s",NULL,ArtNetLocalIP.c_str()},
+    {eText,"Name: %s",GetStringName,SystemInfo.cArtNetName,0,sizeof(SystemInfo.cArtNetName)},
+    {eText,"Network: %s",GetStringName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
+    {eText,"Choose Network",GetNetworkName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
+    {eText,"Password: %s",GetStringName,SystemInfo.cNetworkPassword,0,sizeof(SystemInfo.cNetworkPassword)},
+    {eBool,"Universe Start: %s",ToggleBool,&SystemInfo.bStartUniverseOne,0,0,0,"1","0"},
+    {eExit,PreviousMenu},
+    // make sure this one is last
+    {eTerminate}
+};
 MenuItem SystemMenu[] = {
     {eExit,"System Settings"},
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
     {eMenu,"Run Screen Settings",{.menu = HomeScreenMenu}},
     {eMenu,"Dial & Button Settings",{.menu = DialMenu}},
     {eMenu,"Preview Settings",{.menu = PreviewMenu}},
-    {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
+    {eMenu,"ArtNet DMX WiFi",{.menu = ArtnetMenu}},
+    {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
     {eBool,"Startup LED test: %s",ToggleBool,&SystemInfo.bInitTest,0,0,0,"On","Off"},
     {eText,"Net: %s",NULL,ssid},
     {eText,"Homepage: %s",NULL,localIpAddress},
@@ -1203,4 +1233,5 @@ typedef struct MACRO_INFO {
 MACRO_INFO MacroInfo[10];
 SemaphoreHandle_t macroMutex;
 // task for LED test on startup and then for sideways scrolling
-TaskHandle_t Task1;
+TaskHandle_t TaskLEDTest;
+TaskHandle_t TaskArtNet;

@@ -50,7 +50,6 @@ TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite
 #define BATTERY_BAR_HEIGHT 5
 TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
 
-volatile bool taskDone = false;
 void setup()
 {
 	// init the display
@@ -121,7 +120,7 @@ void setup()
 	server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
-	///////////////////////////// End of Request commands
+	/////////////////////////// End of Request commands
 	SystemInfo.bCriticalBatteryLevel = false;
 	server.begin();
 	tft.setFreeFont(&Dialog_bold_16);
@@ -214,7 +213,10 @@ void setup()
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
 	if (nBootCount == 0) {
-		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &Task1, 0);
+		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &TaskLEDTest, 0);
+		if (SystemInfo.bRunArtNetDMX) {
+			xTaskCreatePinnedToCore(TaskRunArtNet, "ARTNET", 10000, NULL, 1, &TaskArtNet, 0);
+		}
 		tft.setTextColor(SystemInfo.menuTextColor);
 		//grey_fill();
 		rainbow_fill();
@@ -230,12 +232,6 @@ void setup()
 		if (msg.length()) {
 			tft.drawString(msg, 20, 110);
 		}
-		for (int cnt = 0; cnt < 400; ++cnt) {
-			if (ReadButton() != BTN_NONE) {
-				break;
-			}
-			vTaskDelay(10 / portTICK_PERIOD_MS);
-		}
 	}
 	// clear the button buffer
 	CRotaryDialButton::clear();
@@ -245,12 +241,35 @@ void setup()
 	// read the macro data
 	ReadMacroInfo();
 	GetFileNamesFromSDorBuiltins(currentFolder);
+	for (int cnt = 0; cnt < 400; ++cnt) {
+		if (ReadButton() != BTN_NONE) {
+			break;
+		}
+		vTaskDelay(10 / portTICK_PERIOD_MS);
+	}
 	ClearScreen();
 	DisplayCurrentFile();
-	// wait for led test to finish
-	for (; !taskDone; delay(100)) {
+	//// wait for led test to finish
+	//eTaskState state = eTaskGetState(TaskLEDTest);
+	//for (; state != eReady; delay(10)) {
+	//	state = eTaskGetState(TaskLEDTest);
+	//}
+}
+
+// task to run ArtNet
+void TaskRunArtNet(void* parameter)
+{
+	// use for ArtNetWiFi
+	ConnectWifi();
+	artnet.begin(SystemInfo.cArtNetName);
+	// this will be called for each packet received
+	artnet.setArtDmxCallback(onDmxFrame);
+	while (true) {
+		artnet.read();
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
 }
+
 // task to test the LEDS on start
 void TaskInitTestLed(void* parameter)
 {
@@ -268,7 +287,6 @@ void TaskInitTestLed(void* parameter)
 	//RainbowPulse();
 	if (SystemInfo.bInitTest)
 		TestLEDs(500);
-	taskDone = true;
 	vTaskDelete(NULL);
 }
 
@@ -5824,4 +5842,182 @@ void TestLEDs(int delay)
 		leds[i] = CRGB(0, 0, 0);
 	}
 	FastLED.show();
+}
+
+// connect to wifi – returns true if successful or false if not
+boolean ConnectWifi(void)
+{
+	boolean state = true;
+	int i = 0;
+
+	WiFi.begin(SystemInfo.cNetworkName, SystemInfo.cNetworkPassword);
+	Serial.println("");
+	Serial.println("Connecting to WiFi for Art-Net");
+	Serial.println(SystemInfo.cNetworkName);
+	// Wait for connection
+	while (WiFi.status() != WL_CONNECTED) {
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+		Serial.print(".");
+		if (i > 20) {
+			state = false;
+			break;
+		}
+		i++;
+	}
+	if (state) {
+		ArtNetLocalIP = WiFi.localIP().toString();
+		Serial.println("");
+		Serial.println(String("Connected to ") + SystemInfo.cNetworkName);
+		Serial.print("IP address: " + ArtNetLocalIP);
+		Serial.println(" as '" + String(SystemInfo.cArtNetName) + "'");
+		bArtNetActive = true;
+	}
+	else {
+		String txt = String("Art-Net Connection to\n") + SystemInfo.cNetworkName + "\nfailed";
+		WriteMessage(txt, true);
+		Serial.println("");
+		Serial.println("Connection failed.");
+		bArtNetActive = false;
+	}
+	return state;
+}
+
+// handle ArtNet requests
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data)
+{
+	int startUniverse = SystemInfo.bStartUniverseOne ? 1 : 0;
+	const int numLeds = 144; // CHANGE FOR YOUR SETUP
+	const int numberOfChannels = numLeds * 3; // Total number of channels you want to receive (1 led = 3 channels)
+	// Check if we got all universes
+	const int maxUniverses = numberOfChannels / 512 + ((numberOfChannels % 512) ? 1 : 0);
+	bool universesReceived[maxUniverses];
+	static bool sendFrame = 1;
+	//Serial.println("universe: " + String(universe) + " len: " + String(length) + " seq: " + String(sequence)
+	//	+ " data: " + String(data[0]) + " " + String(data[1]) + " " + String(data[2]));
+	sendFrame = 1;
+	// set brightness of the whole strip
+	if (universe == 15)
+	{
+		FastLED.setBrightness(data[0]);
+		FastLED.show();
+	}
+
+	// Store which universe has got in
+	if ((universe - startUniverse) < maxUniverses) {
+		universesReceived[universe - startUniverse] = 1;
+	}
+
+	for (int i = 0; i < maxUniverses; i++)
+	{
+		if (universesReceived[i] == 0)
+		{
+			Serial.println("Broke");
+			sendFrame = 0;
+			break;
+		}
+	}
+	static int previousDataLength = 0;
+	// read universe and put into the right part of the display buffer
+	for (int i = 0; i < length / 3; i++)
+	{
+		int led = i + (universe - startUniverse) * (previousDataLength / 3);
+		if (led < numLeds)
+			leds[AdjustStripIndex(led)] = CRGB(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+	}
+	previousDataLength = length;
+
+	if (sendFrame)
+	{
+		FastLED.show();
+		// Reset universeReceived to 0
+		memset(universesReceived, 0, maxUniverses);
+	}
+}
+
+// scan for networks
+int ScanForNetworks()
+{
+	Serial.println("scan start");
+	WiFi.disconnect();
+	// WiFi.scanNetworks will return the number of networks found
+	int retval = WiFi.scanNetworks();
+	Serial.println("scan done");
+	if (retval == 0) {
+		Serial.println("no networks found");
+	}
+	else {
+		Serial.print(retval);
+		Serial.println(" networks found");
+		for (int i = 0; i < retval; ++i) {
+			// Print SSID and RSSI for each network found
+			Serial.print(i + 1);
+			Serial.print(": ");
+			Serial.print(WiFi.SSID(i));
+			Serial.print(" (");
+			Serial.print(WiFi.RSSI(i));
+			Serial.print(")");
+			Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
+			delay(10);
+		}
+	}
+	return retval;
+}
+
+// get a string
+void GetStringName(MenuItem* menu)
+{
+	String savedNameFilter = nameFilter;
+	nameFilter = (char*)menu->value;
+	SetFilter(menu);
+	strncpy((char*)menu->value, nameFilter.c_str(), menu->max - 1);
+	nameFilter = savedNameFilter;
+}
+
+// choose a network name from the first 5 found
+void GetNetworkName(MenuItem* menu)
+{
+	ClearScreen();
+	DisplayLine(0, "Scanning Networks...", SystemInfo.menuTextColor, TFT_BLACK);
+	int nets = ScanForNetworks();
+	// maximum 5 nets
+	constexpr int maxNetworks = 5;
+	nets = min(nets, maxNetworks);
+	for (int ix = 0; ix < nets; ++ix) {
+		DisplayLine(ix, WiFi.SSID(ix), SystemInfo.menuTextColor, TFT_BLACK);
+	}
+	// loop handling key presses
+	int which = 0;
+	bool done = false;
+	DisplayLine(6, "Longpress=accept LongB0=cancel", SystemInfo.menuTextColor, TFT_BLACK);
+	DisplayLine(which, WiFi.SSID(which), TFT_BLACK, SystemInfo.menuTextColor);
+	while (!done) {
+		CRotaryDialButton::Button btn = ReadButton();
+		switch (btn) {
+		case CRotaryDialButton::BTN_LONGPRESS:
+			strncpy((char*)menu->value, WiFi.SSID(which).c_str(), menu->max - 1);
+			bControllerReboot = true;
+			done = true;
+			break;
+		case CRotaryDialButton::BTN0_LONGPRESS:
+			done = true;
+			break;
+		case CRotaryDialButton::BTN_RIGHT:
+			if (which < maxNetworks - 1) {
+				DisplayLine(which, WiFi.SSID(which), SystemInfo.menuTextColor, TFT_BLACK);
+				++which;
+				DisplayLine(which, WiFi.SSID(which), TFT_BLACK, SystemInfo.menuTextColor);
+			}
+			break;
+		case CRotaryDialButton::BTN_LEFT:
+			if (which > 0) {
+				DisplayLine(which, WiFi.SSID(which), SystemInfo.menuTextColor, TFT_BLACK);
+				--which;
+				DisplayLine(which, WiFi.SSID(which), TFT_BLACK, SystemInfo.menuTextColor);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	delay(10);
 }
