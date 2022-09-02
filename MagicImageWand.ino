@@ -1274,7 +1274,7 @@ void SetMenuColor(MenuItem* menu)
 			DisplayLine(0, "Text Color", SystemInfo.menuTextColor);
 			change = false;
 		}
-		switch (CRotaryDialButton::dequeue()) {
+		switch (ReadButton()) {
 		case CRotaryDialButton::BTN_LONGPRESS:
 			done = true;
 			break;
