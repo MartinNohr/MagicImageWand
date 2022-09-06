@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.43";
+const char* MIW_Version = "2.44";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -286,8 +286,8 @@ typedef struct SYSTEM_INFO {
     // ArtNet DMX variables
     bool bRunArtNetDMX = false;                 // set to run the ArtNet WiFi DMX protocol
     char cArtNetName[20] = "MIW_ARTNET_DMX";    // ArtNet name
-    char cNetworkName[40] = "";                 // the network to connect to
-    char cNetworkPassword[40] = "";             // network password
+    char cNetworkName[33] = "";                 // the network to connect to
+    char cNetworkPassword[65] = "";             // network password
     bool bStartUniverseOne = false;             // some controllers need 1, others 0 (false)
     //
 };
