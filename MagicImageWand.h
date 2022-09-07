@@ -1,10 +1,10 @@
 #pragma once
 
-const char* MIW_Version = "2.44";
+const char* MIW_Version = "2.45";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
-#include <ArtnetWifi.h>
+#include <ArtnetNodeWifi.h>
 #include <ArduinoJson.h>
 
 const int JSON_DOC_SIZE = 5000;
@@ -294,7 +294,7 @@ typedef struct SYSTEM_INFO {
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
 
 // Art-Net variables
-ArtnetWifi artnet;
+ArtnetnodeWifi artnet;
 // Art-Net settings
 String ArtNetLocalIP;
 bool bArtNetActive = false;

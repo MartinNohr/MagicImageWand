@@ -57,7 +57,8 @@ void setup()
 	tft.fillScreen(TFT_BLACK);
 
 	Serial.begin(115200);
-	while (!Serial) {
+	while (!Serial.availableForWrite()) {
+		delay(10);
 	}
 	//Serial.print("setup() is running on core ");
 	//Serial.println(xPortGetCoreID());
@@ -259,9 +260,14 @@ void setup()
 // task to run ArtNet
 void TaskRunArtNet(void* parameter)
 {
+	artnet.setName(SystemInfo.cArtNetName);
+	artnet.setNumPorts(1);
+	artnet.enableDMXOutput(0);
+	//artnet.disableDMXOutput(0);
+	artnet.setStartingUniverse(SystemInfo.bStartUniverseOne ? 1 : 0);
 	// use for ArtNetWiFi
 	ConnectWifi();
-	artnet.begin(SystemInfo.cArtNetName);
+	artnet.begin();
 	// this will be called for each packet received
 	artnet.setArtDmxCallback(onDmxFrame);
 	while (true) {
@@ -5851,7 +5857,6 @@ boolean ConnectWifi(void)
 	int i = 0;
 
 	WiFi.begin(SystemInfo.cNetworkName, SystemInfo.cNetworkPassword);
-	Serial.println("");
 	Serial.println("Connecting to WiFi for Art-Net");
 	Serial.println(SystemInfo.cNetworkName);
 	// Wait for connection
@@ -5866,7 +5871,6 @@ boolean ConnectWifi(void)
 	}
 	if (state) {
 		ArtNetLocalIP = WiFi.localIP().toString();
-		Serial.println("");
 		Serial.println(String("Connected to ") + SystemInfo.cNetworkName);
 		Serial.print("IP address: " + ArtNetLocalIP);
 		Serial.println(" as '" + String(SystemInfo.cArtNetName) + "'");
@@ -5937,11 +5941,11 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 // scan for networks
 int ScanForNetworks()
 {
-	Serial.println("scan start");
+	//Serial.println("scan start");
 	WiFi.disconnect();
 	// WiFi.scanNetworks will return the number of networks found
 	int retval = WiFi.scanNetworks();
-	Serial.println("scan done");
+	//Serial.println("scan done");
 	if (retval == 0) {
 		Serial.println("no networks found");
 	}
@@ -5957,7 +5961,6 @@ int ScanForNetworks()
 			Serial.print(WiFi.RSSI(i));
 			Serial.print(")");
 			Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
-			delay(10);
 		}
 	}
 	return retval;
