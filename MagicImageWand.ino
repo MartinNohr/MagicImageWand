@@ -544,8 +544,8 @@ void loop()
 	}
 	bLastSettingsMode = bSettingsMode;
 	if (!bSettingsMode && bControllerReboot) {
-		if (memcmp(&LedInfo, &LedInfoSaved, sizeof(LedInfo))) {
-			WriteMessage("Rebooting due to\nLED controller change", false, 2000);
+		if (memcmp(&LedInfo, &LedInfoSaved, sizeof(LedInfo)) || memcmp(&SystemInfoSaved, &SystemInfo, sizeof(SystemInfo))) {
+			WriteMessage("Rebooting due to\nsystem change", false, 2000);
 			SaveLoadSettings(true, false, true, true);
 			ESP.restart();
 		}
@@ -6023,4 +6023,31 @@ void GetNetworkName(MenuItem* menu)
 		}
 	}
 	delay(10);
+}
+
+// toggle ArtNet running, reboot if needed
+void ToggleArtNet(MenuItem* menu)
+{
+	// save existing value
+	bool bWas = *(bool*)menu->value;
+	ToggleBool(menu);
+	bControllerReboot = (bWas != *(bool*)menu->value);
+}
+
+// change network name or password or ArtNet name, reboot if necessary
+void ChangeNetCredentials(MenuItem* menu)
+{
+	// save the values
+	String oldArt = (char*)menu->value;
+	String oldNet = (char*)menu->value;
+	String oldPass = (char*)menu->value;
+	GetStringName(menu);
+	// check for changes
+	if (oldArt != (char*)menu->value
+		|| oldNet != (char*)menu->value
+		|| oldPass != (char*)menu->value) {
+		// only really matters if ArtNet is running
+		if (SystemInfo.bRunArtNetDMX)
+			bControllerReboot = true;
+	}
 }

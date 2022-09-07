@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.45";
+const char* MIW_Version = "2.46";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -548,6 +548,7 @@ void GetIntegerValue(MenuItem* menu);
 void GetIntegerValueHue(MenuItem* menu);
 void GetSelectChoice(MenuItem* menu);
 void ToggleBool(MenuItem* menu);
+void ToggleArtNet(MenuItem* menu);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void UpdateBatteries(MenuItem* menu, int flag);
@@ -581,6 +582,7 @@ void ShowLightSensor(MenuItem* menu);
 //void UpdateFilter(MenuItem* menu, int flag);
 void GetStringName(MenuItem* menu);
 void GetNetworkName(MenuItem* menu);
+void ChangeNetCredentials(MenuItem* menu);
 
 struct saveValues {
     void* val;
@@ -899,13 +901,13 @@ MenuItem PreviewMenu[] = {
 };
 MenuItem ArtnetMenu[] = {
     {eExit,"ArtNet Settings"},
-    {eBool,"Enable: %s",ToggleBool,&SystemInfo.bRunArtNetDMX,0,0,0,"Yes","No"},
+    {eBool,"Enable: %s",ToggleArtNet,&SystemInfo.bRunArtNetDMX,0,0,0,"Yes","No"},
     {eBool,"Status: %s",NULL,&bArtNetActive,0,0,0,"Running","Stopped"},
     {eText,"IP: %s",NULL,ArtNetLocalIP.c_str()},
-    {eText,"Name: %s",GetStringName,SystemInfo.cArtNetName,0,sizeof(SystemInfo.cArtNetName)},
-    {eText,"Network: %s",GetStringName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
+    {eText,"Name: %s",ChangeNetCredentials,SystemInfo.cArtNetName,0,sizeof(SystemInfo.cArtNetName)},
+    {eText,"Network: %s",ChangeNetCredentials,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
     {eText,"Choose Network",GetNetworkName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
-    {eText,"Password: %s",GetStringName,SystemInfo.cNetworkPassword,0,sizeof(SystemInfo.cNetworkPassword)},
+    {eText,"Password: %s",ChangeNetCredentials,SystemInfo.cNetworkPassword,0,sizeof(SystemInfo.cNetworkPassword)},
     {eBool,"Universe Start: %s",ToggleBool,&SystemInfo.bStartUniverseOne,0,0,0,"1","0"},
     {eExit,PreviousMenu},
     // make sure this one is last
