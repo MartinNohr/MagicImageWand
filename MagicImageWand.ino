@@ -5220,7 +5220,7 @@ void append_page_header() {
 	webpage += "footer{background-color:#AAAAAA; text-align:center;padding:0.3em 0.3em;border-radius:0.375em;font-size:60%;}";
 	webpage += "button{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:100%;}";
 	webpage += ".buttons {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:80%;}";
-	webpage += ".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width45%; color:white;font-size:70%;}";
+	webpage += ".buttonsm{border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%; color:white;font-size:70%;}";
 	webpage += ".buttonm {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}";
 	webpage += ".buttonw {border-radius:0.5em;background:#666666;padding:0.3em 0.3em;width:45%;color:white;font-size:70%;}";
 	webpage += "a{font-size:75%;}";
@@ -5795,6 +5795,7 @@ void ShowUpdateProgress(size_t x, size_t total)
 {
 	ShowProgressBar(x * 100 / total);
 }
+
 // see if there is an update bin file in the SD slot
 void CheckUpdateBin(MenuItem* menu)
 {
@@ -5803,8 +5804,15 @@ void CheckUpdateBin(MenuItem* menu)
 		if (GetYesNo("Load New Firmware?")) {
 			ClearScreen();
 			DisplayLine(2, "loading...");
-			File binFile = SD.open(binFileName);
-			if (binFile) {
+#if USE_STANDARD_SD
+			SDFile binFile;
+			binFile = SD.open(binFileName);
+			if (binFileName) {
+#else
+			FsFile binFile;
+			binFile = SD.open(binFileName);
+			if (binFile.getError() == 0) {
+#endif
 				size_t binSize = binFile.size();
 				//Serial.println("size: " + String(binSize));
 				Update.begin(binSize);
