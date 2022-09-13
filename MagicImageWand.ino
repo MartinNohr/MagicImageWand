@@ -118,7 +118,8 @@ void setup()
 	server.on("/download", File_Download);
 	server.on("/upload", File_Upload);
 	server.on("/settings", ShowSettings);
-	server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
+	server.on("/runimage", RunImage);
+	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	/////////////////////////// End of Request commands
@@ -3168,7 +3169,6 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	SetPixel(0, TFT_BLACK, -1, (int)imgHeight);
 	long secondsLeft = 0, lastSeconds = 0;
 	char num[50];
-	int percent;
 	unsigned minLoopTime = 0; // the minimum time it takes to process a line
 	bool bLoopTimed = false;
 	if (SystemInfo.bShowDuringBmpFile) {
@@ -3195,9 +3195,9 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		if (bRunningMacro) {
 			// count columns done
 			++nMacroColumnsDone;
-			percent = map(nMacroColumnsDone, 0, MacroInfo[ImgInfo.nCurrentMacro].pixels, 0, 100);
+			g_nPercentDone = map(nMacroColumnsDone, 0, MacroInfo[ImgInfo.nCurrentMacro].pixels, 0, 100);
 			static int lastSeconds;
-			int currentSeconds = (MacroInfo[ImgInfo.nCurrentMacro].mSeconds * percent / 100 + 500) / 1000;
+			int currentSeconds = (MacroInfo[ImgInfo.nCurrentMacro].mSeconds * g_nPercentDone / 100 + 500) / 1000;
 			if (lastSeconds != currentSeconds) {
 				lastSeconds = currentSeconds;
 				int sec = MacroInfo[ImgInfo.nCurrentMacro].mSeconds / 1000 - currentSeconds;
@@ -3213,16 +3213,16 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 				sprintf(num, "File Seconds: %d", secondsLeft);
 				DisplayLine(2, num, SystemInfo.menuTextColor);
 			}
-			percent = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+			g_nPercentDone = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
 		}
 		if (ImgInfo.bMirrorPlayImage) {
-			percent /= 2;
+			g_nPercentDone /= 2;
 			if (!doingFirstHalf) {
-				percent += 50;
+				g_nPercentDone += 50;
 			}
 		}
-		if (percent < 2 || ((percent % 5) == 0) || percent > 90) {
-			ShowProgressBar(percent);
+		if (g_nPercentDone < 2 || ((g_nPercentDone % 5) == 0) || g_nPercentDone > 90) {
+			ShowProgressBar(g_nPercentDone);
 		}
 		int bufpos = 0;
 		CRGB pixel;
@@ -3257,6 +3257,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		// wait for timer to expire before we show the next frame
 		while (bStripWaiting) {
 			MenuTextScrollSideways();
+			//yield();
 			//delayMicroseconds(100);
 			// we should maybe check the cancel key here to handle slow frame rates?
 		}
@@ -3328,6 +3329,8 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (SystemInfo.bShowDuringBmpFile) {
 		ShowLeds(2);
 	}
+	// indicate done for web page
+	g_nPercentDone = 101;
 }
 
 // get some file information from the BMP, namely the width and height
@@ -5174,7 +5177,7 @@ void handleFileUpload() { // upload a new file to the Filing system
 			UploadFile.close();   // Close the file again
 			Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
 			webpage = "";
-			append_page_header();
+			append_page_header(false);
 			webpage += F("<h3>File was successfully uploaded</h3>");
 			webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename + "</h2>";
 			webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>";
@@ -5193,11 +5196,13 @@ void handleFileUpload() { // upload a new file to the Filing system
 }
 
 
-void append_page_header() {
+void append_page_header(bool bRefresh) {
 	webpage = "<!DOCTYPE html><html>";
 	webpage += "<head>";
 	webpage += "<title>MagicImageWand</title>";
 	webpage += "<META name='viewport' content='width=device-width, initial-scale=1.0'>";
+	if (bRefresh)
+		webpage += "<META http-equiv='refresh' content='2'>";
 	webpage += "<style>";
 	webpage += "body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}";
 	webpage += "ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}";
@@ -5249,7 +5254,7 @@ void SendHTML_Header() {
 	server.sendHeader("Expires", "-1");
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
 	server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves. 
-	append_page_header();
+	append_page_header(false);
 	server.sendContent(webpage);
 	webpage = "";
 }
@@ -5268,7 +5273,10 @@ void HomePage() {
 	SendHTML_Header();
 	webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
 	webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
-	webpage += "<a href='/settings'><button style=\"width:auto\">Settings</button></a>";
+	webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
+	webpage += "<br><br><a href='/runimage'><button style='width:90%;font-size:200%'>Run:";
+	webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
+	webpage += "</button></a>";
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
@@ -5436,9 +5444,9 @@ void FormSettings()
 }
 
 void ShowSettings() {
-	append_page_header();
-	webpage += "<h3>Current Settings</h3>";
-	webpage += String("<p>Current File: ") + currentFolder + FileNames[currentFileIndex.nFileIndex];
+	append_page_header(false);
+	webpage += "<h3>Settings</h3>";
+	webpage += String("<p>File: ") + currentFolder + FileNames[currentFileIndex.nFileIndex];
 	if (ImgInfo.bFixedTime) {
 		webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	}
@@ -5446,20 +5454,44 @@ void ShowSettings() {
 		webpage += String("<p>Column Time: ") + String(ImgInfo.nFrameHold) + " mS";
 	}
 	webpage += String("<p>Repeat Count: ") + String(ImgInfo.repeatCount);
-	IncreaseRepeatButton();
-	DecreaseRepeatButton();
+	//IncreaseRepeatButton();
+	//DecreaseRepeatButton();
 	webpage += String("<p>LED Brightness: ") + String(LedInfo.nLEDBrightness);
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
 
-void File_Upload() {
-	append_page_header();
-	webpage += F("<h3>Select File to Upload</h3>");
-	webpage += F("<FORM action='/fupload' method='post' enctype='multipart/form-data'>");
-	webpage += F("<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>");
-	webpage += F("<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>");
-	webpage += F("<a href='/'>[Back]</a><br><br>");
+void RunImage()
+{
+	static bool bRunning = false;
+	if (bRunning && g_nPercentDone > 100) {
+		HomePage();
+		g_nPercentDone = 0;
+		return;
+	}
+	webpage = "";
+	append_page_header(true);
+	webpage += "<h3>Running:";
+	webpage += String(g_nPercentDone);
+	webpage += "</h3>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
+	// run the file
+	bRunning = true;
+	g_nPercentDone = 0;
+	bCancelRun = bCancelMacro = false;
+	ProcessFileOrTest();
+	DisplayCurrentFile();
+}
+
+void File_Upload()
+{
+	append_page_header(false);
+	webpage += "<h>eect File to Upload</h3>";
+	webpage += "<FORMation='/fupload' method='post' enctype='multipart/form-data'>";
+	webpage += "<input cass='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>";
+	webpage += "<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>";
+	webpage += "<a href='/'>[Back]</a><br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }

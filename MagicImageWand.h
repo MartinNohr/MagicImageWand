@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.47";
+const char* MIW_Version = "2.48";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -1237,3 +1237,5 @@ SemaphoreHandle_t macroMutex;
 // task for LED test on startup and then for sideways scrolling
 TaskHandle_t TaskLEDTest;
 TaskHandle_t TaskArtNet;
+// global percent so we can send to web pages
+volatile int g_nPercentDone;
