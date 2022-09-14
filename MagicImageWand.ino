@@ -5149,16 +5149,18 @@ SDFile UploadFile;
 FsFile UploadFile;
 #endif
 
-void handleFileUpload() { // upload a new file to the Filing system
+// upload a new file to the Filing system
+void handleFileUpload()
+{
 	HTTPUpload& uploadfile = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
 											  // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
-	if (uploadfile.status == UPLOAD_FILE_START)
-	{
+	if (uploadfile.status == UPLOAD_FILE_START)	{
 		String filename = uploadfile.filename;
 		String filepath = String("/");
-		if (!filename.startsWith("/")) filename = "/" + filename;
-		Serial.print("Upload File Name: "); Serial.println(filename);
-		SD.remove(filename);                         // Remove a previous version, otherwise data is appended the file again
+		if (!filename.startsWith("/"))
+			filename = "/" + filename;
+		Serial.print("Upload File Name: " + filename);
+		SD.remove(filename);   // Remove a previous version just to start clean
 #if USE_STANDARD_SD
 		UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
 #else
@@ -5168,7 +5170,8 @@ void handleFileUpload() { // upload a new file to the Filing system
 	}
 	else if (uploadfile.status == UPLOAD_FILE_WRITE)
 	{
-		if (UploadFile) UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
+		if (UploadFile)
+			UploadFile.write(uploadfile.buf, uploadfile.currentSize); // Write the received bytes to the file
 	}
 	else if (uploadfile.status == UPLOAD_FILE_END)
 	{
@@ -5274,15 +5277,38 @@ void HomePage() {
 	webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
 	webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
 	webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
-	webpage += "<br><br><a href='/runimage'><button style='width:90%;font-size:200%'>Run:";
-	webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
+	webpage += "<br><br>";
+	webpage += "<a href='/runimage'><button style='width:90%;font-size:200%'>Run</button></a>";
+	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</button></a>";
+	webpage += "<br><br>";
+	webpage += "<select>";
+	int ix = 0;
+	for (String nm : FileNames) {
+		if (nm[0] == NEXT_FOLDER_CHAR)
+			break;
+		webpage += "<option ";
+		if (currentFileIndex.nFileIndex == ix) {
+			webpage += "selected='";
+			webpage += String(ix);
+			webpage += "' ";
+		}
+		webpage += "<value='";
+		webpage += String(ix);
+		webpage += "'>";
+		webpage += nm;
+		webpage += "</option>";
+		++ix;
+	}
+	webpage += "</select>";
+	webpage += "<br><br>";
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
 }
 
-void SelectInput(String heading1, String command, String arg_calling_name) {
+void SelectInput(String heading1, String command, String arg_calling_name)
+{
 	SendHTML_Header();
 	webpage += "<h3>" + heading1 + "</h3>";
 	for (String var : FileNames) {
@@ -5297,17 +5323,22 @@ void SelectInput(String heading1, String command, String arg_calling_name) {
 	SendHTML_Stop();
 }
 
-void File_Download() { // This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
+// This gets called twice, the first pass selects the input, the second pass then processes the command line arguments
+void File_Download()
+{
 	if (server.args() > 0) { // Arguments were received
-		if (server.hasArg("download")) SD_file_download(server.arg(0));
+		if (server.hasArg("download"))
+			SD_file_download(server.arg(0));
 	}
-	else SelectInput("Enter filename to download", "download", "download");
+	else
+		SelectInput("Enter filename to download", "download", "download");
 }
 
-void ReportFileNotPresent(String target) {
+void ReportFileNotPresent(String target)
+{
 	SendHTML_Header();
-	webpage += F("<h3>File does not exist</h3>");
-	webpage += F("<a href='/"); webpage += target + "'>[Back]</a><br><br>";
+	webpage += "<h3>File does not exist</h3>";
+	webpage += "<a href='/" + target + "'>[Back]</a><br><br>";
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
@@ -5315,8 +5346,8 @@ void ReportFileNotPresent(String target) {
 
 void ReportSDNotPresent() {
 	SendHTML_Header();
-	webpage += F("<h3>No SD Card present</h3>");
-	webpage += F("<a href='/'>[Back]</a><br><br>");
+	webpage += "<h3>No SD Card present</h3>";
+	webpage += "<a href='/'>[Back]</a><br><br>";
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
@@ -5347,13 +5378,15 @@ void SD_file_download(String filename)
 	else ReportSDNotPresent();
 }
 
-void IncreaseRepeatButton() {
+void IncreaseRepeatButton()
+{
 	// This can be for sure made into a universal function like IncreaseButton(Setting, Value)
 	  //webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>&#8679;</strong></a>");
 	webpage += String("&nbsp;<a href='/settings/increpeat?var=5'><strong>+;</strong></a>");
 }
 
-void DecreaseRepeatButton() {
+void DecreaseRepeatButton()
+{
 	// This can be for sure made into a universal function like DecreaseButton(Setting, Value)
 	webpage += String("&nbsp;<a href='/settings/decrepeat'><strong>&#8681;</strong></a>");
 }
@@ -5487,9 +5520,9 @@ void RunImage()
 void File_Upload()
 {
 	append_page_header(false);
-	webpage += "<h>eect File to Upload</h3>";
-	webpage += "<FORMation='/fupload' method='post' enctype='multipart/form-data'>";
-	webpage += "<input cass='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>";
+	webpage += "<h3>Select File to Upload</h3>";
+	webpage += "<FORM action='/fupload' method='post' enctype='multipart/form-data'>";
+	webpage += "<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>";
 	webpage += "<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>";
 	webpage += "<a href='/'>[Back]</a><br><br>";
 	append_page_footer();
