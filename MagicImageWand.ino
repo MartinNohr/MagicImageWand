@@ -118,6 +118,7 @@ void setup()
 	server.on("/download", File_Download);
 	server.on("/upload", File_Upload);
 	server.on("/settings", ShowSettings);
+	server.on("/changefile", ChangeFile);
 	server.on("/runimage", RunImage);
 	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
@@ -5272,35 +5273,52 @@ void SendHTML_Stop() {
 	server.client().stop(); // Stop is needed because no content length was sent
 }
 
+// change the current file from the webpage
+void ChangeFile()
+{
+	if (server.args()) {
+		//Serial.println("arg: " + server.arg(0));
+		// find the selected file so we can get the index
+		int ix = 0;
+		for (String name : FileNames) {
+			if (name == server.arg(0)) {
+				currentFileIndex.nFileCursor = 0;
+				currentFileIndex.nFileIndex = ix;
+				DisplayCurrentFile();
+				break;
+			}
+			++ix;
+		}
+	}
+	HomePage();
+}
+
 void HomePage() {
 	SendHTML_Header();
 	webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
 	webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
 	webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
 	webpage += "<br><br>";
-	webpage += "<a href='/runimage'><button style='width:90%;font-size:200%'>Run</button></a>";
+	webpage += "<a href='/runimage'><button style='width:50%;font-size:200%;color:#00ff00'>Run</button></a>";
 	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</button></a>";
 	webpage += "<br><br>";
-	webpage += "<select>";
+	webpage += "<form action='/changefile' method='post'>";
+	webpage += "<select name='newfile'>";
 	int ix = 0;
 	for (String nm : FileNames) {
 		if (nm[0] == NEXT_FOLDER_CHAR)
 			break;
 		webpage += "<option ";
 		if (currentFileIndex.nFileIndex == ix) {
-			webpage += "selected='";
-			webpage += String(ix);
-			webpage += "' ";
+			webpage += "selected='" + String(ix) + "' ";
 		}
-		webpage += "<value='";
-		webpage += String(ix);
-		webpage += "'>";
-		webpage += nm;
-		webpage += "</option>";
+		webpage += "<value='" + String(ix) + "'>" + nm + "</option>";
 		++ix;
 	}
 	webpage += "</select>";
+	webpage += " <input type='submit' value='Update'>";
+	webpage += "</form>";
 	webpage += "<br><br>";
 	append_page_footer();
 	SendHTML_Content();
