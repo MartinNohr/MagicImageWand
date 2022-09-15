@@ -118,6 +118,7 @@ void setup()
 	server.on("/download", File_Download);
 	server.on("/upload", File_Upload);
 	server.on("/settings", ShowSettings);
+	server.on("/changesettings", ChangeSettings);
 	server.on("/changefile", ChangeFile);
 	server.on("/runimage", RunImage);
 	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
@@ -5419,10 +5420,10 @@ void IncRepeat()
 	Serial.println("uri: " + str);
 }
 
+#if 0
 // display settings form
 void FormSettings()
 {
-#if 0
 	form method = "get" enctype = "application/x-www-form-urlencoded" action = "/html/codes/html_form_handler.cfm" >
 
 		<p>
@@ -5482,7 +5483,7 @@ void FormSettings()
 		<datalist id = "destinations">
 		<option value = "Airport">
 		<option value = "Beach">
-		<option value = "Fred Flinstone's House">
+		<option value = "Fred Flintstone's House">
 		< / datalist>
 		< / p>
 
@@ -5495,23 +5496,64 @@ void FormSettings()
 		<p><button>Submit Booking< / button>< / p>
 
 		< / form>
+}
 #endif
+
+String WebSettingsNames[] = {
+	"column_time",
+	"repeat_count",
+	"LED_brightness",
+};
+
+// change the settings from the web page
+void ChangeSettings()
+{
+	if (server.args()) {
+		Serial.println("argcnt: " + String(server.args()));
+		//Serial.println("arg: " + server.arg(0));
+		int ix = 0;
+		for (String val : WebSettingsNames) {
+			Serial.print(val + ": ");
+			switch (ix) {
+			case 0:
+				ImgInfo.nFrameHold = atoi(server.arg(val).c_str());
+				break;
+			case 1:
+				ImgInfo.repeatCount = atoi(server.arg(val).c_str());
+				break;
+			case 2:
+				LedInfo.nLEDBrightness = atoi(server.arg(val).c_str());
+				break;
+			}
+			++ix;
+		}
+	}
+	ShowSettings();
 }
 
 void ShowSettings() {
 	append_page_header(false);
 	webpage += "<h3>Settings</h3>";
-	webpage += String("<p>File: ") + currentFolder + FileNames[currentFileIndex.nFileIndex];
-	if (ImgInfo.bFixedTime) {
-		webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
-	}
-	else {
-		webpage += String("<p>Column Time: ") + String(ImgInfo.nFrameHold) + " mS";
-	}
-	webpage += String("<p>Repeat Count: ") + String(ImgInfo.repeatCount);
-	//IncreaseRepeatButton();
-	//DecreaseRepeatButton();
-	webpage += String("<p>LED Brightness: ") + String(LedInfo.nLEDBrightness);
+	webpage += "<form action='/changesettings' method='post'>";
+	webpage += "<label>Column Time (mS): ";
+	webpage += "<input type='text' name='" + WebSettingsNames[0] + "' size='4' value='" + String(ImgInfo.nFrameHold) + "'>";
+	webpage += "</label>";
+	webpage += "<br><label>Repeat Count: ";
+	webpage += "<input type='text' name='" + WebSettingsNames[1] + "' size='4' value='" + String(ImgInfo.repeatCount) + "'>";
+	webpage += "</label>";
+	webpage += "<br><label>LED Brightness (1-255): ";
+	webpage += "<input type='text' name='" + WebSettingsNames[2] + "' size='4' value='" + String(LedInfo.nLEDBrightness) + "'>";
+	webpage += "</label>";
+	webpage += "<br><br><input type='submit' value='Update MIW'>";
+	webpage += "</form>";
+	//if (ImgInfo.bFixedTime) {
+	//	webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
+	//}
+	//else {
+	//	webpage += String("<p>Column Time: ") + String(ImgInfo.nFrameHold) + " mS";
+	//}
+	////IncreaseRepeatButton();
+	////DecreaseRepeatButton();
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
