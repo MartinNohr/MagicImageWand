@@ -5284,7 +5284,13 @@ void ChangeFile()
 			if (name == server.arg(0)) {
 				currentFileIndex.nFileCursor = 0;
 				currentFileIndex.nFileIndex = ix;
-				DisplayCurrentFile();
+				if (IsFolder(ix)) {
+					// change folders
+					ProcessFileOrTest();
+				}
+				else {
+					DisplayCurrentFile();
+				}
 				break;
 			}
 			++ix;
@@ -5307,8 +5313,6 @@ void HomePage() {
 	webpage += "<select name='newfile'>";
 	int ix = 0;
 	for (String nm : FileNames) {
-		if (nm[0] == NEXT_FOLDER_CHAR)
-			break;
 		webpage += "<option ";
 		if (currentFileIndex.nFileIndex == ix) {
 			webpage += "selected='" + String(ix) + "' ";
@@ -5317,7 +5321,7 @@ void HomePage() {
 		++ix;
 	}
 	webpage += "</select>";
-	webpage += " <input type='submit' value='Update'>";
+	webpage += " <input type='submit' value='Update MIW'>";
 	webpage += "</form>";
 	webpage += "<br><br>";
 	append_page_footer();
