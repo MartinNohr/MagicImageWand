@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.52";
+const char* MIW_Version = "2.53";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -1011,7 +1011,7 @@ MenuItem RepeatMenu[] = {
     {eTextInt,"Repeat Count: %d",GetIntegerValue,&ImgInfo.repeatCount,1,100},
     {eTextInt,"Repeat Delay: %d.%d S",GetIntegerValue,&ImgInfo.repeatDelay,0,100,1},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
-        {eBool,"Chain Files: %s",ToggleBool,&ImgInfo.bChainFiles,0,0,0,"On","Off"},
+        {eBool,"Chain Images: %s",ToggleBool,&ImgInfo.bChainFiles,0,0,0,"On","Off"},
         {eIfEqual,"",NULL,&ImgInfo.bChainFiles,true},
             {eTextInt,"Chain Repeats: %d",GetIntegerValue,&ImgInfo.nChainRepeats,1,100},
             {eTextInt,"Chain Delay: %d.%d S",GetIntegerValue,&ImgInfo.nChainDelay,0,100,1},

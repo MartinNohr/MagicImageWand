@@ -5499,51 +5499,97 @@ void FormSettings()
 }
 #endif
 
-String WebSettingsNames[] = {
-	"column_time",
-	"repeat_count",
-	"LED_brightness",
+// these are used for the list of things that can be set on the settings web page
+enum WEB_SETTINGS_TYPE {
+	WST_NUMBER,		// a number value, decimals 0 for integer
+	WST_BOOL,		// boolean values
+	WST_TEXT_ONLY,	// text that will display as H2, use to separate sections
+};
+typedef WEB_SETTINGS_TYPE WEB_SETTINGS_TYPE;
+struct WEB_SETTINGS {
+	char* text;					// show on page
+	char* name;					// the data name
+	WEB_SETTINGS_TYPE type;		// what type of data
+	void* data;					// a pointer to the data
+	int width;					// how wide to make the field
+	int decimals;				// decimals for floats, although stored as ints
+	//int min, max;				// not used yet, TODO, but will limit range of numbers
+};
+typedef WEB_SETTINGS WebSettings;
+WebSettings WebSettingsPage[] = {
+	{"Image Settings",NULL,WST_TEXT_ONLY},
+	{"Column Time(mS)","column_time",WST_NUMBER,&ImgInfo.nFrameHold,4,0},
+	{"Use Fixed Image Time","use_fixed_time",WST_BOOL,&ImgInfo.bFixedTime},
+	{"Fixed Time Value (S)","fixed_time",WST_NUMBER,&ImgInfo.nFixedImageTime,4,0},
+	{"Start Delay (S)","start_delay",WST_NUMBER,&ImgInfo.startDelay,4,1},
+	{"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
+	{"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
+	{"Repeat Settings",NULL,WST_TEXT_ONLY},
+	{"Repeat Count","repeat_count",WST_NUMBER,&ImgInfo.repeatCount,4,0},
+	{"Repeat Delay (S)","repeat_delay",WST_NUMBER,&ImgInfo.repeatDelay,4,1},
+	{"Chain Images","chain_images",WST_BOOL,&ImgInfo.bChainFiles},
+	{"LED Settings",NULL,WST_TEXT_ONLY},
+	{"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
 };
 
 // change the settings from the web page
 void ChangeSettings()
 {
 	if (server.args()) {
-		Serial.println("argcnt: " + String(server.args()));
+		//Serial.println("argcnt: " + String(server.args()));
 		//Serial.println("arg: " + server.arg(0));
-		int ix = 0;
-		for (String val : WebSettingsNames) {
-			Serial.print(val + ": ");
-			switch (ix) {
-			case 0:
-				ImgInfo.nFrameHold = atoi(server.arg(val).c_str());
+		for (WebSettings val : WebSettingsPage) {
+			switch (val.type) {
+			case WST_NUMBER:
+				*(int*)(val.data) = (int)(server.arg(val.name).toDouble() * pow10(val.decimals));
 				break;
-			case 1:
-				ImgInfo.repeatCount = atoi(server.arg(val).c_str());
+			case WST_BOOL:
+				//Serial.println("val: ~" + server.arg(val.name) + "~");
+				*(bool*)(val.data) = server.arg(val.name).length() ? true : false;
 				break;
-			case 2:
-				LedInfo.nLEDBrightness = atoi(server.arg(val).c_str());
+			case WST_TEXT_ONLY:
 				break;
 			}
-			++ix;
 		}
 	}
+	//Serial.println("fixed: " + String(server.arg("fixed_time")));
 	ShowSettings();
 }
 
 void ShowSettings() {
+	String stmp;
+	double sfloat;
+	bool bDoneFirst = false;
 	append_page_header(false);
-	webpage += "<h3>Settings</h3>";
 	webpage += "<form action='/changesettings' method='post'>";
-	webpage += "<label>Column Time (mS): ";
-	webpage += "<input type='text' name='" + WebSettingsNames[0] + "' size='4' value='" + String(ImgInfo.nFrameHold) + "'>";
-	webpage += "</label>";
-	webpage += "<br><label>Repeat Count: ";
-	webpage += "<input type='text' name='" + WebSettingsNames[1] + "' size='4' value='" + String(ImgInfo.repeatCount) + "'>";
-	webpage += "</label>";
-	webpage += "<br><label>LED Brightness (1-255): ";
-	webpage += "<input type='text' name='" + WebSettingsNames[2] + "' size='4' value='" + String(LedInfo.nLEDBrightness) + "'>";
-	webpage += "</label>";
+	for (WebSettings val : WebSettingsPage) {
+		if (bDoneFirst)
+			webpage += "<br>";
+		else
+			bDoneFirst = true;
+		switch (val.type) {
+		case WST_NUMBER:
+			webpage += "<label>" + String(val.text) + ": ";
+			stmp = String(*(int*)(val.data));
+			sfloat = stmp.toDouble() / pow10(val.decimals);
+			stmp = String(sfloat, val.decimals);
+			webpage += "<input type='text' name='" + String(val.name) + "' size='" + String(val.width) + "' value='" + stmp + "'>";
+			webpage += "</label>";
+			break;
+		case WST_BOOL:
+			webpage += "<label>" + String(val.text) + ": ";
+			webpage += "<input type='checkbox' name='" + String(val.name) + "' value='" + val.name + "'";
+			if (*(bool*)(val.data))
+				webpage += " checked='checked'";
+			webpage += ">";
+			webpage += "</label>";
+			break;
+		case WST_TEXT_ONLY:
+			webpage += "<h2>" + String(val.text) + "</h2>";
+			bDoneFirst = false;
+			break;
+		}
+	}
 	webpage += "<br><br><input type='submit' value='Update MIW'>";
 	webpage += "</form>";
 	//if (ImgInfo.bFixedTime) {
