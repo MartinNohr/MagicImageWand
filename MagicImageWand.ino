@@ -1448,7 +1448,7 @@ bool HandleRunMode()
 	switch (button) {
 	case BTN_SELECT:
 		bCancelRun = bCancelMacro = false;
-		ProcessFileOrTest();
+		ProcessFileOrBuiltin();
 		DisplayCurrentFile();
 		break;
 	case BTN_RIGHT_LONG:
@@ -1766,7 +1766,6 @@ void BouncingColoredBalls(int balls, CRGB colors[]) {
 			colorChangeCounter = 0;
 		}
 		ShowLeds();
-		//FastLED.show();
 		delayMicroseconds(50);
 		FastLED.clear();
 	}
@@ -1819,7 +1818,6 @@ void BarberPole()
 			}
 		}
 		ShowLeds();
-		//FastLED.show();
 		delay(ImgInfo.nFrameHold);
 	}
 }
@@ -1974,7 +1972,6 @@ void RandomDot()
 	// remember the last one, turn it off
 	SetPixel(LedInfo.nTotalLeds - 1, CRGB::Black);
 	ShowLeds();
-	//FastLED.show();
 	FastLED.clear(true);
 	delay(2);
 }
@@ -2019,7 +2016,6 @@ void OppositeRunningDots()
 			SetPixel(LedInfo.nTotalLeds - ix, CRGB(r, g, b));
 			SetPixel(ix, CRGB(r, g, b));
 			ShowLeds();
-			//FastLED.show();
 			delay(max(1, ImgInfo.nFrameHold));
 		}
 	}
@@ -2419,7 +2415,6 @@ void TwinkleRandom(int SpeedDelay, boolean OnlyOne) {
 	while (!done) {
 		SetPixel(random(LedInfo.nTotalLeds - 1), CRGB(random(0, 255), random(0, 255), random(0, 255)));
 		ShowLeds();
-		//FastLED.show();
 		delay(SpeedDelay);
 		if (OnlyOne) {
 			FastLED.clear(true);
@@ -2448,7 +2443,6 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 		}
 		SetPixel(i + EyeSize + 1, CRGB(red / 10, green / 10, blue / 10));
 		ShowLeds();
-		//FastLED.show();
 		delay(SpeedDelay);
 	}
 	delay(ReturnDelay);
@@ -2463,7 +2457,6 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
 		}
 		SetPixel(i + EyeSize + 1, CRGB(red / 10, green / 10, blue / 10));
 		ShowLeds();
-		//FastLED.show();
 		delay(SpeedDelay);
 	}
 	FastLED.clear(true);
@@ -2497,7 +2490,6 @@ void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTra
 			}
 		}
 		ShowLeds();
-		//FastLED.show();
 		delay(SpeedDelay);
 	}
 }
@@ -2514,7 +2506,6 @@ void TestConfetti()
 				++BuiltinInfo.gHue;
 			confetti();
 			ShowLeds();
-			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -2541,7 +2532,6 @@ void TestJuggle()
 			timerObj.setPeriod(max(5, ImgInfo.nFrameHold));
 			juggle();
 			ShowLeds();
-			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -2574,7 +2564,6 @@ void TestSine()
 			timerObj.setPeriod(max(5, ImgInfo.nFrameHold));
 			sinelon();
 			ShowLeds();
-			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -2601,7 +2590,6 @@ void TestBpm()
 			timerObj.setPeriod(ImgInfo.nFrameHold);
 			bpm();
 			ShowLeds();
-			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -2650,7 +2638,6 @@ void TestRainbow()
 			if (BuiltinInfo.bRainbowAddGlitter)
 				addGlitter(80);
 			ShowLeds();
-			//FastLED.show();
 		}
 		if (CheckCancel()) {
 			done = true;
@@ -2691,7 +2678,6 @@ void TestStripes()
 		}
 	}
 	ShowLeds();
-	//FastLED.show();
 	bool done = false;
 	while (!done) {
 		if (CheckCancel()) {
@@ -2716,7 +2702,6 @@ void TestLines()
 		bWhite = !bWhite;
 	}
 	ShowLeds();
-	//FastLED.show();
 	bool done = false;
 	while (!done) {
 		if (CheckCancel()) {
@@ -2729,7 +2714,6 @@ void TestLines()
 		//	leds[ix] = (leds[ix] == CRGB::White) ? CRGB::Black : CRGB::White;
 		//}
 		ShowLeds();
-		//FastLED.show();
 	}
 	FastLED.clear(true);
 	delay(2);
@@ -2742,7 +2726,6 @@ void FadeInOut(int time, bool in)
 		for (int i = 0; i <= LedInfo.nLEDBrightness; ++i) {
 			FastLED.setBrightness(i);
 			ShowLeds();
-			//FastLED.show();
 			delay(time / LedInfo.nLEDBrightness);
 		}
 	}
@@ -2750,7 +2733,6 @@ void FadeInOut(int time, bool in)
 		for (int i = LedInfo.nLEDBrightness; i >= 0; --i) {
 			FastLED.setBrightness(i);
 			ShowLeds();
-			//FastLED.show();
 			delay(time / LedInfo.nLEDBrightness);
 		}
 	}
@@ -2848,7 +2830,7 @@ void PopFileIndex()
 }
 
 // run file or built-in
-void ProcessFileOrTest()
+void ProcessFileOrBuiltin()
 {
 	// clear the cancel flag
 	bCancelRun = false;
@@ -3839,6 +3821,13 @@ int FileCountOnly(int start)
 	return count;
 }
 
+// return true if file is folder
+bool IsFolder(String name)
+{
+	return name[0] == NEXT_FOLDER_CHAR
+		|| name[0] == PREVIOUS_FOLDER_CHAR;
+}
+
 // return true if current file is folder
 bool IsFolder(int index)
 {
@@ -4116,7 +4105,7 @@ bool ProcessConfigFile(String filename)
 									strcpy(FileToShow, name.c_str());
 									if (!bRunningMacro)
 										ClearScreen();
-									ProcessFileOrTest();
+									ProcessFileOrBuiltin();
 								}
 								if (oldFolder.length()) {
 									currentFolder = oldFolder;
@@ -4892,7 +4881,6 @@ void RainbowPulse()
 		if (element > last_element) {
 			SetPixel(element, CHSV(element * BuiltinInfo.nRainbowPulseColorScale + BuiltinInfo.nRainbowPulseStartColor, BuiltinInfo.nRainbowPulseSaturation, 255));
 			ShowLeds();
-			//FastLED.show();
 			highest_element = max(highest_element, element);
 		}
 		if (CheckCancel()) {
@@ -4904,7 +4892,6 @@ void RainbowPulse()
 			SetPixel(highest_element, CRGB::Black);
 			SetPixel(element, CRGB::Black);
 			ShowLeds();
-			//FastLED.show();
 		}
 		last_element = element;
 	}
@@ -4929,7 +4916,6 @@ void TestWedge()
 			}
 		}
 		ShowLeds();
-		//FastLED.show();
 		delay(ImgInfo.nFrameHold);
 		if (CheckCancel()) {
 			return;
@@ -5274,28 +5260,27 @@ void SendHTML_Stop() {
 	server.client().stop(); // Stop is needed because no content length was sent
 }
 
+void SetFileIndexFromName(String lookfor)
+{
+	int ix = LookUpFile(lookfor);
+	currentFileIndex.nFileCursor = 0;
+	currentFileIndex.nFileIndex = ix;
+	if (IsFolder(ix)) {
+		// change folders
+		ProcessFileOrBuiltin();
+	}
+	else {
+		DisplayCurrentFile();
+	}
+}
+
 // change the current file from the webpage
 void ChangeFile()
 {
 	if (server.args()) {
 		//Serial.println("arg: " + server.arg(0));
-		// find the selected file so we can get the index
-		int ix = 0;
-		for (String name : FileNames) {
-			if (name == server.arg(0)) {
-				currentFileIndex.nFileCursor = 0;
-				currentFileIndex.nFileIndex = ix;
-				if (IsFolder(ix)) {
-					// change folders
-					ProcessFileOrTest();
-				}
-				else {
-					DisplayCurrentFile();
-				}
-				break;
-			}
-			++ix;
-		}
+		// set the file and reload all the names
+		SetFileIndexFromName(server.arg(0));
 	}
 	HomePage();
 }
@@ -5310,8 +5295,18 @@ void HomePage() {
 	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</button></a>";
 	webpage += "<br><br>";
-	webpage += "<form action='/changefile' method='post'>";
-	webpage += "<select name='newfile'>";
+	MakeFileForm("/changefile", "newfile", "Update MIW");
+	webpage += "<br><br>";
+	append_page_footer();
+	SendHTML_Content();
+	SendHTML_Stop();
+}
+
+// create an html form to select a file
+void MakeFileForm(String action, String name, String text)
+{
+	webpage += "<form action='" + action + "' method='post'>";
+	webpage += "<select name='" + name + "'>";
 	int ix = 0;
 	for (String nm : FileNames) {
 		webpage += "<option ";
@@ -5322,24 +5317,15 @@ void HomePage() {
 		++ix;
 	}
 	webpage += "</select>";
-	webpage += " <input type='submit' value='Update MIW'>";
+	webpage += " <input type='submit' value='" + text + "'>";
 	webpage += "</form>";
-	webpage += "<br><br>";
-	append_page_footer();
-	SendHTML_Content();
-	SendHTML_Stop();
 }
 
 void SelectInput(String heading1, String command, String arg_calling_name)
 {
 	SendHTML_Header();
-	webpage += "<h3>" + heading1 + "</h3>";
-	for (String var : FileNames) {
-		webpage += String("<p>") + var;
-	}
-	webpage += "<FORM action='/" + command + "' method='post'>" + "<input type='text' name='" + arg_calling_name;
-	webpage += "' value=''><br>";
-	webpage += "<type='submit' name='" + arg_calling_name + "' value=''><br>";
+	webpage += "<h2>" + heading1 + "</h2>";
+	MakeFileForm("/" + command, arg_calling_name, "Download File/Open Folder");
 	webpage += "<a href='/'>[Back]</a>";
 	append_page_footer();
 	SendHTML_Content();
@@ -5350,11 +5336,21 @@ void SelectInput(String heading1, String command, String arg_calling_name)
 void File_Download()
 {
 	if (server.args() > 0) { // Arguments were received
-		if (server.hasArg("download"))
-			SD_file_download(server.arg(0));
+		if (server.hasArg("download")) {
+			String name = server.arg("download");
+			// if this is a folder, we kind of start over by setting the current folder and calling SelectInput again
+			// we have the name, but we need the index
+			if (IsFolder(name)) {
+				SetFileIndexFromName(name);
+				SelectInput("Select filename to download", "download", "download");
+			}
+			else {
+				SD_file_download(currentFolder + name);
+			}
+		}
 	}
 	else
-		SelectInput("Enter filename to download", "download", "download");
+		SelectInput("Select filename to download", "download", "download");
 }
 
 void ReportFileNotPresent(String target)
@@ -5380,13 +5376,16 @@ void SD_file_download(String filename)
 {
 	if (bSdCardValid) {
 #if USE_STANDARD_SD
-		SDFile download = SD.open("/" + filename);
+		SDFile download = SD.open(filename);
 #else
-		FsFile download = SD.open("/" + filename);
+		FsFile download = SD.open(filename);
 #endif
+		if (filename[0] != '/')
+			filename = '/' + filename;
 		if (download) {
 			server.sendHeader("Content-Type", "text/text");
-			server.sendHeader("Content-Disposition", "attachment; filename=" + filename);
+			server.sendHeader("Content-Disposition", "attachment; filename="
+				+ filename.substring(filename.lastIndexOf('/') + 1));
 			server.sendHeader("Connection", "close");
 			//server.streamFile(download, "application/octet-stream");
 #if USE_STANDARD_SD
@@ -5614,8 +5613,9 @@ void RunImage()
 	}
 	webpage = "";
 	append_page_header(true);
-	webpage += "<h3>Running:";
-	webpage += String(g_nPercentDone);
+	webpage += "<h3>Running: ";
+	webpage += FileNames[currentFileIndex.nFileIndex];
+	//webpage += String(g_nPercentDone);
 	webpage += "</h3>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
@@ -5623,7 +5623,7 @@ void RunImage()
 	bRunning = true;
 	g_nPercentDone = 0;
 	bCancelRun = bCancelMacro = false;
-	ProcessFileOrTest();
+	ProcessFileOrBuiltin();
 	DisplayCurrentFile();
 }
 
@@ -6015,22 +6015,22 @@ void TestLEDs(int delay)
 	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
 		leds[i] = CRGB(127, 0, 0);
 	}
-	FastLED.show();
+	ShowLeds();
 	vTaskDelay(delay / portTICK_PERIOD_MS);
 	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
 		leds[i] = CRGB(0, 127, 0);
 	}
-	FastLED.show();
+	ShowLeds();
 	vTaskDelay(delay / portTICK_PERIOD_MS);
 	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
 		leds[i] = CRGB(0, 0, 127);
 	}
-	FastLED.show();
+	ShowLeds();
 	vTaskDelay(delay / portTICK_PERIOD_MS);
 	for (int i = 0; i < LedInfo.nTotalLeds; i++) {
 		leds[i] = CRGB(0, 0, 0);
 	}
-	FastLED.show();
+	ShowLeds();
 }
 
 // connect to wifi – returns true if successful or false if not
