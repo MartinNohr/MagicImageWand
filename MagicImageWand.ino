@@ -5507,6 +5507,8 @@ enum WEB_SETTINGS_TYPE {
 };
 typedef WEB_SETTINGS_TYPE WEB_SETTINGS_TYPE;
 struct WEB_SETTINGS {
+	bool* display;				// if not NULL, compare with displayTest to display this line
+	bool displayTest;			// compare with display to see if this line should display or not
 	char* text;					// show on page
 	char* name;					// the data name
 	WEB_SETTINGS_TYPE type;		// what type of data
@@ -5517,32 +5519,32 @@ struct WEB_SETTINGS {
 };
 typedef WEB_SETTINGS WebSettings;
 WebSettings WebSettingsPage[] = {
-	{"Image Settings",NULL,WST_TEXT_ONLY},
-	{"Column Time(mS)","column_time",WST_NUMBER,&ImgInfo.nFrameHold,4,0},
-	{"Use Fixed Image Time","use_fixed_time",WST_BOOL,&ImgInfo.bFixedTime},
-	{"Fixed Time Value (S)","fixed_time",WST_NUMBER,&ImgInfo.nFixedImageTime,4,0},
-	{"Start Delay (S)","start_delay",WST_NUMBER,&ImgInfo.startDelay,4,1},
-	{"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
-	{"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
-	{"Play Mirror Image","mirror_image",WST_BOOL,&ImgInfo.bMirrorPlayImage},
-	{"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
-	{"Scale Height to Fit Pixels","scale_height",WST_BOOL,&ImgInfo.bScaleHeight},
-	{"Double Pixels (144 to 288)","double_pixels",WST_BOOL,&ImgInfo.bDoublePixels},
-	{"Repeat Settings",NULL,WST_TEXT_ONLY},
-	{"Repeat Count","repeat_count",WST_NUMBER,&ImgInfo.repeatCount,4,0},
-	{"Repeat Delay (S)","repeat_delay",WST_NUMBER,&ImgInfo.repeatDelay,4,1},
-	{"Chain Images","chain_images",WST_BOOL,&ImgInfo.bChainFiles},
-	{"Chain Delay (S)","chain_delay",WST_NUMBER,&ImgInfo.nChainDelay,4,1},
-	{"Chain Repeats","chain_repeats",WST_NUMBER,&ImgInfo.nChainRepeats,4,0},
-	{"LED Settings",NULL,WST_TEXT_ONLY},
-	{"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
-	{"Gamma Correction","gamma_correction",WST_BOOL,&LedInfo.bGammaCorrection},
-	{"DMX512 Settings",NULL,WST_TEXT_ONLY},
-	{"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
-	{"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
-	{"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
-	{"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
-	{"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
+	{NULL,true,"Image Settings",NULL,WST_TEXT_ONLY},
+	{NULL,true,"Use Fixed Image Time","use_fixed_time",WST_BOOL,&ImgInfo.bFixedTime},
+	{&ImgInfo.bFixedTime,true,"Fixed Time Value (S)","fixed_time",WST_NUMBER,&ImgInfo.nFixedImageTime,4,0},
+	{&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time",WST_NUMBER,&ImgInfo.nFrameHold,4,0},
+	{NULL,true,"Start Delay (S)","start_delay",WST_NUMBER,&ImgInfo.startDelay,4,1},
+	{NULL,true,"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
+	{NULL,true,"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
+	{NULL,true,"Play Mirror Image","mirror_image",WST_BOOL,&ImgInfo.bMirrorPlayImage},
+	{NULL,true,"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
+	{NULL,true,"Scale Height to Fit Pixels","scale_height",WST_BOOL,&ImgInfo.bScaleHeight},
+	{NULL,true,"Double Pixels (144 to 288)","double_pixels",WST_BOOL,&ImgInfo.bDoublePixels},
+	{NULL,true,"Repeat Settings",NULL,WST_TEXT_ONLY},
+	{NULL,true,"Repeat Count","repeat_count",WST_NUMBER,&ImgInfo.repeatCount,4,0},
+	{NULL,true,"Repeat Delay (S)","repeat_delay",WST_NUMBER,&ImgInfo.repeatDelay,4,1},
+	{NULL,true,"Chain Images","chain_images",WST_BOOL,&ImgInfo.bChainFiles},
+	{&ImgInfo.bChainFiles,true,"Chain Delay (S)","chain_delay",WST_NUMBER,&ImgInfo.nChainDelay,4,1},
+	{&ImgInfo.bChainFiles,true,"Chain Repeats","chain_repeats",WST_NUMBER,&ImgInfo.nChainRepeats,4,0},
+	{NULL,true,"LED Settings",NULL,WST_TEXT_ONLY},
+	{NULL,true,"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
+	{NULL,true,"Gamma Correction","gamma_correction",WST_BOOL,&LedInfo.bGammaCorrection},
+	{NULL,true,"DMX512 Settings",NULL,WST_TEXT_ONLY},
+	{NULL,true,"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
+	{&SystemInfo.bRunArtNetDMX,true,"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
+	{&SystemInfo.bRunArtNetDMX,true,"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
+	{&SystemInfo.bRunArtNetDMX,true,"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
+	{&SystemInfo.bRunArtNetDMX,true,"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
 };
 
 // change the settings from the web page
@@ -5552,6 +5554,8 @@ void ChangeSettings()
 		//Serial.println("argcnt: " + String(server.args()));
 		//Serial.println("arg: " + server.arg(0));
 		for (WebSettings val : WebSettingsPage) {
+			if (val.display && (*(val.display) != val.displayTest))
+				continue;
 			switch (val.type) {
 			case WST_NUMBER:
 				*(int*)(val.data) = (int)(server.arg(val.name).toDouble() * pow10(val.decimals));
@@ -5580,6 +5584,8 @@ void ShowSettings() {
 	append_page_header(false);
 	webpage += "<form action='/changesettings' method='post'>";
 	for (WebSettings val : WebSettingsPage) {
+		if (val.display && (*(val.display) != val.displayTest))
+			continue;
 		if (bDoneFirst)
 			webpage += "<br>";
 		else
