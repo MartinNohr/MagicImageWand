@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.55";
+const char* MIW_Version = "2.56";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -200,7 +200,7 @@ typedef struct IMG_INFO {
     bool bScaleHeight = false;                // scale the Y values to fit the number of pixels
     int nFadeInOutFrames = 0;                 // number of frames to use for fading in and out
     int startDelay = 0;                       // Variable for delay between button press and start of light sequence, in seconds
-    //bool bRepeatForever = false;                           // Variable to select auto repeat (until select button is pressed again)
+    //bool bRepeatForever = false;              // Variable to select auto repeat (until select button is pressed again)
     int repeatDelay = 0;                      // Variable for delay between repeats, 0.1 seconds
     int repeatCount = 1;                      // Variable to keep track of number of repeats
 	int nCurrentMacro = 0;                    // the number of the macro to select or run

@@ -5502,6 +5502,7 @@ void FormSettings()
 enum WEB_SETTINGS_TYPE {
 	WST_NUMBER,		// a number value, decimals 0 for integer
 	WST_BOOL,		// boolean values
+	WST_STRING,		// a string of characters
 	WST_TEXT_ONLY,	// text that will display as H2, use to separate sections
 };
 typedef WEB_SETTINGS_TYPE WEB_SETTINGS_TYPE;
@@ -5511,8 +5512,8 @@ struct WEB_SETTINGS {
 	WEB_SETTINGS_TYPE type;		// what type of data
 	void* data;					// a pointer to the data
 	int width;					// how wide to make the field
-	int decimals;				// decimals for floats, although stored as ints
-	//int min, max;				// not used yet, TODO, but will limit range of numbers
+	int decimals;				// decimals for floats, although stored as ints, also used for max string length
+//	int min, max;				// not used yet, TODO, but will limit range of numbers
 };
 typedef WEB_SETTINGS WebSettings;
 WebSettings WebSettingsPage[] = {
@@ -5523,12 +5524,25 @@ WebSettings WebSettingsPage[] = {
 	{"Start Delay (S)","start_delay",WST_NUMBER,&ImgInfo.startDelay,4,1},
 	{"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
 	{"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
+	{"Play Mirror Image","mirror_image",WST_BOOL,&ImgInfo.bMirrorPlayImage},
+	{"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
+	{"Scale Height to Fit Pixels","scale_height",WST_BOOL,&ImgInfo.bScaleHeight},
+	{"Double Pixels (144 to 288)","double_pixels",WST_BOOL,&ImgInfo.bDoublePixels},
 	{"Repeat Settings",NULL,WST_TEXT_ONLY},
 	{"Repeat Count","repeat_count",WST_NUMBER,&ImgInfo.repeatCount,4,0},
 	{"Repeat Delay (S)","repeat_delay",WST_NUMBER,&ImgInfo.repeatDelay,4,1},
 	{"Chain Images","chain_images",WST_BOOL,&ImgInfo.bChainFiles},
+	{"Chain Delay (S)","chain_delay",WST_NUMBER,&ImgInfo.nChainDelay,4,1},
+	{"Chain Repeats","chain_repeats",WST_NUMBER,&ImgInfo.nChainRepeats,4,0},
 	{"LED Settings",NULL,WST_TEXT_ONLY},
 	{"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
+	{"Gamma Correction","gamma_correction",WST_BOOL,&LedInfo.bGammaCorrection},
+	{"DMX512 Settings",NULL,WST_TEXT_ONLY},
+	{"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
+	{"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
+	{"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
+	{"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
+	{"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
 };
 
 // change the settings from the web page
@@ -5545,6 +5559,10 @@ void ChangeSettings()
 			case WST_BOOL:
 				//Serial.println("val: ~" + server.arg(val.name) + "~");
 				*(bool*)(val.data) = server.arg(val.name).length() ? true : false;
+				break;
+			case WST_STRING:
+				memset(val.data, 0, val.decimals);
+				strncpy((char*)(val.data), server.arg(val.name).c_str(), val.decimals - 1);
 				break;
 			case WST_TEXT_ONLY:
 				break;
@@ -5581,6 +5599,11 @@ void ShowSettings() {
 			if (*(bool*)(val.data))
 				webpage += " checked='checked'";
 			webpage += ">";
+			webpage += "</label>";
+			break;
+		case WST_STRING:
+			webpage += "<label>" + String(val.text) + ": ";
+			webpage += "<input type='text' name='" + String(val.name) + "' size='" + String(val.width) + "' value='" + (char*)(val.data) + "'>";
 			webpage += "</label>";
 			break;
 		case WST_TEXT_ONLY:
