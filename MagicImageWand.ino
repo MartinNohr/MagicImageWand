@@ -121,9 +121,12 @@ void setup()
 	server.on("/changesettings", ChangeSettings);
 	server.on("/changefile", ChangeFile);
 	server.on("/runimage", RunImage);
+	server.on("/utilities", Utilities);
+	server.on("/verifyfiledelete", VerifyFileDelete);
+	server.on("/dofiledelete", DoFileDelete);
+	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
-	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	/////////////////////////// End of Request commands
 	SystemInfo.bCriticalBatteryLevel = false;
 	server.begin();
@@ -242,9 +245,10 @@ void setup()
 	nBootCount = 0;
 	// load the sleep timer
 	sleepTimer = SystemInfo.nSleepTime * 60;
-	// read the macro data
-	ReadMacroInfo();
 	GetFileNamesFromSDorBuiltins(currentFolder);
+	// read the macro data
+	if (bSdCardValid)
+		ReadMacroInfo();
 	for (int cnt = 0; cnt < 400; ++cnt) {
 		if (ReadButton() != BTN_NONE) {
 			break;
@@ -5168,7 +5172,7 @@ void handleFileUpload()
 			UploadFile.close();   // Close the file again
 			Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
 			webpage = "";
-			append_page_header(false);
+			load_page_header(false);
 			webpage += F("<h3>File was successfully uploaded</h3>");
 			webpage += F("<h2>Uploaded File Name: "); webpage += uploadfile.filename + "</h2>";
 			webpage += F("<h2>File Size: "); webpage += file_size(uploadfile.totalSize) + "</h2><br>";
@@ -5187,7 +5191,7 @@ void handleFileUpload()
 }
 
 
-void append_page_header(bool bRefresh) {
+void load_page_header(bool bRefresh) {
 	webpage = "<!DOCTYPE html><html>";
 	webpage += "<head>";
 	webpage += "<title>MagicImageWand</title>";
@@ -5198,7 +5202,8 @@ void append_page_header(bool bRefresh) {
 	webpage += "body{max-width:98%;margin:0 auto;font-family:arial;font-size:100%;text-align:center;color:black;background-color:#888888;}";
 	webpage += "ul{list-style-type:none;margin:0.1em;padding:0;border-radius:0.17em;overflow:hidden;background-color:#EEEEEE;font-size:1em;}";
 	webpage += "li{float:left;border-radius:0.17em;border-right:0.06em solid #bbb;}last-child {border-right:none;font-size:85%}";
-	webpage += "li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:65%}";
+	// fontsize was 65%, changed to 100 to make tabs easier to hit on a phone
+	webpage += "li a{display: block;border-radius:0.17em;padding:0.44em 0.44em;text-decoration:none;font-size:100%}";
 	webpage += "li a:hover{background-color:#DDDDDD;border-radius:0.17em;font-size:85%}";
 	webpage += "section {font-size:0.88em;}";
 	webpage += "h1{color:white;border-radius:0.5em;font-size:1em;padding:0.2em 0.2em;background:#444444;}";
@@ -5232,8 +5237,9 @@ void append_page_footer() {
 	webpage += "<li><a href='/download'>Download</a></li>";
 	webpage += "<li><a href='/upload'>Upload</a></li>";
 	webpage += "<li><a href='/settings'>Settings</a></li>";
+	webpage += "<li><a href='/utilities'>Utilities</a></li>";
 	webpage += "</ul>";
-	webpage += "<footer>MagicImageWand ";
+	webpage += "<footer>Magic Image Wand ";
 	webpage += MIW_Version;
 	webpage += "</footer>";
 	webpage += "</body></html>";
@@ -5245,7 +5251,7 @@ void SendHTML_Header() {
 	server.sendHeader("Expires", "-1");
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
 	server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves. 
-	append_page_header(false);
+	load_page_header(false);
 	server.sendContent(webpage);
 	webpage = "";
 }
@@ -5287,9 +5293,10 @@ void ChangeFile()
 
 void HomePage() {
 	SendHTML_Header();
-	webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
-	webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
-	webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
+	//webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
+	//webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
+	//webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
+	//webpage += "<a href='/utilities'><button style='width:auto'>Utilities</button></a>";
 	webpage += "<br><br>";
 	webpage += "<a href='/runimage'><button style='width:50%;font-size:200%;color:#00ff00'>Run</button></a>";
 	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
@@ -5342,7 +5349,7 @@ void File_Download()
 			// we have the name, but we need the index
 			if (IsFolder(name)) {
 				SetFileIndexFromName(name);
-				SelectInput("Select filename to download", "download", "download");
+				SelectInput("Select file to download", "download", "download");
 			}
 			else {
 				SD_file_download(currentFolder + name);
@@ -5527,7 +5534,7 @@ WebSettings WebSettingsPage[] = {
 	{NULL,true,"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
 	{NULL,true,"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
 	{NULL,true,"Play Mirror Image","mirror_image",WST_BOOL,&ImgInfo.bMirrorPlayImage},
-	{NULL,true,"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
+	{&ImgInfo.bMirrorPlayImage,true,"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
 	{NULL,true,"Scale Height to Fit Pixels","scale_height",WST_BOOL,&ImgInfo.bScaleHeight},
 	{NULL,true,"Double Pixels (144 to 288)","double_pixels",WST_BOOL,&ImgInfo.bDoublePixels},
 	{NULL,true,"Repeat Settings",NULL,WST_TEXT_ONLY},
@@ -5581,7 +5588,7 @@ void ShowSettings() {
 	String stmp;
 	double sfloat;
 	bool bDoneFirst = false;
-	append_page_header(false);
+	load_page_header(false);
 	webpage += "<form action='/changesettings' method='post'>";
 	for (WebSettings val : WebSettingsPage) {
 		if (val.display && (*(val.display) != val.displayTest))
@@ -5618,8 +5625,10 @@ void ShowSettings() {
 			break;
 		}
 	}
+	//webpage += "<br><input type='range' name='test' min='1' max='255' value='50' class='slider' id='myRange'>";
 	webpage += "<br><br><input type='submit' value='Update MIW'>";
 	webpage += "</form>";
+	webpage += "<br>";
 	//if (ImgInfo.bFixedTime) {
 	//	webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	//}
@@ -5632,6 +5641,36 @@ void ShowSettings() {
 	server.send(200, "text/html", webpage);
 }
 
+void Utilities()
+{
+	load_page_header(false);
+	webpage += "<h2>Utilities</h2>";
+	webpage += "<a href='/verifyfiledelete'><button style='width:60%;font-size:150%;color:#ffffff'>Delete File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
+	webpage += "<br><br>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
+}
+
+// verify file delete
+void VerifyFileDelete()
+{
+	load_page_header(false);
+	webpage += "<h2>Confirm File Delete: " + FileNames[currentFileIndex.nFileIndex] + "</h2>";
+	webpage += "<a href='/utilities'><button style='width:30%;font-size:150%;color:#ffffff'>Cancel</button></a>";
+	webpage += "<a href='/dofiledelete'><button style='width:30%;font-size:150%;color:#ffffff'> Delete</button></a>";
+	webpage += "<br><br>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
+}
+
+// do the actual file deletion
+void DoFileDelete()
+{
+	SD.remove(currentFolder + FileNames[currentFileIndex.nFileIndex]);
+	GetFileNamesFromSDorBuiltins(currentFolder);
+	Utilities();
+}
+
 void RunImage()
 {
 	static bool bRunning = false;
@@ -5641,7 +5680,7 @@ void RunImage()
 		return;
 	}
 	webpage = "";
-	append_page_header(true);
+	load_page_header(true);
 	webpage += "<h3>Running: ";
 	webpage += FileNames[currentFileIndex.nFileIndex];
 	//webpage += String(g_nPercentDone);
@@ -5658,8 +5697,8 @@ void RunImage()
 
 void File_Upload()
 {
-	append_page_header(false);
-	webpage += "<h3>Select File to Upload</h3>";
+	load_page_header(false);
+	webpage += "<h2>Select File to Upload</h2>";
 	webpage += "<FORM action='/fupload' method='post' enctype='multipart/form-data'>";
 	webpage += "<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>";
 	webpage += "<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>";
