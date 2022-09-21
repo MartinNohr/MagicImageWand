@@ -5298,7 +5298,8 @@ void HomePage() {
 	//webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
 	//webpage += "<a href='/utilities'><button style='width:auto'>Utilities</button></a>";
 	webpage += "<br><br>";
-	webpage += "<a href='/runimage'><button style='width:50%;font-size:200%;color:#00ff00'>Run</button></a>";
+	webpage += "<a href='/runimage'><button style='width:80%;font-size:200%;color:#00ff00'>";
+	webpage += "Run: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
 	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</button></a>";
 	webpage += "<br><br>";
@@ -5645,7 +5646,8 @@ void Utilities()
 {
 	load_page_header(false);
 	webpage += "<h2>Utilities</h2>";
-	webpage += "<a href='/verifyfiledelete'><button style='width:60%;font-size:150%;color:#ffffff'>Delete File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
+	webpage += "<a href='/verifyfiledelete'><button style='width:80%;font-size:150%;color:#ffffff'>Delete File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
+	//webpage += "<br><a href='/rebootsystem'><button style='width:60%;font-size:150%;color:#ffffff'>Reboot System</button></a>";
 	webpage += "<br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
