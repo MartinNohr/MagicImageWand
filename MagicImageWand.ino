@@ -121,9 +121,11 @@ void setup()
 	server.on("/changesettings", ChangeSettings);
 	server.on("/changefile", ChangeFile);
 	server.on("/runimage", RunImage);
-	server.on("/utilities", Utilities);
+	server.on("/utilities", UtilitiesPage);
 	server.on("/verifyfiledelete", VerifyFileDelete);
 	server.on("/dofiledelete", DoFileDelete);
+	server.on("/verifyrebootsystem", VerifyRebootSystem);
+	server.on("/rebootsystem", RebootSystem);
 	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
@@ -5642,15 +5644,42 @@ void ShowSettings() {
 	server.send(200, "text/html", webpage);
 }
 
-void Utilities()
+// interlock so repeat of webpage won't reboot, verifyreboot has to be called first
+bool b_RebootArmed = false;
+void UtilitiesPage()
 {
 	load_page_header(false);
 	webpage += "<h2>Utilities</h2>";
 	webpage += "<a href='/verifyfiledelete'><button style='width:80%;font-size:150%;color:#ffffff'>Delete File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
-	//webpage += "<br><a href='/rebootsystem'><button style='width:60%;font-size:150%;color:#ffffff'>Reboot System</button></a>";
+	webpage += "<br><br><a href='/verifyrebootsystem'><button style='width:50%;font-size:150%;color:#ffffff'>Reboot System</button></a>";
 	webpage += "<br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
+	b_RebootArmed = false;
+}
+
+// verify reboot
+void VerifyRebootSystem()
+{
+	load_page_header(false);
+	webpage += "<h2>Confirm System Reboot</h2>";
+	webpage += "<a href='/utilities'><button style='width:30%;font-size:150%;color:#ffffff'>Cancel</button></a>";
+	webpage += "<a href='/rebootsystem'><button style='width:30%;font-size:150%;color:#ffffff'> Reboot</button></a>";
+	webpage += "<br><br>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
+	b_RebootArmed = true;
+}
+
+// reboot system from web page
+void RebootSystem()
+{
+	if (b_RebootArmed) {
+		ESP.restart();
+	}
+	else {
+		UtilitiesPage();
+	}
 }
 
 // verify file delete
@@ -5670,7 +5699,7 @@ void DoFileDelete()
 {
 	SD.remove(currentFolder + FileNames[currentFileIndex.nFileIndex]);
 	GetFileNamesFromSDorBuiltins(currentFolder);
-	Utilities();
+	UtilitiesPage();
 }
 
 void RunImage()
