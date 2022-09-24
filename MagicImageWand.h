@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.60";
+const char* MIW_Version = "2.61";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -288,7 +288,7 @@ typedef struct SYSTEM_INFO {
     char cArtNetName[20] = "MIW_ARTNET_DMX";    // ArtNet name
     char cNetworkName[33] = "";                 // the network to connect to
     char cNetworkPassword[65] = "";             // network password
-    bool bStartUniverseOne = false;             // some controllers need 1, others 0 (false)
+    bool bStartUniverseOne = true;              // some controllers need 1, others 0 (false)
     //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;

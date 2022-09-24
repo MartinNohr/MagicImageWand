@@ -222,9 +222,10 @@ void setup()
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
 	if (nBootCount == 0) {
-		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &TaskLEDTest, 0);
+		// this must run on same task as main or only the first few LEDs light using FastLED 3.5, don't know why, 3.3 worked
+		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &TaskLEDTest, xPortGetCoreID());
 		if (SystemInfo.bRunArtNetDMX) {
-			xTaskCreatePinnedToCore(TaskRunArtNet, "ARTNET", 10000, NULL, 1, &TaskArtNet, 0);
+			xTaskCreatePinnedToCore(TaskRunArtNet, "ARTNET", 10000, NULL, 1, &TaskArtNet, xPortGetCoreID());
 		}
 		tft.setTextColor(SystemInfo.menuTextColor);
 		//grey_fill();
@@ -288,18 +289,7 @@ void TaskRunArtNet(void* parameter)
 // task to test the LEDS on start
 void TaskInitTestLed(void* parameter)
 {
-	const CRGB color[3] = { CRGB::Red,CRGB::Green,CRGB::Blue };
-	//// show 3 pixels on each end red and green, I had a strip that only showed 142 pixels, this will help detect that failure
-	//for (int cix = 0; cix < 3; ++cix) {
-	//	for (int px = 0; px < 3; ++px) {
-	//		SetPixel(px, color[cix]);
-	//		SetPixel(143 - px, color[cix]);
-	//	}
-	//	FastLED.show();
-	//	vTaskDelay(100 / portTICK_PERIOD_MS);
-	//}
 	FastLED.clear(true);
-	//RainbowPulse();
 	if (SystemInfo.bInitTest)
 		TestLEDs(500);
 	vTaskDelete(NULL);
@@ -6139,7 +6129,7 @@ boolean ConnectWifi(void)
 	int i = 0;
 
 	WiFi.begin(SystemInfo.cNetworkName, SystemInfo.cNetworkPassword);
-	Serial.println("Connecting to WiFi for Art-Net");
+	Serial.println("Connecting to WiFi for Art-Net DMX");
 	Serial.println(SystemInfo.cNetworkName);
 	// Wait for connection
 	while (WiFi.status() != WL_CONNECTED) {
