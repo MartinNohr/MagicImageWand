@@ -4688,7 +4688,7 @@ void LoadMacro(MenuItem* menu)
 	MacroLoadRun(menu, false);
 }
 
-void MacroLoadRun(MenuItem* menu, bool save)
+void MacroLoadRun(MenuItem*, bool save)
 {
 	bool oldShowBuiltins = false;
 	if (save) {
@@ -5539,12 +5539,12 @@ WebSettings WebSettingsPage[] = {
 	{NULL,true,"LED Settings",NULL,WST_TEXT_ONLY},
 	{NULL,true,"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
 	{NULL,true,"Gamma Correction","gamma_correction",WST_BOOL,&LedInfo.bGammaCorrection},
-	{NULL,true,"DMX512 Settings",NULL,WST_TEXT_ONLY},
-	{NULL,true,"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
-	{&SystemInfo.bRunArtNetDMX,true,"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
-	{&SystemInfo.bRunArtNetDMX,true,"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
-	{&SystemInfo.bRunArtNetDMX,true,"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
-	{&SystemInfo.bRunArtNetDMX,true,"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
+	//{NULL,true,"DMX512 Settings",NULL,WST_TEXT_ONLY},
+	//{NULL,true,"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
+	//{&SystemInfo.bRunArtNetDMX,true,"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
+	//{&SystemInfo.bRunArtNetDMX,true,"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
+	//{&SystemInfo.bRunArtNetDMX,true,"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
+	//{&SystemInfo.bRunArtNetDMX,true,"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
 };
 
 // change the settings from the web page
