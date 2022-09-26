@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.62";
+const char* MIW_Version = "2.63";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -900,7 +900,7 @@ MenuItem PreviewMenu[] = {
     {eTerminate}
 };
 MenuItem ArtnetMenu[] = {
-    {eExit,"ArtNet Settings"},
+    {eExit,"Art-Net Settings"},
     {eBool,"Enable: %s",ToggleArtNet,&SystemInfo.bRunArtNetDMX,0,0,0,"Yes","No"},
     {eBool,"Status: %s",NULL,&bArtNetActive,0,0,0,"Running","Stopped"},
     {eText,"IP: %s",NULL,ArtNetLocalIP.c_str()},
@@ -922,7 +922,7 @@ MenuItem SystemMenu[] = {
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
-    {eMenu,"ArtNet DMX WiFi",{.menu = ArtnetMenu}},
+    {eMenu,"Art-Net DMX WiFi",{.menu = ArtnetMenu}},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
     {eBool,"Startup LED test: %s",ToggleBool,&SystemInfo.bInitTest,0,0,0,"On","Off"},
     {eText,"Net: %s",NULL,ssid},
