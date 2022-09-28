@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.63";
+const char* MIW_Version = "2.64";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -289,6 +289,7 @@ typedef struct SYSTEM_INFO {
     char cNetworkName[33] = "";                 // the network to connect to
     char cNetworkPassword[65] = "";             // network password
     bool bStartUniverseOne = true;              // some controllers need 1, others 0 (false)
+    bool bRunWebServer = false;                 // run the web server
     //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -549,6 +550,7 @@ void GetIntegerValueHue(MenuItem* menu);
 void GetSelectChoice(MenuItem* menu);
 void ToggleBool(MenuItem* menu);
 void ToggleArtNet(MenuItem* menu);
+void ToggleWebServer(MenuItem* menu);
 void ToggleFilesBuiltin(MenuItem* menu);
 void UpdateDisplayBrightness(MenuItem* menu, int flag);
 void UpdateBatteries(MenuItem* menu, int flag);
@@ -899,16 +901,23 @@ MenuItem PreviewMenu[] = {
     // make sure this one is last
     {eTerminate}
 };
-MenuItem ArtnetMenu[] = {
-    {eExit,"Art-Net Settings"},
-    {eBool,"Enable: %s",ToggleArtNet,&SystemInfo.bRunArtNetDMX,0,0,0,"Yes","No"},
-    {eBool,"Status: %s",NULL,&bArtNetActive,0,0,0,"Running","Stopped"},
-    {eText,"IP: %s",NULL,ArtNetLocalIP.c_str()},
-    {eText,"Name: %s",ChangeNetCredentials,SystemInfo.cArtNetName,0,sizeof(SystemInfo.cArtNetName)},
-    {eText,"Network: %s",ChangeNetCredentials,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
-    {eText,"Choose Network",GetNetworkName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
-    {eText,"Password: %s",ChangeNetCredentials,SystemInfo.cNetworkPassword,0,sizeof(SystemInfo.cNetworkPassword)},
-    {eBool,"Universe Start: %s",ToggleBool,&SystemInfo.bStartUniverseOne,0,0,0,"1","0"},
+MenuItem WiFiMenu[] = {
+    {eExit,"WiFi Settings"},
+    {eBool,"MIW Web Server: %s",ToggleWebServer,&SystemInfo.bRunWebServer,0,0,0,"On","Off"},
+    {eIfEqual,"",NULL,&SystemInfo.bRunWebServer,true},
+        {eText,"MIW Net: %s",NULL,ssid},
+        {eText,"Homepage: %s",NULL,localIpAddress},
+    {eEndif},
+    {eBool,"Art-Net DMX: %s",ToggleArtNet,&SystemInfo.bRunArtNetDMX,0,0,0,"On","Off"},
+    {eIfEqual,"",NULL,&SystemInfo.bRunArtNetDMX,true},
+        {eBool,"DMX Status: %s",NULL,&bArtNetActive,0,0,0,"Running","Stopped"},
+        {eText,"DMX IP: %s",NULL,ArtNetLocalIP.c_str()},
+        {eText,"Name: %s",ChangeNetCredentials,SystemInfo.cArtNetName,0,sizeof(SystemInfo.cArtNetName)},
+        {eText,"Network: %s",ChangeNetCredentials,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
+        {eText,"Choose Network",GetNetworkName,SystemInfo.cNetworkName,0,sizeof(SystemInfo.cNetworkName)},
+        {eText,"Password: %s",ChangeNetCredentials,SystemInfo.cNetworkPassword,0,sizeof(SystemInfo.cNetworkPassword)},
+        {eBool,"Universe Start: %s",ToggleBool,&SystemInfo.bStartUniverseOne,0,0,0,"1","0"},
+    {eEndif},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
@@ -922,11 +931,9 @@ MenuItem SystemMenu[] = {
 #if HAS_BATTERY_LEVEL
     {eMenu,"Battery Settings",{.menu = BatteryMenu}},
 #endif
-    {eMenu,"Art-Net DMX WiFi",{.menu = ArtnetMenu}},
     {eTextInt,"Sleep Time: %d Min",GetIntegerValue,&SystemInfo.nSleepTime,0,120},
-    {eBool,"Startup LED test: %s",ToggleBool,&SystemInfo.bInitTest,0,0,0,"On","Off"},
-    {eText,"Net: %s",NULL,ssid},
-    {eText,"Homepage: %s",NULL,localIpAddress},
+    {eBool,"Startup LED Test: %s",ToggleBool,&SystemInfo.bInitTest,0,0,0,"On","Off"},
+    {eMenu,"WiFi Settings",{.menu = WiFiMenu}},
     {eText,"New Version BIN file",CheckUpdateBin},
     {eText,"Reset All Settings",FactorySettings},
     {eExit,PreviousMenu},
@@ -1239,3 +1246,9 @@ TaskHandle_t TaskLEDTest;
 TaskHandle_t TaskArtNet;
 // global percent so we can send to web pages
 volatile int g_nPercentDone;
+// enums for what to fill the web page dropdowns with
+enum WEB_PAGE_DROP_DOWNS {
+    WPDD_FILES,     // image file types
+    WPDD_MACROS,
+};
+typedef WEB_PAGE_DROP_DOWNS WebPageDropDowns;

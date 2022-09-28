@@ -105,33 +105,7 @@ void setup()
 	esp_timer_create(&periodic_Second_timer_args, &periodic_Second_timer);
 	esp_timer_start_periodic(periodic_Second_timer, 1000 * 1000);
 
-	//WiFi
-	WiFi.softAP(ssid, password);
-	IPAddress myIP = WiFi.softAPIP();
-	// save for the menu system
-	strncpy(localIpAddress, myIP.toString().c_str(), sizeof(localIpAddress));
-	Serial.print("AP IP address: ");
-	Serial.println(myIP);
-	server.begin();
-	Serial.println("Server started");
-	server.on("/", HomePage);
-	server.on("/download", File_Download);
-	server.on("/upload", File_Upload);
-	server.on("/settings", ShowSettings);
-	server.on("/changesettings", ChangeSettings);
-	server.on("/changefile", ChangeFile);
-	server.on("/runimage", RunImage);
-	server.on("/utilities", UtilitiesPage);
-	server.on("/verifyfiledelete", VerifyFileDelete);
-	server.on("/dofiledelete", DoFileDelete);
-	server.on("/verifyrebootsystem", VerifyRebootSystem);
-	server.on("/rebootsystem", RebootSystem);
-	server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
-	//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
-	//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
-	/////////////////////////// End of Request commands
 	SystemInfo.bCriticalBatteryLevel = false;
-	server.begin();
 	tft.setFreeFont(&Dialog_bold_16);
 #if TTGO_T == 1
 	SystemInfo.nDisplayRotation = 3;
@@ -181,7 +155,34 @@ void setup()
 	SetScreenRotation(SystemInfo.nDisplayRotation);
 	//ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
-
+	//WiFi
+	if (SystemInfo.bRunWebServer) {
+		WiFi.softAP(ssid, password);
+		IPAddress myIP = WiFi.softAPIP();
+		// save for the menu system
+		strncpy(localIpAddress, myIP.toString().c_str(), sizeof(localIpAddress));
+		Serial.print("AP IP address: ");
+		Serial.println(myIP);
+		server.begin();
+		Serial.println("Server started");
+		server.on("/", HomePage);
+		server.on("/download", File_Download);
+		server.on("/upload", File_Upload);
+		server.on("/settings", ShowSettings);
+		server.on("/changesettings", ChangeSettings);
+		server.on("/changefile", ChangeFile);
+		server.on("/runimage", RunImage);
+		server.on("/utilities", UtilitiesPage);
+		server.on("/verifyfiledelete", VerifyFileDelete);
+		server.on("/dofiledelete", DoFileDelete);
+		server.on("/verifyrebootsystem", VerifyRebootSystem);
+		server.on("/rebootsystem", RebootSystem);
+		server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
+		//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
+		//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
+		/////////////////////////// End of Request commands
+		server.begin();
+	}
 	if (nBootCount) {
 		// see if we need to get the path back
 		if (strlen(sleepFolder))
@@ -552,7 +553,9 @@ void loop()
 			bControllerReboot = false;
 		}
 	}
-	server.handleClient();
+	if (SystemInfo.bRunWebServer) {
+		server.handleClient();
+	}
 	// wait for no keys
 	if (didsomething) {
 		didsomething = false;
@@ -5295,7 +5298,7 @@ void HomePage() {
 	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</button></a>";
 	webpage += "<br><br>";
-	MakeFileForm("/changefile", "newfile", "Update MIW");
+	MakeFileForm("/changefile", "newfile", "Update MIW", WPDD_FILES);
 	webpage += "<br><br>";
 	append_page_footer();
 	SendHTML_Content();
@@ -5303,29 +5306,35 @@ void HomePage() {
 }
 
 // create an html form to select a file
-void MakeFileForm(String action, String name, String text)
+void MakeFileForm(String action, String name, String text, WebPageDropDowns dataType)
 {
 	webpage += "<form action='" + action + "' method='post'>";
 	webpage += "<select name='" + name + "'>";
 	int ix = 0;
-	for (String nm : FileNames) {
-		webpage += "<option ";
-		if (currentFileIndex.nFileIndex == ix) {
-			webpage += "selected='" + String(ix) + "' ";
+	switch (dataType) {
+	case WPDD_FILES:	// fill with bmp filenames
+		for (String nm : FileNames) {
+			webpage += "<option ";
+			if (currentFileIndex.nFileIndex == ix) {
+				webpage += "selected='" + String(ix) + "' ";
+			}
+			webpage += "<value='" + String(ix) + "'>" + nm + "</option>";
+			++ix;
 		}
-		webpage += "<value='" + String(ix) + "'>" + nm + "</option>";
-		++ix;
+		webpage += "</select>";
+		webpage += " <input type='submit' value='" + text + "'>";
+		webpage += "</form>";
+		break;
+	case WPDD_MACROS:	// handle macro filenames/descriptions
+		break;
 	}
-	webpage += "</select>";
-	webpage += " <input type='submit' value='" + text + "'>";
-	webpage += "</form>";
 }
 
 void SelectInput(String heading1, String command, String arg_calling_name)
 {
 	SendHTML_Header();
 	webpage += "<h2>" + heading1 + "</h2>";
-	MakeFileForm("/" + command, arg_calling_name, "Download File/Open Folder");
+	MakeFileForm("/" + command, arg_calling_name, "Download File/Open Folder", WPDD_FILES);
 	webpage += "<a href='/'>[Back]</a>";
 	append_page_footer();
 	SendHTML_Content();
@@ -6295,6 +6304,15 @@ void GetNetworkName(MenuItem* menu)
 		}
 	}
 	delay(10);
+}
+
+// toggle ArtNet running, reboot if needed
+void ToggleWebServer(MenuItem* menu)
+{
+	// save existing value
+	bool bWas = *(bool*)menu->value;
+	ToggleBool(menu);
+	bControllerReboot = (bWas != *(bool*)menu->value);
 }
 
 // toggle ArtNet running, reboot if needed
