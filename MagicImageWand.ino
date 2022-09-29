@@ -171,7 +171,9 @@ void setup()
 		server.on("/settings", ShowSettings);
 		server.on("/changesettings", ChangeSettings);
 		server.on("/changefile", ChangeFile);
-		server.on("/runimage", RunImage);
+		server.on("/changemacro", ChangeMacro);
+		server.on("/runimage", WebRunImage);
+		server.on("/runmacro", WebRunMacro);
 		server.on("/utilities", UtilitiesPage);
 		server.on("/verifyfiledelete", VerifyFileDelete);
 		server.on("/dofiledelete", DoFileDelete);
@@ -5261,6 +5263,18 @@ void SendHTML_Stop() {
 	server.client().stop(); // Stop is needed because no content length was sent
 }
 
+// set the current macro from its name
+void SetMacroIndexFromName(String lookfor)
+{
+	for (int ix = 0; ix < (sizeof(MacroInfo) / sizeof(*MacroInfo)); ++ix) {
+		if (lookfor == MacroInfo[ix].description) {
+			ImgInfo.nCurrentMacro = ix;
+			break;
+		}
+	}
+}
+
+// set the current file index from the name
 void SetFileIndexFromName(String lookfor)
 {
 	int ix = LookUpFile(lookfor);
@@ -5286,19 +5300,34 @@ void ChangeFile()
 	HomePage();
 }
 
+// change the current macro from the webpage
+void ChangeMacro()
+{
+	if (server.args()) {
+		SetMacroIndexFromName(server.arg(0));
+	}
+	HomePage();
+}
+
+// display the homepage on the web browser
 void HomePage() {
 	SendHTML_Header();
 	//webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
 	//webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
 	//webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
 	//webpage += "<a href='/utilities'><button style='width:auto'>Utilities</button></a>";
-	webpage += "<br><br>";
+	webpage += "<br><h2>" + String("Folder: ") + currentFolder + "</h2>";
 	webpage += "<a href='/runimage'><button style='width:80%;font-size:200%;color:#00ff00'>";
-	webpage += "Run: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
-	//webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
+	webpage += "Run File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
 	webpage += "</button></a>";
 	webpage += "<br><br>";
 	MakeFileForm("/changefile", "newfile", "Update MIW", WPDD_FILES);
+	webpage += "<br><br>";
+	webpage += "<a href='/runmacro'><button style='width:80%;font-size:200%;color:#00ff00'>";
+	webpage += "Run Macro: " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
+	webpage += "</button></a>";
+	webpage += "<br><br>";
+	MakeFileForm("/changemacro", "newfile", "Update MIW", WPDD_MACROS);
 	webpage += "<br><br>";
 	append_page_footer();
 	SendHTML_Content();
@@ -5326,6 +5355,16 @@ void MakeFileForm(String action, String name, String text, WebPageDropDowns data
 		webpage += "</form>";
 		break;
 	case WPDD_MACROS:	// handle macro filenames/descriptions
+		for (int ix = 0; ix < (sizeof(MacroInfo) / sizeof(*MacroInfo)); ++ix) {
+			webpage += "<option ";
+			if (ImgInfo.nCurrentMacro == ix) {
+				webpage += "selected='" + String(ix) + "' ";
+			}
+			webpage += "<value='" + String(ix) + "'>" + MacroInfo[ix].description + "</option>";
+		}
+		webpage += "</select>";
+		webpage += " <input type='submit' value='" + text + "'>";
+		webpage += "</form>";
 		break;
 	}
 }
@@ -5701,7 +5740,33 @@ void DoFileDelete()
 	UtilitiesPage();
 }
 
-void RunImage()
+// run the current selected image from the web button
+void WebRunMacro()
+{
+	static bool bRunning = false;
+	if (bRunning && g_nPercentDone > 100) {
+		HomePage();
+		g_nPercentDone = 0;
+		return;
+	}
+	webpage = "";
+	load_page_header(true);
+	webpage += "<h3>Running: ";
+	webpage += MacroInfo[ImgInfo.nCurrentMacro].description;
+	//webpage += String(g_nPercentDone);
+	webpage += "</h3>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
+	// run the file
+	bRunning = true;
+	g_nPercentDone = 0;
+	bCancelRun = bCancelMacro = false;
+	MacroLoadRun(NULL, true);
+	DisplayCurrentFile();
+}
+
+// run the current selected image from the web button
+void WebRunImage()
 {
 	static bool bRunning = false;
 	if (bRunning && g_nPercentDone > 100) {
