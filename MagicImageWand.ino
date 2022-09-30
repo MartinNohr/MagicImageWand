@@ -5266,6 +5266,9 @@ void SendHTML_Stop() {
 // set the current macro from its name
 void SetMacroIndexFromName(String lookfor)
 {
+	// strip the "#n " from the start
+	if (lookfor[0] == '#')
+		lookfor = lookfor.substring(lookfor.indexOf(' ') + 1);
 	for (int ix = 0; ix < (sizeof(MacroInfo) / sizeof(*MacroInfo)); ++ix) {
 		if (lookfor == MacroInfo[ix].description) {
 			ImgInfo.nCurrentMacro = ix;
@@ -5324,7 +5327,7 @@ void HomePage() {
 	MakeFileForm("/changefile", "newfile", "Update MIW", WPDD_FILES);
 	webpage += "<br><br>";
 	webpage += "<a href='/runmacro'><button style='width:80%;font-size:200%;color:#00ff00'>";
-	webpage += "Run Macro: " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
+	webpage += "Run Macro: #" + String(ImgInfo.nCurrentMacro) + " " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
 	webpage += "</button></a>";
 	webpage += "<br><br>";
 	MakeFileForm("/changemacro", "newfile", "Update MIW", WPDD_MACROS);
@@ -5340,6 +5343,7 @@ void MakeFileForm(String action, String name, String text, WebPageDropDowns data
 	webpage += "<form action='" + action + "' method='post'>";
 	webpage += "<select name='" + name + "'>";
 	int ix = 0;
+	String macroName;
 	switch (dataType) {
 	case WPDD_FILES:	// fill with bmp filenames
 		for (String nm : FileNames) {
@@ -5360,7 +5364,12 @@ void MakeFileForm(String action, String name, String text, WebPageDropDowns data
 			if (ImgInfo.nCurrentMacro == ix) {
 				webpage += "selected='" + String(ix) + "' ";
 			}
-			webpage += "<value='" + String(ix) + "'>" + MacroInfo[ix].description + "</option>";
+			// use the description if it is there, else the number
+			macroName = MacroInfo[ix].description;
+			if (MacroInfo[ix].mSeconds == 0)
+				macroName = "Empty";
+			macroName = "#" + String(ix) + " " + macroName;
+			webpage += "<value='" + String(ix) + "'>" + macroName + "</option>";
 		}
 		webpage += "</select>";
 		webpage += " <input type='submit' value='" + text + "'>";
