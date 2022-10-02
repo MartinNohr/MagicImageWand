@@ -5320,17 +5320,17 @@ void HomePage() {
 	//webpage += "<a href='/settings'><button style='width:auto'>Settings</button></a>";
 	//webpage += "<a href='/utilities'><button style='width:auto'>Utilities</button></a>";
 	webpage += "<br><h2>" + String("Folder: ") + currentFolder + "</h2>";
-	webpage += "<a href='/runimage'><button style='width:80%;font-size:200%;color:#00ff00'>";
+	webpage += "<a href='/runimage'><button style='width:90%;font-size:200%;color:#00ff00'>";
 	webpage += "Run File: " + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
 	webpage += "</button></a>";
 	webpage += "<br><br>";
 	MakeFileForm("/changefile", "newfile", "Update MIW", WPDD_FILES);
 	webpage += "<br><br>";
-	webpage += "<a href='/runmacro'><button style='width:80%;font-size:200%;color:#00ff00'>";
+	webpage += "<a href='/runmacro'><button style='width:90%;font-size:200%;color:#00ff00'>";
 	webpage += "Run Macro: #" + String(ImgInfo.nCurrentMacro) + " " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
 	webpage += "</button></a>";
 	webpage += "<br><br>";
-	MakeFileForm("/changemacro", "newfile", "Update MIW", WPDD_MACROS);
+	MakeFileForm("/changemacro", "newmacro", "Update MIW", WPDD_MACROS);
 	webpage += "<br><br>";
 	append_page_footer();
 	SendHTML_Content();
@@ -5340,8 +5340,8 @@ void HomePage() {
 // create an html form to select a file
 void MakeFileForm(String action, String name, String text, WebPageDropDowns dataType)
 {
-	webpage += "<form action='" + action + "' method='post'>";
-	webpage += "<select name='" + name + "'>";
+	webpage += "<form id='" + name + "' action = '" + action + "' method = 'post'>";
+	webpage += "<select onchange='document.forms[\"" + name + "\"].submit()' name='" + name + "'>";
 	int ix = 0;
 	String macroName;
 	switch (dataType) {
@@ -5355,7 +5355,7 @@ void MakeFileForm(String action, String name, String text, WebPageDropDowns data
 			++ix;
 		}
 		webpage += "</select>";
-		webpage += " <input type='submit' value='" + text + "'>";
+		//webpage += " <input type='submit' value='" + text + "'>";
 		webpage += "</form>";
 		break;
 	case WPDD_MACROS:	// handle macro filenames/descriptions
@@ -5372,7 +5372,7 @@ void MakeFileForm(String action, String name, String text, WebPageDropDowns data
 			webpage += "<value='" + String(ix) + "'>" + macroName + "</option>";
 		}
 		webpage += "</select>";
-		webpage += " <input type='submit' value='" + text + "'>";
+		//webpage += " <input type='submit' value='" + text + "'>";
 		webpage += "</form>";
 		break;
 	}
@@ -5760,10 +5760,10 @@ void WebRunMacro()
 	}
 	webpage = "";
 	load_page_header(true);
-	webpage += "<h3>Running: ";
+	webpage += "<h2>Running: ";
 	webpage += MacroInfo[ImgInfo.nCurrentMacro].description;
 	//webpage += String(g_nPercentDone);
-	webpage += "</h3>";
+	webpage += "</h2>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 	// run the file
@@ -5785,10 +5785,10 @@ void WebRunImage()
 	}
 	webpage = "";
 	load_page_header(true);
-	webpage += "<h3>Running: ";
+	webpage += "<h2>Running: ";
 	webpage += FileNames[currentFileIndex.nFileIndex];
 	//webpage += String(g_nPercentDone);
-	webpage += "</h3>";
+	webpage += "</h2>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 	// run the file
