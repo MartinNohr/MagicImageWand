@@ -174,6 +174,8 @@ void setup()
 		server.on("/changemacro", ChangeMacro);
 		server.on("/runimage", WebRunImage);
 		server.on("/runmacro", WebRunMacro);
+		server.on("/cancel", WebCancel);
+		server.on("/togglefilesbuiltins", WebToggleFilesBuiltins);
 		server.on("/utilities", UtilitiesPage);
 		server.on("/verifyfiledelete", VerifyFileDelete);
 		server.on("/dofiledelete", DoFileDelete);
@@ -1528,6 +1530,9 @@ bool HandleRunMode()
 // check the rotation buttons during running
 enum CRotaryDialButton::Button ReadButton()
 {
+	if (SystemInfo.bRunWebServer) {
+		server.handleClient();
+	}
 	MenuTextScrollSideways();
 	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE if none there
@@ -5187,7 +5192,6 @@ void handleFileUpload()
 	}
 }
 
-
 void load_page_header(bool bRefresh) {
 	webpage = "<!DOCTYPE html><html>";
 	webpage += "<head>";
@@ -5322,10 +5326,12 @@ void HomePage() {
 	webpage += "<br><h2>" + String("Folder: ") + currentFolder + "</h2>";
 	webpage += "<a href='/runimage'><button style='width:90%;font-size:200%;color:#00ff00'>";
 	webpage += "Run File:<br>" + FileNames[currentFileIndex.nFileIndex] + "</button></a>";
-	webpage += "</button></a>";
 	webpage += "<br><br>";
-	MakeFileForm("/changefile", "newfile", "Select Folder", WPDD_FILES);
-	webpage += "<br><br>";
+	MakeFileForm("/changefile", "newfile", (ImgInfo.bShowBuiltInTests ? NULL : "Select Folder"), WPDD_FILES);
+	webpage += "<br>";
+	webpage += "<a href='/togglefilesbuiltins'><button style='font-size:150%'>";
+	webpage += "Switch to: " + String(ImgInfo.bShowBuiltInTests ? "Files" : "Built-Ins") + "</button></a>";
+	webpage += "<br><br><br>";
 	webpage += "<a href='/runmacro'><button style='width:90%;font-size:200%;color:#00ff00'>";
 	webpage += "Run Macro:<br>#" + String(ImgInfo.nCurrentMacro) + " " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
 	webpage += "</button></a>";
@@ -5337,8 +5343,16 @@ void HomePage() {
 	SendHTML_Stop();
 }
 
+// toggle files or builtins flag
+void WebToggleFilesBuiltins()
+{
+	ToggleFilesBuiltin(NULL);
+	DisplayCurrentFile();
+	HomePage();
+}
+
 // create an html form to select a file
-void MakeFileForm(String action, String name, char* text, WebPageDropDowns dataType)
+void MakeFileForm(String action, String name, const char* text, WebPageDropDowns dataType)
 {
 	webpage += "<form id='" + String(name) + "' action = '" + action + "' method = 'post'>";
 	webpage += "<select onchange='document.forms[\"" + String(name) + "\"].submit()' name='" + name + "'>";
@@ -5779,29 +5793,41 @@ void WebRunMacro()
 	DisplayCurrentFile();
 }
 
+void WebCancel()
+{
+	bWebRunning = false;
+	bCancelRun = bCancelMacro = true;
+	HomePage();
+}
+
 // run the current selected image from the web button
 void WebRunImage()
 {
-	static bool bRunning = false;
-	if (bRunning && g_nPercentDone > 100) {
+	if (bWebRunning && g_nPercentDone > 100) {
 		HomePage();
 		g_nPercentDone = 0;
+		bWebRunning = false;
 		return;
 	}
 	webpage = "";
 	load_page_header(true);
 	webpage += "<h2>Running: ";
 	webpage += FileNames[currentFileIndex.nFileIndex];
-	//webpage += String(g_nPercentDone);
+	webpage += " " + String(g_nPercentDone) + "%";
 	webpage += "</h2>";
+	webpage += "<a href='/cancel'><button style='width:50%;font-size:200%;color:#ff0000'>";
+	webpage += "Cancel</button></a>";
+	webpage += "<br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 	// run the file
-	bRunning = true;
-	g_nPercentDone = 0;
-	bCancelRun = bCancelMacro = false;
-	ProcessFileOrBuiltin();
-	DisplayCurrentFile();
+	if (!bWebRunning) {
+		bWebRunning = true;
+		g_nPercentDone = 0;
+		bCancelRun = bCancelMacro = false;
+		ProcessFileOrBuiltin();
+		DisplayCurrentFile();
+	}
 }
 
 void File_Upload()

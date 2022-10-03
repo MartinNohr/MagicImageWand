@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.69";
+const char* MIW_Version = "2.70";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -453,6 +453,7 @@ bool bnameFilter = false;                 // set this true to enable the filters
 bool bSettingsMode = false;               // set true when settings are displayed
 bool bCancelRun = false;                  // set to cancel a running job
 bool bCancelMacro = false;                // set to cancel a running macro
+bool bWebRunning = false;                 // set while running from web
 bool bRecordingMacro = false;             // set while recording
 char FileToShow[100];
 unsigned long recordingTime;              // shows the time for each part
