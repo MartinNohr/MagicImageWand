@@ -3320,7 +3320,8 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		ShowLeds(2);
 	}
 	// indicate done for web page
-	g_nPercentDone = 101;
+	if (!bRunningMacro)
+		g_nPercentDone = 101;
 }
 
 // get some file information from the BMP, namely the width and height
@@ -5318,6 +5319,8 @@ void ChangeMacro()
 
 // display the homepage on the web browser
 void HomePage() {
+	g_nPercentDone = 0;
+	bWebRunning = false;
 	SendHTML_Header();
 	//webpage += "<a href='/download'><button style=\"width:auto\">Download</button></a>";
 	//webpage += "<a href='/upload'><button style=\"width:auto\">Upload</button></a>";
@@ -5771,26 +5774,31 @@ void DoFileDelete()
 // run the current selected image from the web button
 void WebRunMacro()
 {
-	static bool bRunning = false;
-	if (bRunning && g_nPercentDone > 100) {
+	if (!bRunningMacro && g_nPercentDone > 0) {
 		HomePage();
 		g_nPercentDone = 0;
+		bWebRunning = false;
 		return;
 	}
 	webpage = "";
 	load_page_header(true);
 	webpage += "<h2>Running: ";
 	webpage += MacroInfo[ImgInfo.nCurrentMacro].description;
-	//webpage += String(g_nPercentDone);
+	webpage += " " + String(g_nPercentDone) + "%";
 	webpage += "</h2>";
+	webpage += "<a href='/cancel'><button style='width:50%;font-size:200%;color:#ff0000'>";
+	webpage += "Cancel</button></a>";
+	webpage += "<br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 	// run the file
-	bRunning = true;
-	g_nPercentDone = 0;
-	bCancelRun = bCancelMacro = false;
-	MacroLoadRun(NULL, true);
-	DisplayCurrentFile();
+	if (!bWebRunning) {
+		bWebRunning = true;
+		g_nPercentDone = 0;
+		bCancelRun = bCancelMacro = false;
+		MacroLoadRun(NULL, true);
+		DisplayCurrentFile();
+	}
 }
 
 void WebCancel()
