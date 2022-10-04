@@ -5781,7 +5781,11 @@ void WebRunMacro()
 	load_page_header(true);
 	webpage += "<h2>Running: ";
 	webpage += MacroInfo[ImgInfo.nCurrentMacro].description;
-	webpage += " " + String(g_nPercentDone) + "%";
+	webpage += " " + String(g_nPercentDone) + "%<br>";
+	if (!bRunningMacro)
+		webpage += MacroInfo[ImgInfo.nCurrentMacro].fileNames[0];
+	else
+		webpage += currentFolder + FileNames[currentFileIndex.nFileIndex];
 	webpage += "</h2>";
 	webpage += "<a href='/cancel'><button style='width:50%;font-size:200%;color:#ff0000'>";
 	webpage += "Cancel</button></a>";
