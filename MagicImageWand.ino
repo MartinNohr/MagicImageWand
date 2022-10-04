@@ -3319,9 +3319,6 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (SystemInfo.bShowDuringBmpFile) {
 		ShowLeds(2);
 	}
-	// indicate done for web page
-	if (!bRunningMacro)
-		g_nPercentDone = 101;
 }
 
 // get some file information from the BMP, namely the width and height
@@ -5811,7 +5808,7 @@ void WebCancel()
 // run the current selected image from the web button
 void WebRunImage()
 {
-	if (bWebRunning && g_nPercentDone > 100) {
+	if (bWebRunning && !bIsRunning) {
 		HomePage();
 		g_nPercentDone = 0;
 		bWebRunning = false;
