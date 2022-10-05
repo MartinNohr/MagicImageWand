@@ -21,7 +21,7 @@
 #define GCC_NOT_5_2_0 0
 #define WITH_POSIX 1
 #define F_CPU 240000000L
-#define ARDUINO 108013
+#define ARDUINO 108015
 #define ARDUINO_TTGO_T1 1
 #define ARDUINO_ARCH_ESP32 1
 #define ARDUINO_BOARD "TTGO_T1"
@@ -98,6 +98,11 @@ typedef long pthread_cond_t;
 // Ensure ArduinoJSON Lib Intellisense works correctly
 #define ARDUINOJSON_ENABLE_STD_STREAM 0
 
+class VM_DBG {
+public:
+	// Send a Message to the Serial Monitor via WiFi Connection 
+	void sendUserMessage(const char* theMessage) {};
+} MicroDebug;
 #include <arduino.h>
 #include <pins_arduino.h> 
 

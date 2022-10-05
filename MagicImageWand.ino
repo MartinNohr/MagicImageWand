@@ -5658,7 +5658,8 @@ void ShowSettings() {
 	double sfloat;
 	bool bDoneFirst = false;
 	load_page_header(false);
-	webpage += "<form action='/changesettings' method='post'>";
+	webpage += "<form id='allsettings' onchange='document.forms[\"allsettings\"].submit()' action='/changesettings' method='post'>";
+	//webpage += "<form onchange='document.getElementById(\"settingssubmitbutton\").disabled=false' action='/changesettings' method='post'>";
 	for (WebSettings val : WebSettingsPage) {
 		if (val.display && (*(val.display) != val.displayTest))
 			continue;
@@ -5695,9 +5696,8 @@ void ShowSettings() {
 		}
 	}
 	//webpage += "<br><input type='range' name='test' min='1' max='255' value='50' class='slider' id='myRange'>";
-	webpage += "<br><br><input type='submit' value='Update MIW'>";
-	webpage += "</form>";
-	webpage += "<br>";
+	//webpage += "<br><br><input id='settingssubmitbutton' disabled type='submit' value='Update MIW'>";
+	webpage += "</form><br>";
 	//if (ImgInfo.bFixedTime) {
 	//	webpage += String("<p>Fixed Image Time: ") + String(ImgInfo.nFixedImageTime) + " S";
 	//}
