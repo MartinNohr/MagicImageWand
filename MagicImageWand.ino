@@ -5628,16 +5628,15 @@ void ChangeSettings()
 {
 	if (server.args()) {
 		//Serial.println("argcnt: " + String(server.args()));
-		//Serial.println("arg: " + server.arg(0));
 		for (WebSettings val : WebSettingsPage) {
-			if (val.display && (*(val.display) != val.displayTest))
+			if (val.type != WST_BOOL && !server.hasArg(val.name))
 				continue;
+			//Serial.println(String(val.name) + ": ~" + server.arg(val.name) + "~");
 			switch (val.type) {
 			case WST_NUMBER:
 				*(int*)(val.data) = (int)(server.arg(val.name).toDouble() * pow10(val.decimals));
 				break;
 			case WST_BOOL:
-				//Serial.println("val: ~" + server.arg(val.name) + "~");
 				*(bool*)(val.data) = server.arg(val.name).length() ? true : false;
 				break;
 			case WST_STRING:
