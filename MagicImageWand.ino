@@ -5580,11 +5580,11 @@ enum WEB_SETTINGS_TYPE {
 };
 typedef WEB_SETTINGS_TYPE WEB_SETTINGS_TYPE;
 struct WEB_SETTINGS {
+	WEB_SETTINGS_TYPE type;		// what type of data
 	bool* display;				// if not NULL, compare with displayTest to display this line
 	bool displayTest;			// compare with display to see if this line should display or not
 	char* text;					// show on page
 	char* name;					// the data name
-	WEB_SETTINGS_TYPE type;		// what type of data
 	void* data;					// a pointer to the data
 	int width;					// how wide to make the field
 	int decimals;				// decimals for floats, although stored as ints, also used for max string length
@@ -5592,35 +5592,35 @@ struct WEB_SETTINGS {
 };
 typedef WEB_SETTINGS WebSettings;
 WebSettings WebSettingsPage[] = {
-	{NULL,true,"Image Settings",NULL,WST_TEXT_ONLY},
-	{NULL,true,"Use Fixed Image Time","use_fixed_time",WST_BOOL,&ImgInfo.bFixedTime},
-	{&ImgInfo.bFixedTime,true,"Fixed Time Value (S)","fixed_time",WST_NUMBER,&ImgInfo.nFixedImageTime,4,0},
-	{&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time",WST_NUMBER,&ImgInfo.nFrameHold,4,0},
-	{NULL,true,"Start Delay (S)","start_delay",WST_NUMBER,&ImgInfo.startDelay,4,1},
-	{NULL,true,"Upside Down","upside_down",WST_BOOL,&ImgInfo.bUpsideDown},
-	{NULL,true,"Reverse Walk (left-right)","reverse_walk",WST_BOOL,&ImgInfo.bReverseImage},
-	{NULL,true,"Play Mirror Image","mirror_image",WST_BOOL,&ImgInfo.bMirrorPlayImage},
-	{&ImgInfo.bMirrorPlayImage,true,"Middle Mirror Delay (S)","mirror_delay",WST_NUMBER,&ImgInfo.nMirrorDelay,4,1},
-	{NULL,true,"Scale Height to Fit Pixels","scale_height",WST_BOOL,&ImgInfo.bScaleHeight},
-	{NULL,true,"Double Pixels (144 to 288)","double_pixels",WST_BOOL,&ImgInfo.bDoublePixels},
-	{NULL,true,"File Repeat Settings",NULL,WST_TEXT_ONLY},
-	{NULL,true,"Repeat Count","repeat_count",WST_NUMBER,&ImgInfo.repeatCount,4,0},
-	{NULL,true,"Repeat Delay (S)","repeat_delay",WST_NUMBER,&ImgInfo.repeatDelay,4,1},
-	{NULL,true,"Chain Images","chain_images",WST_BOOL,&ImgInfo.bChainFiles},
-	{&ImgInfo.bChainFiles,true,"Chain Delay (S)","chain_delay",WST_NUMBER,&ImgInfo.nChainDelay,4,1},
-	{&ImgInfo.bChainFiles,true,"Chain Repeats","chain_repeats",WST_NUMBER,&ImgInfo.nChainRepeats,4,0},
-	{NULL,true,"Macro Repeat Settings",NULL,WST_TEXT_ONLY},
-	{NULL,true,"Repeat Count","macro_repeat_count",WST_NUMBER,&ImgInfo.nRepeatCountMacro,4,0},
-	{NULL,true,"Repeat Delay (S)","macro_repeat_delay",WST_NUMBER,&ImgInfo.nRepeatWaitMacro,4,1},
-	{NULL,true,"LED Settings",NULL,WST_TEXT_ONLY},
-	{NULL,true,"LED Brightness (1-255)","LED_brightness",WST_NUMBER,&LedInfo.nLEDBrightness,4,0},
-	{NULL,true,"Gamma Correction","gamma_correction",WST_BOOL,&LedInfo.bGammaCorrection},
-	//{NULL,true,"DMX512 Settings",NULL,WST_TEXT_ONLY},
-	//{NULL,true,"DMX Enabled","dmx_enabled",WST_BOOL,&SystemInfo.bRunArtNetDMX},
-	//{&SystemInfo.bRunArtNetDMX,true,"Art-Net Name","artnet_name",WST_STRING,&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
-	//{&SystemInfo.bRunArtNetDMX,true,"Network to Connect To","network_name",WST_STRING,&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
-	//{&SystemInfo.bRunArtNetDMX,true,"Password","password",WST_STRING,&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
-	//{&SystemInfo.bRunArtNetDMX,true,"Universe Start 1 (off for 0)","universe_start",WST_BOOL,&SystemInfo.bStartUniverseOne},
+	{WST_TEXT_ONLY,NULL,true,"Image Settings",NULL},
+	{WST_BOOL,NULL,true,"Use Fixed Image Time","use_fixed_time",&ImgInfo.bFixedTime},
+	{WST_NUMBER,&ImgInfo.bFixedTime,true,"Fixed Time Value (S)","fixed_time",&ImgInfo.nFixedImageTime,4,0},
+	{WST_NUMBER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time",&ImgInfo.nFrameHold,4,0},
+	{WST_NUMBER,NULL,true,"Start Delay (S)","start_delay",&ImgInfo.startDelay,4,1},
+	{WST_BOOL,NULL,true,"Upside Down","upside_down",&ImgInfo.bUpsideDown},
+	{WST_BOOL,NULL,true,"Reverse Walk (left-right)","reverse_walk",&ImgInfo.bReverseImage},
+	{WST_BOOL,NULL,true,"Play Mirror Image","mirror_image",&ImgInfo.bMirrorPlayImage},
+	{WST_NUMBER,&ImgInfo.bMirrorPlayImage,true,"Middle Mirror Delay (S)","mirror_delay",&ImgInfo.nMirrorDelay,4,1},
+	{WST_BOOL,NULL,true,"Scale Height to Fit Pixels","scale_height",&ImgInfo.bScaleHeight},
+	{WST_BOOL,NULL,true,"Double Pixels (144 to 288)","double_pixels",&ImgInfo.bDoublePixels},
+	{WST_BOOL,NULL,true,"Chain Images","chain_images",&ImgInfo.bChainFiles},
+	{WST_NUMBER,&ImgInfo.bChainFiles,true,"Chain Delay (S)","chain_delay",&ImgInfo.nChainDelay,4,1},
+	{WST_NUMBER,&ImgInfo.bChainFiles,true,"Chain Repeats","chain_repeats",&ImgInfo.nChainRepeats,4,0},
+	{WST_TEXT_ONLY,NULL,true,"File Repeat Settings",NULL},
+	{WST_NUMBER,NULL,true,"Repeat Count","repeat_count",&ImgInfo.repeatCount,4,0},
+	{WST_NUMBER,NULL,true,"Repeat Delay (S)","repeat_delay",&ImgInfo.repeatDelay,4,1},
+	{WST_TEXT_ONLY,NULL,true,"Macro Repeat Settings",NULL},
+	{WST_NUMBER,NULL,true,"Repeat Count","macro_repeat_count",&ImgInfo.nRepeatCountMacro,4,0},
+	{WST_NUMBER,NULL,true,"Repeat Delay (S)","macro_repeat_delay",&ImgInfo.nRepeatWaitMacro,4,1},
+	{WST_TEXT_ONLY,NULL,true,"LED Settings",NULL},
+	{WST_NUMBER,NULL,true,"LED Brightness (1-255)","LED_brightness",&LedInfo.nLEDBrightness,4,0},
+	{WST_BOOL,NULL,true,"Gamma Correction","gamma_correction",&LedInfo.bGammaCorrection},
+	//{WST_TEXT_ONLY,NULL,true,"DMX512 Settings",NULL},
+	//{WST_BOOL,NULL,true,"DMX Enabled","dmx_enabled",&SystemInfo.bRunArtNetDMX},
+	//{WST_STRING,&SystemInfo.bRunArtNetDMX,true,"Art-Net Name","artnet_name",&SystemInfo.cArtNetName,14,sizeof(SystemInfo.cArtNetName)},
+	//{WST_STRING,&SystemInfo.bRunArtNetDMX,true,"Network to Connect To","network_name",&SystemInfo.cNetworkName,20,sizeof(SystemInfo.cNetworkName)},
+	//{WST_STRING,&SystemInfo.bRunArtNetDMX,true,"Password","password",&SystemInfo.cNetworkPassword,30,sizeof(SystemInfo.cNetworkPassword)},
+	//{WST_BOOL,&SystemInfo.bRunArtNetDMX,true,"Universe Start 1 (off for 0)","universe_start",&SystemInfo.bStartUniverseOne},
 };
 
 // change the settings from the web page
