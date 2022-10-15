@@ -165,22 +165,9 @@ void setup()
 		Serial.println(myIP);
 		server.begin();
 		Serial.println("Server started");
-		server.on("/", HomePage);
-		server.on("/download", File_Download);
-		server.on("/upload", File_Upload);
-		server.on("/settings", ShowSettings);
-		server.on("/changesettings", ChangeSettings);
-		server.on("/changefile", ChangeFile);
-		server.on("/changemacro", ChangeMacro);
-		server.on("/runimage", WebRunImage);
-		server.on("/runmacro", WebRunMacro);
-		server.on("/cancel", WebCancel);
-		server.on("/togglefilesbuiltins", WebToggleFilesBuiltins);
-		server.on("/utilities", UtilitiesPage);
-		server.on("/verifyfiledelete", VerifyFileDelete);
-		server.on("/dofiledelete", DoFileDelete);
-		server.on("/verifyrebootsystem", VerifyRebootSystem);
-		server.on("/rebootsystem", RebootSystem);
+		for (OnServerItem item : OnServerList) {
+			server.on(item.path, item.function);
+		}
 		server.on("/fupload", HTTP_POST, []() { server.send(200); }, handleFileUpload);
 		//server.on("/settings/increpeat", HTTP_GET, []() { server.send(200); }, IncRepeat);
 		//server.on("/settings/increpeat", HTTP_GET, IncRepeat);
@@ -216,11 +203,17 @@ void setup()
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
 	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
-	FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
+	if (LedInfo.bSwapControllers)
+		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
+	else
+		FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	//FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, NUM_LEDS);	// to test parallel second strip
 	// create the second led controller
 	if (LedInfo.bSecondController) {
-		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
+		if (LedInfo.bSwapControllers)
+			FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
+		else
+			FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 	}
 	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
@@ -917,7 +910,7 @@ void ToggleBool(MenuItem* menu)
 	bool* pb = (bool*)menu->value;
 	*pb = !*pb;
 	if (menu->change != NULL) {
-		(*menu->change)(menu, -1);
+		(*menu->change)(menu, 0);
 	}
 	ResetTextLines();
 }
@@ -1054,6 +1047,7 @@ void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
 //	}
 //}
 
+// called when brightness changed
 void UpdateStripBrightness(MenuItem* menu, int flag)
 {
 	switch (flag) {
@@ -1073,15 +1067,26 @@ void UpdateStripBrightness(MenuItem* menu, int flag)
 	}
 }
 
+// called when LED controller changes happen
 void UpdateControllers(MenuItem* menu, int flag)
 {
-	if (LedInfo.bSecondController)
-		LedInfo.nTotalLeds *= 2;
-	else
-		LedInfo.nTotalLeds /= 2;
-	if (flag == -1 && !bControllerReboot) {
-		//WriteMessage("Reboot needed\nto take effect", false, 1000);
-		bControllerReboot = true;
+	static LED_INFO oldInfo;
+	switch (flag) {
+	case 1:		// first time
+		oldInfo = LedInfo;
+		break;
+	case 0:		// every change
+		if (oldInfo.bSecondController != LedInfo.bSecondController) {
+			if (LedInfo.bSecondController)
+				LedInfo.nTotalLeds *= 2;
+			else
+				LedInfo.nTotalLeds /= 2;
+		}
+		break;
+	case -1:
+		if (memcmp(&oldInfo, &LedInfo, sizeof(LedInfo)) != 0)
+			bControllerReboot = true;
+		break;
 	}
 }
 
@@ -5295,7 +5300,7 @@ void SetFileIndexFromName(String lookfor)
 }
 
 // change the current file from the webpage
-void ChangeFile()
+void WebChangeFile()
 {
 	if (server.args()) {
 		//Serial.println("arg: " + server.arg(0));
@@ -5306,7 +5311,7 @@ void ChangeFile()
 }
 
 // change the current macro from the webpage
-void ChangeMacro()
+void WebChangeMacro()
 {
 	if (server.args()) {
 		SetMacroIndexFromName(server.arg(0));
@@ -5329,8 +5334,15 @@ void HomePage() {
 	webpage += "<br><br>";
 	MakeFileForm("/changefile", "newfile", (ImgInfo.bShowBuiltInTests ? NULL : "Select Folder"), WPDD_FILES);
 	webpage += "<br>";
+	// now lets see if we need to add settings for a builtin
+	// this is done by checking for a menu entry for the current
+	//if (ImgInfo.bShowBuiltInTests && BuiltInFiles[currentFileIndex.nFileIndex].menu) {
+	//	webpage += "<a href='/builtinsettings'><button style='width:50%;font-size:200%;color:#00ff00'>";
+	//	webpage += "Settings:<br>" + FileNames[currentFileIndex.nFileIndex] + "</button></a><br>";
+	//}
+	webpage += "<br>";
 	webpage += "<a href='/togglefilesbuiltins'><button style='font-size:150%'>";
-	webpage += "Switch to: " + String(ImgInfo.bShowBuiltInTests ? "Files" : "Built-Ins") + "</button></a>";
+	webpage += "Switch to: " + String(ImgInfo.bShowBuiltInTests ? "SD Files" : "Built-Ins") + "</button></a>";
 	webpage += "<br><br><br>";
 	webpage += "<a href='/runmacro'><button style='width:90%;font-size:200%;color:#00ff00'>";
 	webpage += "Run Macro:<br>#" + String(ImgInfo.nCurrentMacro) + " " + MacroInfo[ImgInfo.nCurrentMacro].description + "</button></a>";
@@ -5341,6 +5353,62 @@ void HomePage() {
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
+}
+
+// handle the builtin settings changes
+void WebChangeBuiltinSettings()
+{
+	MenuItem* menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
+	Serial.println("builtin settings change");
+	String str, line, name, stmp;
+	double sfloat;
+	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
+		name = "bi_" + String(ix);
+		Serial.println("id:" + name);
+		switch (menu->op) {
+		case eText:
+			Serial.println("eText");
+			break;
+		case eTextInt:
+			*(int*)(menu->value) = server.arg(name).toInt();
+			break;
+		case eBool:
+			*(bool*)(menu->value) = server.arg(name).length() ? true : false;
+			break;
+		case eList:	// TODO: a set of radio or dropdown
+			Serial.println("eList");
+			break;
+		case eExit:	// do nothing
+			break;
+		case eTextCurrentFile:
+		case eMenu:
+		case eIfEqual:
+		case eIfIntEqual:
+		case eElse:
+		case eEndif:
+		case eBuiltinOptions:
+		case eReboot:
+		case eMacroList:
+		case eTerminate:
+			Serial.println("unsupported menutype from html: " + String(menu->op));
+			break;
+		default:
+			break;
+		}
+	}
+	WebBuiltinSettings();
+}
+
+// handle builtin web settings
+void WebBuiltinSettings()
+{
+	load_page_header(false);
+	webpage += "<form id='builtinsettings' onchange='document.forms[\"builtinsettings\"].submit()' action='/changebuiltinsettings' method='post'>";
+	//webpage += "<form id='builtinsettings' action='/changebuiltinsettings' method='post'>";
+	webpage += MenuToHtml(BuiltInFiles[currentFileIndex.nFileIndex].menu);
+	webpage += "</form><br>";
+	append_page_footer();
+	server.send(200, "text/html", webpage);
 }
 
 // toggle files or builtins flag
@@ -5624,7 +5692,7 @@ WebSettings WebSettingsPage[] = {
 };
 
 // change the settings from the web page
-void ChangeSettings()
+void WebChangeSettings()
 {
 	if (server.args()) {
 		//Serial.println("argcnt: " + String(server.args()));
@@ -5649,10 +5717,10 @@ void ChangeSettings()
 		}
 	}
 	//Serial.println("fixed: " + String(server.arg("fixed_time")));
-	ShowSettings();
+	WebShowSettings();
 }
 
-void ShowSettings() {
+void WebShowSettings() {
 	String stmp;
 	double sfloat;
 	bool bDoneFirst = false;
@@ -5808,6 +5876,66 @@ void WebCancel()
 	HomePage();
 }
 
+// map a menuitem list to html
+String MenuToHtml(MenuItem* menu)
+{
+	String str, line, name, stmp;
+	double sfloat;
+	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
+		name = "bi_" + String(ix);
+		// keep the line without %x's
+		line = menu->text;
+		if (line.indexOf("%d.%d") >= 0) {
+			line.remove(line.indexOf("%d.%d"), 5);
+		}
+		while (line.indexOf('%') >= 0) {
+			line.remove(line.indexOf('%'), 2);
+		}
+		switch (menu->op) {
+		case eText:
+			str += String("<p>") + line + "</p>";
+			break;
+		case eTextInt:
+			str += "<label>" + line;
+			stmp = String(*(int*)(menu->value));
+			sfloat = stmp.toDouble() / pow10(menu->decimals);
+			stmp = String(sfloat, menu->decimals);
+			str += "<input type='text' name='" + name + "' size='" + String(5) + "' value='" + stmp + "'>";
+			str += "</label>";
+			break;
+		case eBool:
+			str += "<label>" + line;
+			str += "<input type='checkbox' name='" + name + "' value='" + name + "'";
+			if (*(bool*)(menu->value))
+				str += " checked='checked'";
+			str += ">";
+			str += "</label>";
+			break;
+		case eList:	// TODO: a set of radio or dropdown
+			str += String("<p>") + line + "</p>";
+			break;
+		case eExit:
+			break;
+		case eTextCurrentFile:
+		case eMenu:
+		case eIfEqual:
+		case eIfIntEqual:
+		case eElse:
+		case eEndif:
+		case eBuiltinOptions:
+		case eReboot:
+		case eMacroList:
+		case eTerminate:
+			Serial.println("unsupported menutype to html: " + String(menu->op));
+			break;
+		default:
+			break;
+		}
+		str += "<br>";
+	}
+	return str;
+}
+
 // run the current selected image from the web button
 void WebRunImage()
 {
@@ -5826,6 +5954,11 @@ void WebRunImage()
 	webpage += "<a href='/cancel'><button style='width:50%;font-size:200%;color:#ff0000'>";
 	webpage += "Cancel</button></a>";
 	webpage += "<br><br>";
+	// now lets see if we need to add settings for a builtin
+	// this is done by checking for a menu entry for the current
+	if (ImgInfo.bShowBuiltInTests && BuiltInFiles[currentFileIndex.nFileIndex].menu == LedLightBarMenu) {
+		webpage += MenuToHtml(BuiltInFiles[currentFileIndex.nFileIndex].menu);
+	}
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 	// run the file

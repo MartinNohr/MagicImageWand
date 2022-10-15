@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.76";
+const char* MIW_Version = "2.77";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -163,7 +163,8 @@ enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OU
 const char* StripsWiringText[] = { "Middle","Serial","Outside" };
 const char* DisplayRotationText[] = { "90","180","270","0" };
 typedef struct LED_INFO {
-    bool bSecondController = false;
+    bool bSecondController = false; // enable the second controller
+    bool bSwapControllers = false;  // swap the 1st and 2nd LED controller output pins
     int nLEDBrightness = 25;
     int nTotalLeds = 144;
     bool bGammaCorrection = true;
@@ -984,6 +985,7 @@ MenuItem StripMenu[] = {
     {eTextInt,"Max Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
     //{eTextInt,"Max Pixel Current: %d mA",GetIntegerValue,&LedInfo.nPixelMaxCurrent,1,2000,0,NULL,NULL,UpdatePixelMaxCurrent},
     {eBool,"LED Controllers: %s",ToggleBool,&LedInfo.bSecondController,0,0,0,"2","1",UpdateControllers},
+    {eBool,"Controllers: %s First",ToggleBool,&LedInfo.bSwapControllers,0,0,0,"LED2","LED1",UpdateControllers},
     {eTextInt,"Total LEDs: %d",GetIntegerValue,&LedInfo.nTotalLeds,1,512,0,NULL,NULL,UpdateTotalLeds},
 	{eList,"LED Wiring: %s",GetSelectChoice,&LedInfo.stripsMode,0,sizeof(StripsWiringText) / sizeof(*StripsWiringText) - 1,0,NULL,NULL,UpdateWiringMode,StripsWiringText},
     {eBool,"Gamma Correction: %s",ToggleBool,&LedInfo.bGammaCorrection,0,0,0,"On","Off"},
@@ -1253,3 +1255,46 @@ enum WEB_PAGE_DROP_DOWNS {
     WPDD_MACROS,
 };
 typedef WEB_PAGE_DROP_DOWNS WebPageDropDowns;
+
+void RebootSystem();
+void VerifyRebootSystem();
+void DoFileDelete();
+void VerifyFileDelete();
+void UtilitiesPage();
+void WebToggleFileBuiltins();
+void WebCancel();
+void WebRunMacro();
+void WebRunImage();
+void WebChangeMacro();
+void WebChangeBuiltinSettings();
+void WebBuiltinSettings();
+void WebChangeFile();
+void WebToggleFilesBuiltins();
+void WebChangeSettings();
+void WebShowSettings();
+
+struct ON_SERVER_ITEM {
+    char* path;
+    void(*function)();
+};
+typedef ON_SERVER_ITEM OnServerItem;
+OnServerItem OnServerList[] = {
+    {"/", HomePage},
+    {"/download", File_Download},
+    {"/upload", File_Upload},
+    {"/settings", WebShowSettings},
+    {"/changesettings", WebChangeSettings},
+    {"/changefile", WebChangeFile},
+    {"/builtinsettings", WebBuiltinSettings},
+    {"/changebuiltinsettings", WebChangeBuiltinSettings},
+    {"/changemacro", WebChangeMacro},
+    {"/runimage", WebRunImage},
+    {"/runmacro", WebRunMacro},
+    {"/cancel", WebCancel},
+    {"/togglefilesbuiltins", WebToggleFilesBuiltins},
+    {"/utilities", UtilitiesPage},
+    {"/verifyfiledelete", VerifyFileDelete},
+    {"/dofiledelete", DoFileDelete},
+    {"/verifyrebootsystem", VerifyRebootSystem},
+    {"/rebootsystem", RebootSystem},
+};
