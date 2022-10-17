@@ -3459,10 +3459,6 @@ void ShowBmp(MenuItem*)
 			break;
 		}
 		bool bHalfSize = false;
-		int displayWidth = imgWidth;
-		if (imgWidth > LedInfo.nTotalLeds) {
-			displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
-		}
 		// see if this is too tall for the TFT
 		if (imgWidth > 144) {
 			bHalfSize = true;
@@ -3550,7 +3546,7 @@ void ShowBmp(MenuItem*)
 					CRGB pixel;
 					// get to start of pixel data for this column
 					FileSeekBuf((uint32_t)bmpOffBits + (((col + imgStartCol) * (bHalfSize ? 2 : 1)) * lineLength));
-					for (int x = 0; x < displayWidth; ++x) {
+					for (int x = 0; x < imgWidth; ++x) {
 						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();
 						// throw a pixel away if we're dividing by 2 for the 288 pixel image
@@ -5912,7 +5908,9 @@ String MenuToHtml(MenuItem* menu)
 			str += "</label>";
 			break;
 		case eList:	// TODO: a set of radio or dropdown
-			str += String("<p>") + line + "</p>";
+			for (int ix = 0; ix <= menu->max; ++ix) {
+				str += String("<p>list") + menu->nameList[ix] + "</p>";
+			}
 			break;
 		case eExit:
 			break;
