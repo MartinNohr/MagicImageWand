@@ -5332,10 +5332,10 @@ void HomePage() {
 	webpage += "<br>";
 	// now lets see if we need to add settings for a builtin
 	// this is done by checking for a menu entry for the current
-	//if (ImgInfo.bShowBuiltInTests && BuiltInFiles[currentFileIndex.nFileIndex].menu) {
-	//	webpage += "<a href='/builtinsettings'><button style='width:50%;font-size:200%;color:#00ff00'>";
-	//	webpage += "Settings:<br>" + FileNames[currentFileIndex.nFileIndex] + "</button></a><br>";
-	//}
+	if (ImgInfo.bShowBuiltInTests && BuiltInFiles[currentFileIndex.nFileIndex].menu) {
+		webpage += "<a href='/builtinsettings'><button style='width:50%;font-size:200%;color:#00ff00'>";
+		webpage += "Settings:<br>" + FileNames[currentFileIndex.nFileIndex] + "</button></a><br>";
+	}
 	webpage += "<br>";
 	webpage += "<a href='/togglefilesbuiltins'><button style='font-size:150%'>";
 	webpage += "Switch to: " + String(ImgInfo.bShowBuiltInTests ? "SD Files" : "Built-Ins") + "</button></a>";
@@ -5354,13 +5354,26 @@ void HomePage() {
 // handle the builtin settings changes
 void WebChangeBuiltinSettings()
 {
+	bool bSkipping = false;
 	MenuItem* menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
 	Serial.println("builtin settings change");
 	String str, line, name, stmp;
 	double sfloat;
 	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
+		if (bSkipping) {
+			switch (menu->op) {
+			case eIfEqual:
+			case eIfIntEqual:
+			case eElse:
+			case eEndif:
+				break;
+			default:
+				continue;
+				break;
+			}
+		}
 		name = "bi_" + String(ix);
-		Serial.println("id:" + name);
+		//Serial.println("id:" + name);
 		switch (menu->op) {
 		case eText:
 			Serial.println("eText");
@@ -5371,22 +5384,35 @@ void WebChangeBuiltinSettings()
 		case eBool:
 			*(bool*)(menu->value) = server.arg(name).length() ? true : false;
 			break;
-		case eList:	// TODO: a set of radio or dropdown
-			Serial.println("eList");
+		case eList:	// a dropdown list
+			// figure out which one
+			for (int ix = 0; ix <= menu->max; ++ix) {
+				if (server.arg(name) == String(menu->nameList[ix])) {
+					*(int*)menu->value = ix;
+				}
+			}
+			Serial.println("eList: " + String(server.arg(name)));
+			break;
+		case eIfEqual:
+			bSkipping = *(bool*)(menu->value) != (menu->min ? true : false);
+			break;
+		case eIfIntEqual:
+			bSkipping = *(int*)(menu->value) != (menu->min);
+			break;
+		case eElse:
+			bSkipping = !bSkipping;
+			break;
+		case eEndif:
+			bSkipping = false;
 			break;
 		case eExit:	// do nothing
-			break;
 		case eTextCurrentFile:
 		case eMenu:
-		case eIfEqual:
-		case eIfIntEqual:
-		case eElse:
-		case eEndif:
 		case eBuiltinOptions:
 		case eReboot:
 		case eMacroList:
 		case eTerminate:
-			Serial.println("unsupported menutype from html: " + String(menu->op));
+			//Serial.println("unsupported menutype from html: " + String(menu->op));
 			break;
 		default:
 			break;
@@ -5403,6 +5429,7 @@ void WebBuiltinSettings()
 	//webpage += "<form id='builtinsettings' action='/changebuiltinsettings' method='post'>";
 	webpage += MenuToHtml(BuiltInFiles[currentFileIndex.nFileIndex].menu);
 	webpage += "</form><br>";
+	webpage += "<a href='/' style='font-size:125%;color:#f0f0f0'>[Back]</a><br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
@@ -5463,7 +5490,7 @@ void SelectInput(String heading1, String command, String arg_calling_name)
 	SendHTML_Header();
 	webpage += "<h2>" + heading1 + "</h2>";
 	MakeFileForm("/" + command, arg_calling_name, "Download File/Open Folder", WPDD_FILES);
-	webpage += "<a href='/'>[Back]</a>";
+	webpage += "<br><a href='/' style='font-size:125%'>[Back]</a><br><br>";
 	append_page_footer();
 	SendHTML_Content();
 	SendHTML_Stop();
@@ -5875,9 +5902,22 @@ void WebCancel()
 // map a menuitem list to html
 String MenuToHtml(MenuItem* menu)
 {
+	bool bSkipping = false;
 	String str, line, name, stmp;
 	double sfloat;
 	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
+		if (bSkipping) {
+			switch (menu->op) {
+			case eIfEqual:
+			case eIfIntEqual:
+			case eElse:
+			case eEndif:
+				break;
+			default:
+				continue;
+				break;
+			}
+		}
 		name = "bi_" + String(ix);
 		// keep the line without %x's
 		line = menu->text;
@@ -5907,29 +5947,45 @@ String MenuToHtml(MenuItem* menu)
 			str += ">";
 			str += "</label>";
 			break;
-		case eList:	// TODO: a set of radio or dropdown
+		case eList:	// a dropdown list
+			str += "<label>" + line;
+			str += "<select name='" + name + "'>";
 			for (int ix = 0; ix <= menu->max; ++ix) {
-				str += String("<p>list") + menu->nameList[ix] + "</p>";
+				str += "<option ";
+				if (ix == *(int*)(menu->value))
+					str += "selected='" + String(ix) + "' ";
+				str += "<value='" + String(ix) + "'>" + menu->nameList[ix] + "</option>";
 			}
+			str += "</select>";
+			str += "</label>";
 			break;
 		case eExit:
 			break;
+		case eIfEqual:
+			bSkipping = *(bool*)(menu->value) != (menu->min ? true : false);
+			break;
+		case eIfIntEqual:
+			bSkipping = *(int*)(menu->value) != (menu->min);
+			break;
+		case eElse:
+			bSkipping = !bSkipping;
+			break;
+		case eEndif:
+			bSkipping = false;
+			break;
 		case eTextCurrentFile:
 		case eMenu:
-		case eIfEqual:
-		case eIfIntEqual:
-		case eElse:
-		case eEndif:
 		case eBuiltinOptions:
 		case eReboot:
 		case eMacroList:
 		case eTerminate:
-			Serial.println("unsupported menutype to html: " + String(menu->op));
+			//Serial.println("unsupported menutype to html: " + String(menu->op));
 			break;
 		default:
 			break;
 		}
-		str += "<br>";
+		if (!bSkipping)
+			str += "<br>";
 	}
 	return str;
 }
@@ -5976,7 +6032,7 @@ void File_Upload()
 	webpage += "<FORM action='/fupload' method='post' enctype='multipart/form-data'>";
 	webpage += "<input class='buttons' style='width:75%' type='file' name='fupload' id = 'fupload' value=''><br>";
 	webpage += "<br><button class='buttons' style='width:75%' type='submit'>Upload File</button><br>";
-	webpage += "<a href='/'>[Back]</a><br><br>";
+	webpage += "<br><a href='/' style='font-size:125%'>[Back]</a><br><br>";
 	append_page_footer();
 	server.send(200, "text/html", webpage);
 }
