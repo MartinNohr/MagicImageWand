@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.79";
+const char* MIW_Version = "2.80";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -786,15 +786,15 @@ MenuItem LedLightBarMenu[] = {
     {eBool,"Allow rollover: %s",ToggleBool,&BuiltinInfo.bAllowRollover,0,0,0,"Yes","No"},
     {eTextInt,"Change Delay: %d mS",GetIntegerValue,&BuiltinInfo.nDisplayAllChangeTime,0,1000},
     {eList,"Color Mode: %s",GetSelectChoice,&BuiltinInfo.nLightBarMode,0,sizeof(LightBarModeText) / sizeof(*LightBarModeText) - 1,0,NULL,NULL,NULL,LightBarModeText},
-    {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_RGB},
-        {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllRed,0,255},
-        {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllGreen,0,255},
-        {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
-    {eEndif},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_HSV},
         {eTextInt,"Hue: %d",GetIntegerValueHue,&BuiltinInfo.nDisplayAllHue,0,255,0,NULL,NULL,UpdateStripHue},
         {eTextInt,"Saturation: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllSaturation,0,255},
         {eTextInt,"Brightness: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBrightness,0,255,0,NULL,NULL,UpdateStripBrightness},
+    {eEndif},
+    {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_RGB},
+        {eTextInt,"Red: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllRed,0,255},
+        {eTextInt,"Green: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllGreen,0,255},
+        {eTextInt,"Blue: %d",GetIntegerValue,&BuiltinInfo.nDisplayAllBlue,0,255},
     {eEndif},
     {eIfIntEqual,"",NULL,&BuiltinInfo.nLightBarMode,LBMODE_KELVIN},
 		{eList,"Temp: %s",GetSelectChoice,&BuiltinInfo.nColorTemperature,0,sizeof(LightBarColorKelvinText) / sizeof(*LightBarColorKelvinText) - 1,0,NULL,NULL,NULL,LightBarColorKelvinText},
@@ -1298,3 +1298,5 @@ OnServerItem OnServerList[] = {
     {"/verifyrebootsystem", VerifyRebootSystem},
     {"/rebootsystem", RebootSystem},
 };
+
+String MenuToHtml(MenuItem* menu, bool bActive = true, int nLevel = 0);

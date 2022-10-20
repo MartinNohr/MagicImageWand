@@ -703,7 +703,6 @@ void ShowMenu(struct MenuItem* menu)
 	MenuStack.top()->menucount = 0;
 	int y = 0;
 	int x = 0;
-	char line[50]{};
 	// load with a false to start with
 	std::stack<bool> skipStack;
 	skipStack.push(false);
@@ -5354,57 +5353,40 @@ void HomePage() {
 // handle the builtin settings changes
 void WebChangeBuiltinSettings()
 {
-	bool bSkipping = false;
 	MenuItem* menu = BuiltInFiles[currentFileIndex.nFileIndex].menu;
-	Serial.println("builtin settings change");
+	//Serial.println("builtin settings change");
 	String str, line, name, stmp;
 	double sfloat;
 	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
-		if (bSkipping) {
-			switch (menu->op) {
-			case eIfEqual:
-			case eIfIntEqual:
-			case eElse:
-			case eEndif:
-				break;
-			default:
-				continue;
-				break;
-			}
-		}
 		name = "bi_" + String(ix);
 		//Serial.println("id:" + name);
 		switch (menu->op) {
 		case eText:
-			Serial.println("eText");
+			//Serial.println("eText");
 			break;
 		case eTextInt:
-			*(int*)(menu->value) = server.arg(name).toInt();
+			//Serial.println("eTextInt:" + name);
+			if (server.hasArg(name))
+				*(int*)(menu->value) = server.arg(name).toInt();
 			break;
 		case eBool:
 			*(bool*)(menu->value) = server.arg(name).length() ? true : false;
 			break;
 		case eList:	// a dropdown list
 			// figure out which one
-			for (int ix = 0; ix <= menu->max; ++ix) {
-				if (server.arg(name) == String(menu->nameList[ix])) {
-					*(int*)menu->value = ix;
+			if (server.hasArg(name)) {
+				for (int ix = 0; ix <= menu->max; ++ix) {
+					if (server.arg(name) == String(menu->nameList[ix])) {
+						*(int*)menu->value = ix;
+					}
 				}
 			}
-			Serial.println("eList: " + String(server.arg(name)));
+			//Serial.println("eList: " + String(server.arg(name)));
 			break;
 		case eIfEqual:
-			bSkipping = *(bool*)(menu->value) != (menu->min ? true : false);
-			break;
 		case eIfIntEqual:
-			bSkipping = *(int*)(menu->value) != (menu->min);
-			break;
 		case eElse:
-			bSkipping = !bSkipping;
-			break;
 		case eEndif:
-			bSkipping = false;
-			break;
 		case eExit:	// do nothing
 		case eTextCurrentFile:
 		case eMenu:
@@ -5900,13 +5882,25 @@ void WebCancel()
 }
 
 // map a menuitem list to html
-String MenuToHtml(MenuItem* menu)
+// recurses for each eIf
+String MenuToHtml(MenuItem* pMenu, bool bActive, int nLevel)
 {
-	bool bSkipping = false;
-	String str, line, name, stmp;
+	static String str;
+	static int ix;
+	static MenuItem* menu, *StartMenu;
+	static String line, name, stmp;
 	double sfloat;
-	for (int ix = 0; menu->op != eTerminate; ++ix, ++menu) {
-		if (bSkipping) {
+	if (nLevel == 0) {
+		StartMenu = pMenu;
+		str = "";
+		ix = 0;
+	}
+	else {
+		++ix;
+	}
+	for (menu = &StartMenu[ix]; menu->op != eTerminate; ++ix, ++menu) {
+		if (!bActive) {
+			// skip if not one of the if else parts when not active
 			switch (menu->op) {
 			case eIfEqual:
 			case eIfIntEqual:
@@ -5919,6 +5913,7 @@ String MenuToHtml(MenuItem* menu)
 			}
 		}
 		name = "bi_" + String(ix);
+		//Serial.println("name: " + name);
 		// keep the line without %x's
 		line = menu->text;
 		if (line.indexOf("%d.%d") >= 0) {
@@ -5939,8 +5934,8 @@ String MenuToHtml(MenuItem* menu)
 			str += "<input type='text' name='" + name + "' size='" + String(5) + "' value='" + stmp + "'>";
 			str += "</label>";
 			break;
-		case eBool:
-			str += "<label>" + line;
+		case eBool:	// show the two text choices in (...)
+			str += "<label>" + line + " (" + menu->on + "&#x2611; | " + menu->off + "&#9633;)";
 			str += "<input type='checkbox' name='" + name + "' value='" + name + "'";
 			if (*(bool*)(menu->value))
 				str += " checked='checked'";
@@ -5962,16 +5957,18 @@ String MenuToHtml(MenuItem* menu)
 		case eExit:
 			break;
 		case eIfEqual:
-			bSkipping = *(bool*)(menu->value) != (menu->min ? true : false);
+			MenuToHtml(NULL, *(bool*)(menu->value) == (menu->min ? true : false), nLevel + 1);
+			continue;
 			break;
 		case eIfIntEqual:
-			bSkipping = *(int*)(menu->value) != (menu->min);
+			MenuToHtml(NULL, *(int*)(menu->value) == (menu->min), nLevel + 1);
+			continue;
 			break;
 		case eElse:
-			bSkipping = !bSkipping;
+			bActive = !bActive;
 			break;
 		case eEndif:
-			bSkipping = false;
+			return str;
 			break;
 		case eTextCurrentFile:
 		case eMenu:
@@ -5984,8 +5981,9 @@ String MenuToHtml(MenuItem* menu)
 		default:
 			break;
 		}
-		if (!bSkipping)
+		if (bActive) {
 			str += "<br>";
+		}
 	}
 	return str;
 }
