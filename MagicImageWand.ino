@@ -59,7 +59,6 @@ void setup()
 	while (!Serial.availableForWrite()) {
 		delay(10);
 	}
-	Serial2.begin(115200, SERIAL_8N1, 26, 27);
 	//Serial.println("flash:" + String(ESP.getFlashChipSize()));
 	//Serial.print("setup() is running on core ");
 	//Serial.println(xPortGetCoreID());
