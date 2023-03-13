@@ -55,11 +55,12 @@ void setup()
 	// init the display
 	tft.init();
 	tft.fillScreen(TFT_BLACK);
-
 	Serial.begin(115200);
 	while (!Serial.availableForWrite()) {
 		delay(10);
 	}
+	Serial2.begin(115200, SERIAL_8N1, 26, 27);
+	//Serial.println("flash:" + String(ESP.getFlashChipSize()));
 	//Serial.print("setup() is running on core ");
 	//Serial.println(xPortGetCoreID());
 	// create a mutex
@@ -5650,6 +5651,7 @@ enum WEB_SETTINGS_TYPE {
 	WST_BOOL,		// boolean values
 	WST_STRING,		// a string of characters
 	WST_TEXT_ONLY,	// text that will display as H2, use to separate sections
+	WST_SLIDER,		// a slider control
 };
 typedef WEB_SETTINGS_TYPE WEB_SETTINGS_TYPE;
 struct WEB_SETTINGS {
@@ -5661,7 +5663,7 @@ struct WEB_SETTINGS {
 	void* data;					// a pointer to the data
 	int width;					// how wide to make the field
 	int decimals;				// decimals for floats, although stored as ints, also used for max string length
-//	int min, max;				// not used yet, TODO, but will limit range of numbers
+	int min, max;				// not used yet, TODO, but will limit range of numbers
 };
 typedef WEB_SETTINGS WebSettings;
 WebSettings WebSettingsPage[] = {
@@ -5669,6 +5671,7 @@ WebSettings WebSettingsPage[] = {
 	{WST_BOOL,NULL,true,"Use Fixed Image Time","use_fixed_time",&ImgInfo.bFixedTime},
 	{WST_NUMBER,&ImgInfo.bFixedTime,true,"Fixed Time Value (S)","fixed_time",&ImgInfo.nFixedImageTime,4,0},
 	{WST_NUMBER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time",&ImgInfo.nFrameHold,4,0},
+	//{WST_SLIDER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time_slider",&ImgInfo.nFrameHold,4,0,0,500},
 	{WST_NUMBER,NULL,true,"Start Delay (S)","start_delay",&ImgInfo.startDelay,4,1},
 	{WST_BOOL,NULL,true,"Upside Down","upside_down",&ImgInfo.bUpsideDown},
 	{WST_BOOL,NULL,true,"Reverse Walk (left-right)","reverse_walk",&ImgInfo.bReverseImage},
@@ -5700,13 +5703,23 @@ WebSettings WebSettingsPage[] = {
 void WebChangeSettings()
 {
 	if (server.args()) {
+		void* lastData = NULL;
+		void* thisData = NULL;
 		//Serial.println("argcnt: " + String(server.args()));
 		for (WebSettings val : WebSettingsPage) {
+			thisData = val.data;
+			//if (thisData == lastData)
+			//	continue;
+			lastData = thisData;
 			if (val.type != WST_BOOL && !server.hasArg(val.name))
 				continue;
 			//Serial.println(String(val.name) + ": ~" + server.arg(val.name) + "~");
 			switch (val.type) {
 			case WST_NUMBER:
+				*(int*)(val.data) = (int)(server.arg(val.name).toDouble() * pow10(val.decimals));
+				break;
+			case WST_SLIDER:
+				//Serial.println("slider value:" + server.arg(val.name));
 				*(int*)(val.data) = (int)(server.arg(val.name).toDouble() * pow10(val.decimals));
 				break;
 			case WST_BOOL:
@@ -5730,6 +5743,7 @@ void WebShowSettings() {
 	double sfloat;
 	bool bDoneFirst = false;
 	load_page_header(false);
+	//webpage += ".slidecontainer{  width: 100 %;	}";
 	webpage += "<form id='allsettings' onchange='document.forms[\"allsettings\"].submit()' action='/changesettings' method='post'>";
 	//webpage += "<form onchange='document.getElementById(\"settingssubmitbutton\").disabled=false' action='/changesettings' method='post'>";
 	for (WebSettings val : WebSettingsPage) {
@@ -5747,6 +5761,14 @@ void WebShowSettings() {
 			stmp = String(sfloat, val.decimals);
 			webpage += "<input type='text' name='" + String(val.name) + "' size='" + String(val.width) + "' value='" + stmp + "'>";
 			webpage += "</label>";
+			break;
+		case WST_SLIDER:
+			//webpage += "<label>" + String(val.text) + ": ";
+			stmp = String(*(int*)(val.data));
+			sfloat = stmp.toDouble() / pow10(val.decimals);
+			stmp = String(sfloat, val.decimals);
+			webpage += "<input type='range' name='" + String(val.name) + "' min='" + String(val.min) + "' max='" + String(val.max) + "' value='" + stmp + "' class='slider' id='" + val.name + "'>";
+			//webpage += "</label>";
 			break;
 		case WST_BOOL:
 			webpage += "<label>" + String(val.text) + ": ";
