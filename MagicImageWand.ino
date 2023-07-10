@@ -4,6 +4,7 @@
  Author:	Martin Nohr
 */
 
+#include <TFT_eSPI.h>
 #include "MagicImageWand.h"
 #include "fonts.h"
 #include <nvs_flash.h>
@@ -103,7 +104,7 @@ void setup()
 				"second timer"
 	};
 	esp_timer_create(&periodic_Second_timer_args, &periodic_Second_timer);
-	esp_timer_start_periodic(periodic_Second_timer, 1000 * 1000);
+	esp_timer_start_periodic(periodic_Second_timer, (int64_t)1000 * 1000);
 
 	SystemInfo.bCriticalBatteryLevel = false;
 	tft.setFreeFont(&Dialog_bold_16);
