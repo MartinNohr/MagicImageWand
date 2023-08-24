@@ -3368,7 +3368,7 @@ void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
 }
 
 // put the current file on the display
-// Note that menu is not used, it is called with NULL sometimes
+// Note that MenuItem is not used
 void ShowBmp(MenuItem*)
 {
 	if (ImgInfo.bShowBuiltInTests) {
@@ -3553,7 +3553,8 @@ void ShowBmp(MenuItem*)
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
 						// because tftTall (might be 135) row display is less than 144 image
-						int row = x - SystemInfo.nPreviewStartOffset;
+						int row = ImgInfo.bUpsideDown ? (imgWidth - 1 - x) : x;
+						row -= SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < tftTall) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
 							uint16_t sbcolor;

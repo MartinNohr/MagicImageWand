@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.83";
+const char* MIW_Version = "2.84";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -1112,6 +1112,7 @@ MenuItem MainMenu[] = {
     {eIfEqual,"",NULL,&SystemInfo.bSimpleMenu,true},
         {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500,0,NULL,NULL,NULL,NULL,HelpImageColumnTime},
         {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
+        {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
         {eMenu,"Macros: #%d",{.menu = MacroMenuSimple},&ImgInfo.nCurrentMacro},
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
             {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
