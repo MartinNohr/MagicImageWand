@@ -3387,6 +3387,7 @@ void ShowBmp(MenuItem*)
 	LedInfo.bGammaCorrection = false;
 	bool bKeepShowing = true;
 	int tftTall = _min(144, tft.height());
+	int tftWide = tft.width();
 	while (bKeepShowing) {
 		String fn = currentFolder + FileNames[currentFileIndex.nFileIndex];
 		// make sure this is a bmp file, if not just quietly go away
@@ -3473,7 +3474,7 @@ void ShowBmp(MenuItem*)
 			lineLength = (lineLength / 4 + 1) * 4;
 		bool bDone = false;
 		bool bRedraw = true;
-		bool bAllowScroll = imgHeight > 240;
+		bool bAllowScroll = imgHeight > tftWide;
 		// column offset for showing the image
 		int imgStartCol = 0;
 		int oldImgStartCol = 0;
@@ -3497,7 +3498,7 @@ void ShowBmp(MenuItem*)
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
-				int newColStart = min((int32_t)imgHeight - 240, imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
+				int newColStart = min((int32_t)imgHeight - tftWide, imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
 				// if <= 0 we couldn't scroll
 				if (newColStart > 0) {
 					// if no change we must be at the end, so reset it
@@ -3517,35 +3518,42 @@ void ShowBmp(MenuItem*)
 				// following that the rest of the screen is read from the SD card
 				// this doubled the display speed on average when sideways scrolling
 				int startCol = 0;
-				int endCol = (imgHeight > 240 ? 240 : imgHeight);
+				int endCol = (imgHeight > tftWide ? tftWide : imgHeight);
 				uint16_t* base = scrBuf;
 				int diff = abs(imgStartCol - oldImgStartCol);
 				if (imgStartCol != oldImgStartCol) {
 					if (imgStartCol > oldImgStartCol) {
 						// move the display columns to the left
-						startCol = 240 - diff;
-						for (int mrow = 0; mrow < tftTall; ++mrow, base += 240) {
+						startCol = tftWide - diff;
+						for (int mrow = 0; mrow < tftTall; ++mrow, base += tftWide) {
 							// move the row
-							memmove(base, base + diff, (240 - diff) * sizeof(uint16_t));
+							memmove(base, base + diff, (tftWide - diff) * sizeof(uint16_t));
 						}
 					}
 					else {
 						// move the display columns to the right
 						startCol = 0;
 						endCol = diff;
-						for (int mrow = 0; mrow < tftTall; ++mrow, base += 240) {
+						for (int mrow = 0; mrow < tftTall; ++mrow, base += tftWide) {
 							// move the row
-							memmove(base + diff, base, (240 - diff) * sizeof(uint16_t));
+							memmove(base + diff, base, (tftWide - diff) * sizeof(uint16_t));
 						}
 					}
 				}
 				// now we read the missing data from the SD card
 				// loop through the image, y is the image width, and x is the image height
+//	for (int y = ImgInfo.bReverseImage ? imgHeight - 1 : 0; ImgInfo.bReverseImage ? y >= 0 : y < imgHeight; ImgInfo.bReverseImage ? --y : ++y) {
 				for (int col = startCol; col < endCol; ++col) {
 					int bufpos = 0;
 					CRGB pixel;
+					int tmpcol;
+					// if the image is rotated we need to reverse the direction reading the file
+					if (ImgInfo.bRotate180)
+						tmpcol = imgHeight - 1 - (col + imgStartCol);
+					else
+						tmpcol = col + imgStartCol;
 					// get to start of pixel data for this column
-					FileSeekBuf((uint32_t)bmpOffBits + (((col + imgStartCol) * (bHalfSize ? 2 : 1)) * lineLength));
+					FileSeekBuf((uint32_t)bmpOffBits + ((tmpcol * (bHalfSize ? 2 : 1)) * lineLength));
 					for (int x = 0; x < imgWidth; ++x) {
 						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();
@@ -3553,7 +3561,8 @@ void ShowBmp(MenuItem*)
 						if (bHalfSize)
 							pixel = getRGBwithGamma();
 						// because tftTall (might be 135) row display is less than 144 image
-						int row = ImgInfo.bUpsideDown ? (imgWidth - 1 - x) : x;
+						// if upsidedown xor (boolean !=) rotated180 we need to make it upside down
+						int row = (ImgInfo.bUpsideDown != ImgInfo.bRotate180) ? (imgWidth - 1 - x) : x;
 						row -= SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < tftTall) {
 							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
@@ -3561,13 +3570,13 @@ void ShowBmp(MenuItem*)
 							// the memory image colors are byte swapped
 							swab(&color, &sbcolor, 2);
 							// add to the display memory, organized as rows from top to bottom in memory
-							scrBuf[row * 240 + col] = sbcolor;
+							scrBuf[row * tftWide + col] = sbcolor;
 						}
 					}
 				}
 				oldImgStartCol = imgStartCol;
 				// got it all, go show it
-				tft.pushRect(0, 0, 240, tftTall, scrBuf);
+				tft.pushRect(0, 0, tftWide, tftTall, scrBuf);
 				// don't draw it again until something changes
 				bRedraw = false;
 			}
@@ -3603,7 +3612,7 @@ void ShowBmp(MenuItem*)
 			case BTN_LEFT_LONG:
 				if (!bShowingSize && bAllowScroll) {
 					imgStartCol += SystemInfo.nPreviewScrollCols;
-					imgStartCol = min((int)imgHeight - 240, imgStartCol);
+					imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
 				}
 				break;
 			case BTN_LEFT:
@@ -3619,7 +3628,7 @@ void ShowBmp(MenuItem*)
 				else {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol += SystemInfo.nPreviewScrollCols;
-						imgStartCol = min((int)imgHeight - 240, imgStartCol);
+						imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
 					}
 				}
 				break;
@@ -4844,7 +4853,7 @@ void SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		fade = 255;
 	}
 	int ix1 = 0, ix2 = 0;
-	if (ImgInfo.bUpsideDown) {
+	if (ImgInfo.bUpsideDown != ImgInfo.bRotate180) {
 		if (ImgInfo.bDoublePixels && !ImgInfo.bShowBuiltInTests) {
 			ix1 = AdjustStripIndex(LedInfo.nTotalLeds - 1 - 2 * ix);
 			ix2 = AdjustStripIndex(LedInfo.nTotalLeds - 2 - 2 * ix);
@@ -5675,6 +5684,7 @@ WebSettings WebSettingsPage[] = {
 	//{WST_SLIDER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time_slider",&ImgInfo.nFrameHold,4,0,0,500},
 	{WST_NUMBER,NULL,true,"Start Delay (S)","start_delay",&ImgInfo.startDelay,4,1},
 	{WST_BOOL,NULL,true,"Upside Down","upside_down",&ImgInfo.bUpsideDown},
+	{WST_BOOL,NULL,true,"Rotate 180","rotate_180",&ImgInfo.bRotate180},
 	{WST_BOOL,NULL,true,"Reverse Walk (left-right)","reverse_walk",&ImgInfo.bReverseImage},
 	{WST_BOOL,NULL,true,"Play Mirror Image","mirror_image",&ImgInfo.bMirrorPlayImage},
 	{WST_NUMBER,&ImgInfo.bMirrorPlayImage,true,"Middle Mirror Delay (S)","mirror_delay",&ImgInfo.nMirrorDelay,4,1},

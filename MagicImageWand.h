@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.84";
+const char* MIW_Version = "2.85";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -191,6 +191,7 @@ typedef struct IMG_INFO {
     bool bManualFrameAdvance = false;         // advance frame by clicking or rotating button
     bool bReverseImage = false;               // read the file lines in reverse
     bool bUpsideDown = false;                 // play the image upside down
+    bool bRotate180 = false;                  // the image is rotated 180 degrees, example: MagiLight images
     bool bDoublePixels = false;               // double the image line, to go from 144 to 288
     bool bMirrorPlayImage = false;            // play the file twice, 2nd time reversed
     int nMirrorDelay = 0;                     // pause between the two halves of the image
@@ -956,6 +957,7 @@ MenuItem ImageMenu[] = {
     {eTextInt,"Start Delay: %d.%d S",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
     {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255,0,NULL,NULL,NULL,NULL,HelpImageFade},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
+    {eBool,"Rotate 180: %s",ToggleBool,&ImgInfo.bRotate180,0,0,0,"Yes","No"},
     {eList,"Running Dial: %s",GetSelectChoice,&ImgInfo.nDialDuringImgAction,0,sizeof(DialImgText) / sizeof(*DialImgText) - 1,0,NULL,NULL,NULL,DialImgText},
 	{eIfIntEqual,"",NULL,&ImgInfo.nDialDuringImgAction,DIAL_IMG_NONE},
     {eElse},
@@ -1113,6 +1115,7 @@ MenuItem MainMenu[] = {
         {eTextInt,"Column Time: %d mS",GetIntegerValue,&ImgInfo.nFrameHold,0,500,0,NULL,NULL,NULL,NULL,HelpImageColumnTime},
         {eTextInt,"Brightness: %d/255",GetIntegerValue,&LedInfo.nLEDBrightness,1,255,0,NULL,NULL,UpdateStripBrightness},
         {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
+        {eBool,"Rotate 180: %s",ToggleBool,&ImgInfo.bRotate180,0,0,0,"Yes","No"},
         {eMenu,"Macros: #%d",{.menu = MacroMenuSimple},&ImgInfo.nCurrentMacro},
         {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,true},
             {eBuiltinOptions,"%s Options",{.builtin = BuiltInFiles}},
