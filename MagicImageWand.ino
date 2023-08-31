@@ -3169,10 +3169,11 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (SystemInfo.bShowDuringBmpFile) {
 		ShowLeds(1, TFT_BLACK, imgWidth);
 	}
+	bool bReverseImage = ImgInfo.bReverseImage != ImgInfo.bRotate180;
 	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
-	for (int y = ImgInfo.bReverseImage ? imgHeight - 1 : 0; ImgInfo.bReverseImage ? y >= 0 : y < imgHeight; ImgInfo.bReverseImage ? --y : ++y) {
+	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
 		// approximate time left
-		if (ImgInfo.bReverseImage)
+		if (bReverseImage)
 			secondsLeft = ((long)y * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
 		else
 			secondsLeft = ((long)(imgHeight - y) * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
@@ -3208,7 +3209,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 				sprintf(num, "File Seconds: %d", secondsLeft);
 				DisplayLine(2, num, SystemInfo.menuTextColor);
 			}
-			g_nPercentDone = map(ImgInfo.bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+			g_nPercentDone = map(bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
 		}
 		if (ImgInfo.bMirrorPlayImage) {
 			g_nPercentDone /= 2;
@@ -3296,7 +3297,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 						CRotaryDialButton::pushButton(BTN_LONG);
 					else if (btn == BTN_LEFT) {
 						// backup a line, use 2 because the for loop does one when we're done here
-						if (ImgInfo.bReverseImage) {
+						if (bReverseImage) {
 							y += 2;
 							if (y > imgHeight)
 								y = imgHeight;
@@ -3542,7 +3543,6 @@ void ShowBmp(MenuItem*)
 				}
 				// now we read the missing data from the SD card
 				// loop through the image, y is the image width, and x is the image height
-//	for (int y = ImgInfo.bReverseImage ? imgHeight - 1 : 0; ImgInfo.bReverseImage ? y >= 0 : y < imgHeight; ImgInfo.bReverseImage ? --y : ++y) {
 				for (int col = startCol; col < endCol; ++col) {
 					int bufpos = 0;
 					CRGB pixel;
@@ -4828,7 +4828,7 @@ void SetPixel(int ix, CRGB pixel, int column, int totalColumns)
 		}
 		// when the column changes check if we are in the fade areas
 		if (column != lastColumn) {
-			int realColumn = ImgInfo.bReverseImage ? maxColumn - 1 - column : column;
+			int realColumn = (ImgInfo.bReverseImage != ImgInfo.bRotate180) ? maxColumn - 1 - column : column;
 			if (realColumn <= fadeColumns) {
 				// calculate the fade amount
 				fade = realColumn * fadeStep;
