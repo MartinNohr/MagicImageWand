@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.86";
+const char* MIW_Version = "2.87";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -211,6 +211,9 @@ typedef struct IMG_INFO {
     bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
     int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
     int nDialDuringImgInc = 1;                // how much to change by during image display
+    int nStartCol = 0;                        // starting column to display
+    int nEndCol = 0;                          // ending column to display, ignored if 0 or same as start
+    bool bAutoColumnReset = true;             // reset the start and end columns when the file is changed
 };
 RTC_DATA_ATTR IMG_INFO ImgInfo;
 
@@ -292,6 +295,7 @@ typedef struct SYSTEM_INFO {
     char cNetworkPassword[65] = "";             // network password
     bool bStartUniverseOne = true;              // some controllers need 1, others 0 (false)
     bool bRunWebServer = false;                 // run the web server
+    bool bAutoLoadFileOnRun = true;             // load the associated file when an image is run
     //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -946,6 +950,8 @@ MenuItem SystemMenu[] = {
 const char* HelpImageColumnTime = "How many mSeconds to display each column on the LEDS";
 const char* HelpImageTime = "How many seconds to display the entire image on the LEDS";
 const char* HelpImageFade = "Columns that fade up at start and down at end";
+const char* HelpStartCol = "Starting column index, 0 is first";
+const char* HelpEndCol = "Ending column index, make 0 to disable";
 MenuItem ImageMenu[] = {
     {eExit,"Image Settings"},
     {eBool,"Timing Type: %s",ToggleBool,&ImgInfo.bFixedTime,0,0,0,"Image","Column"},
@@ -970,6 +976,9 @@ MenuItem ImageMenu[] = {
             {eTextInt,"Mirror Delay: %d.%d S",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
+        {eTextInt,"Start Column: %d",GetIntegerValue,&ImgInfo.nStartCol,0,2048,0,NULL,NULL,NULL,NULL,HelpStartCol},
+        {eTextInt,"End Column: %d",GetIntegerValue,&ImgInfo.nEndCol,0,2048,0,NULL,NULL,NULL,NULL,HelpEndCol},
+        {eBool,"Reset Columns on Change: %s",ToggleBool,&ImgInfo.bAutoColumnReset,0,0,0,"Yes","No"},
     {eEndif},
     {eBool,"144 to 288 Pixels: %s",ToggleBool,&ImgInfo.bDoublePixels,0,0,0,"Yes","No"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
@@ -1004,6 +1013,7 @@ MenuItem AssociatedFileMenu[] = {
     {eTextCurrentFile,"Save  %s.MIW",SaveAssociatedFile},
     {eTextCurrentFile,"Load  %s.MIW",LoadAssociatedFile},
     {eTextCurrentFile,"Erase %s.MIW",EraseAssociatedFile},
+    {eBool,"Autoload on Run: %s",ToggleBool,&SystemInfo.bAutoLoadFileOnRun,0,0,0,"Yes","No"},
     {eExit,"MIW Files Menu"},
     // make sure this one is last
     {eTerminate}
@@ -1221,6 +1231,9 @@ struct SETTINGVAR SettingsVarList[] = {
     {"HILITE FILE",&SystemInfo.bHiLiteCurrentFile,vtBool},
     {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
+    {"ROTATE 180",&ImgInfo.bRotate180,vtBool},
+    {"START COLUMN",&ImgInfo.nStartCol,vtInt,0,2048},
+    {"END COLUMN",&ImgInfo.nEndCol,vtInt,0,2048},
 };
 
 RTC_DATA_ATTR int nMenuLineCount = 7;

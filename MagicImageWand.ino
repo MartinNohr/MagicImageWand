@@ -1461,6 +1461,8 @@ bool HandleRunMode()
 		break;
 	case BTN_RIGHT_LONG:
 	case BTN_RIGHT:
+		if (ImgInfo.bAutoColumnReset)
+			ImgInfo.nStartCol = ImgInfo.nEndCol = 0;
 		while (btnRepeatCount--) {
 			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor < maxMenuLine) {
 				++currentFileIndex.nFileCursor;
@@ -1478,6 +1480,8 @@ bool HandleRunMode()
 		break;
 	case BTN_LEFT_LONG:
 	case BTN_LEFT:
+		if (ImgInfo.bAutoColumnReset)
+			ImgInfo.nStartCol = ImgInfo.nEndCol = 0;
 		while (btnRepeatCount--) {
 			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor > 0) {
 				--currentFileIndex.nFileCursor;
@@ -3060,10 +3064,13 @@ void ProcessFileOrBuiltin()
 }
 
 void SendFile(String Filename) {
-	// see if there is an associated config file
-	String cfFile = MakeMIWFilename(Filename, true);
-	SettingsSaveRestore(true, 0);
-	ProcessConfigFile(cfFile);
+	bool bSavedReverse = ImgInfo.bReverseImage;	// save in case we mess with it
+	// see if there is an associated config file and if it is supposed to run
+	if (SystemInfo.bAutoLoadFileOnRun) {
+		String cfFile = MakeMIWFilename(Filename, true);
+		SettingsSaveRestore(true, 0);
+		ProcessConfigFile(cfFile);
+	}
 	String fn = currentFolder + Filename;
 	dataFile = SD.open(fn);
 	// if the file is available send it to the LED's
@@ -3088,7 +3095,10 @@ void SendFile(String Filename) {
 	}
 	if (!bRunningMacro)
 		ShowProgressBar(100);
-	SettingsSaveRestore(false, 0);
+	if (SystemInfo.bAutoLoadFileOnRun) {
+		SettingsSaveRestore(false, 0);
+	}
+	ImgInfo.bReverseImage = bSavedReverse;
 }
 
 // some useful BMP constants
@@ -3122,6 +3132,8 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	uint32_t imgSize = readLong();
 	uint32_t imgWidth = readLong();
 	uint32_t imgHeight = readLong();
+	// save the original length, we need it later since imgHeight might be changed due to column limits
+	uint32_t imgOriginalHeight = imgHeight;
 	uint16_t imgPlanes = readInt();
 	uint16_t imgBitCount = readInt();
 	uint32_t imgCompression = readLong();
@@ -3171,12 +3183,21 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	}
 	bool bReverseImage = ImgInfo.bReverseImage != ImgInfo.bRotate180;
 	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
-	for (int y = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? y >= 0 : y < imgHeight; bReverseImage ? --y : ++y) {
+	// if start and end columns are different we need to adjust the imgHeight value
+	// first see if end needs to be fixed
+	if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
+		// set it to the end
+		ImgInfo.nEndCol = imgHeight - 1;
+	}
+	if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
+		imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+	}
+	for (int column = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? column >= 0 : column < imgHeight; bReverseImage ? --column : ++column) {
 		// approximate time left
 		if (bReverseImage)
-			secondsLeft = ((long)y * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
+			secondsLeft = ((long)column * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
 		else
-			secondsLeft = ((long)(imgHeight - y) * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
+			secondsLeft = ((long)(imgHeight - column) * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
 		// mark the time for timing the loop
 		if (!bLoopTimed) {
 			minLoopTime = millis();
@@ -3209,7 +3230,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 				sprintf(num, "File Seconds: %d", secondsLeft);
 				DisplayLine(2, num, SystemInfo.menuTextColor);
 			}
-			g_nPercentDone = map(bReverseImage ? imgHeight - y : y, 0, imgHeight, 0, 100);
+			g_nPercentDone = map(bReverseImage ? imgHeight - column : column, 0, imgHeight, 0, 100);
 		}
 		if (ImgInfo.bMirrorPlayImage) {
 			g_nPercentDone /= 2;
@@ -3222,18 +3243,20 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		int bufpos = 0;
 		CRGB pixel;
-		FileSeekBuf((uint32_t)bmpOffBits + (y * lineLength));
+		int startHere = bReverseImage ? imgOriginalHeight - ImgInfo.nStartCol - (imgHeight - column) : column + ImgInfo.nStartCol;
+		//Serial.print(String("startHere:") + startHere + " col:" + column + "\n");
+		FileSeekBuf((uint32_t)bmpOffBits + (startHere * lineLength));
 		//uint32_t offset = (bmpOffBits + (y * lineLength));
 		//dataFile.seekSet(offset);
-		// add the column here
-		for (int x = displayWidth - 1; x >= 0; --x) {
+		// add the column row data here
+		for (int row = displayWidth - 1; row >= 0; --row) {
 			// this reads three bytes
 			pixel = getRGBwithGamma();
 			// see if we want this one
-			if (ImgInfo.bScaleHeight && (x * displayWidth) % imgWidth) {
+			if (ImgInfo.bScaleHeight && (row * displayWidth) % imgWidth) {
 				continue;
 			}
-			SetPixel(x, pixel, y);
+			SetPixel(row, pixel, column);
 			if (SystemInfo.bShowDuringBmpFile) {
 				ShowLeds(4, pixel);
 			}
@@ -3298,14 +3321,14 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 					else if (btn == BTN_LEFT) {
 						// backup a line, use 2 because the for loop does one when we're done here
 						if (bReverseImage) {
-							y += 2;
-							if (y > imgHeight)
-								y = imgHeight;
+							column += 2;
+							if (column > imgHeight)
+								column = imgHeight;
 						}
 						else {
-							y -= 2;
-							if (y < -1)
-								y = -1;
+							column -= 2;
+							if (column < -1)
+								column = -1;
 						}
 						break;
 					}
@@ -3443,6 +3466,7 @@ void ShowBmp(MenuItem*)
 		uint32_t imgSize = readLong();
 		uint32_t imgWidth = readLong();
 		uint32_t imgHeight = readLong();
+		uint32_t imgOriginalHeight = imgHeight;	// keep around for later use, since imgHeight might get changed due to column restrictions
 		uint16_t imgPlanes = readInt();
 		uint16_t imgBitCount = readInt();
 		uint32_t imgCompression = readLong();
@@ -3467,7 +3491,14 @@ void ShowBmp(MenuItem*)
 			// also divide the width (height in the file) by 2
 			imgHeight /= 2;
 		}
-
+		// now see if column restrictions are set, first see if end needs to be fixed
+		if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
+			// set it to the end
+			ImgInfo.nEndCol = imgHeight - 1;
+		}
+		if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
+			imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+		}
 		/* compute the line length */
 		uint32_t lineLength = imgWidth * 3;
 		// fix for padding to 4 byte words
@@ -3542,18 +3573,20 @@ void ShowBmp(MenuItem*)
 					}
 				}
 				// now we read the missing data from the SD card
-				// loop through the image, y is the image width, and x is the image height
+				// loop through the image, col is the image width, and x is the image height
 				for (int col = startCol; col < endCol; ++col) {
 					int bufpos = 0;
 					CRGB pixel;
-					int tmpcol;
+					int startHere;
 					// if the image is rotated we need to reverse the direction reading the file
-					if (ImgInfo.bRotate180)
-						tmpcol = imgHeight - 1 - (col + imgStartCol);
-					else
-						tmpcol = col + imgStartCol;
+					if (ImgInfo.bRotate180) {
+						startHere = imgOriginalHeight - 1 - (col + imgStartCol) - ImgInfo.nStartCol;
+					}
+					else {
+						startHere = col + imgStartCol + ImgInfo.nStartCol;
+					}
 					// get to start of pixel data for this column
-					FileSeekBuf((uint32_t)bmpOffBits + ((tmpcol * (bHalfSize ? 2 : 1)) * lineLength));
+					FileSeekBuf((uint32_t)bmpOffBits + ((startHere * (bHalfSize ? 2 : 1)) * lineLength));
 					for (int x = 0; x < imgWidth; ++x) {
 						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();

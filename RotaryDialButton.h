@@ -266,6 +266,7 @@ public:
             gpio_set_pull_mode(gpioAltRight, GPIO_PULLUP_ONLY);
             attachInterruptArg(gpioAltRight, clickHandler, (void*)"3", FALLING);
         }
+        encoder.setFilter(1023);
     }
     // see what the next button is, return None if queue empty
     static Button peek()
