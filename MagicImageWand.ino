@@ -23,7 +23,7 @@ int FileCountOnly(int start = 0);
 //esp_timer_cb_t oneshot_timer_callback(void* arg)
 void oneshot_LED_timer_callback(void* arg)
 {
-	bStripWaiting = false;
+	g_bStripWaiting = false;
 	//int64_t time_since_boot = esp_timer_get_time();
 	//Serial.println("in isr");
 	//ESP_LOGI(TAG, "One-shot timer called, time since boot: %lld us", time_since_boot);
@@ -204,6 +204,7 @@ void setup()
 	MenuStack.top()->index = 0;
 	MenuStack.top()->offset = 0;
 	leds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
+	tmpLeds = (CRGB*)calloc(LedInfo.nTotalLeds, sizeof(*leds));
 	if (LedInfo.bSwapControllers)
 		FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, 0, LedInfo.bSecondController ? LedInfo.nTotalLeds / 2 : LedInfo.nTotalLeds);
 	else
@@ -216,7 +217,6 @@ void setup()
 		else
 			FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds, LedInfo.nTotalLeds / 2, LedInfo.nTotalLeds / 2);
 	}
-	//FastLED.setTemperature(whiteBalance);
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
@@ -1850,7 +1850,6 @@ void CheckerBoard()
 			SetPixel(y, ((y + addPixels) % width) < BuiltinInfo.nCheckboardBlackWidth ? color1 : color2);
 		}
 		ShowLeds();
-		//FastLED.show();
 		int count = BuiltinInfo.nCheckerboardHoldframes;
 		while (count-- > 0) {
 			delay(ImgInfo.nFrameHold);
@@ -1949,13 +1948,11 @@ void RunningDot()
 			}
 			SetPixel(ix, CRGB(r, g, b));
 			ShowLeds();
-			//FastLED.show();
 			delay(max(1, ImgInfo.nFrameHold));
 		}
 		// remember the last one, turn it off
 		SetPixel(LedInfo.nTotalLeds - 1, CRGB::Black);
 		ShowLeds();
-		//FastLED.show();
 	}
 	FastLED.clear(true);
 	delay(2);
@@ -2946,8 +2943,12 @@ void ProcessFileOrBuiltin()
 				DisplayLine(3, line, SystemInfo.menuTextColor);
 				if (ImgInfo.bShowBuiltInTests) {
 					DisplayLine(4, "Running (long cancel)", SystemInfo.menuTextColor);
+					if (SystemInfo.bShowLEDsOnLcdWhileRunning)
+						ShowLeds(1);
 					// run the test
 					(*BuiltInFiles[currentFileIndex.nFileIndex].function)();
+					if (SystemInfo.bShowLEDsOnLcdWhileRunning)
+						ShowLeds(2);
 				}
 				else {
 					if (ImgInfo.nRepeatCountMacro > 1 && bRunningMacro) {
@@ -3154,7 +3155,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
 		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
 	{
-		WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
+		WriteMessage(String("Unsupported, must be 24bpp, 1 plane, uncompressed, and non-zero size:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 		return;
 	}
 	int displayWidth = imgWidth;
@@ -3178,7 +3179,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	char num[50];
 	unsigned minLoopTime = 0; // the minimum time it takes to process a line
 	bool bLoopTimed = false;
-	if (SystemInfo.bShowDuringBmpFile) {
+	if (SystemInfo.bShowLEDsOnLcdWhileRunning) {
 		ShowLeds(1, TFT_BLACK, imgWidth);
 	}
 	bool bReverseImage = ImgInfo.bReverseImage != ImgInfo.bRotate180;
@@ -3195,9 +3196,9 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	for (int column = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? column >= 0 : column < imgHeight; bReverseImage ? --column : ++column) {
 		// approximate time left
 		if (bReverseImage)
-			secondsLeft = ((long)column * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
+			secondsLeft = ((long)column * (ImgInfo.nFrameHold + ImgInfo.nStutterTime + minLoopTime) / 1000L) + 1;
 		else
-			secondsLeft = ((long)(imgHeight - column) * (ImgInfo.nFrameHold + minLoopTime) / 1000L) + 1;
+			secondsLeft = ((long)(imgHeight - column) * (ImgInfo.nFrameHold + ImgInfo.nStutterTime + minLoopTime) / 1000L) + 1;
 		// mark the time for timing the loop
 		if (!bLoopTimed) {
 			minLoopTime = millis();
@@ -3257,7 +3258,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 				continue;
 			}
 			SetPixel(row, pixel, column);
-			if (SystemInfo.bShowDuringBmpFile) {
+			if (SystemInfo.bShowLEDsOnLcdWhileRunning) {
 				ShowLeds(4, pixel);
 			}
 		}
@@ -3274,19 +3275,16 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 			}
 		}
 		// wait for timer to expire before we show the next frame
-		while (bStripWaiting) {
+		while (g_bStripWaiting) {
 			MenuTextScrollSideways();
 			//yield();
 			//delayMicroseconds(100);
 			// we should maybe check the cancel key here to handle slow frame rates?
 		}
 		// now show the lights
-		FastLED.show();
-		if (SystemInfo.bShowDuringBmpFile) {
-			ShowLeds(3);
-		}
+		ShowLeds();
 		// set a timer while we go ahead and load the next frame
-		bStripWaiting = true;
+		g_bStripWaiting = true;
 		esp_timer_start_once(oneshot_LED_timer, static_cast<uint64_t>(ImgInfo.nFrameHold) * 1000);
 		// check keys
 		if (CheckCancel())
@@ -3345,7 +3343,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	}
 	// all done
 	readByte(true);
-	if (SystemInfo.bShowDuringBmpFile) {
+	if (SystemInfo.bShowLEDsOnLcdWhileRunning) {
 		ShowLeds(2);
 	}
 }
@@ -3399,6 +3397,7 @@ void ShowBmp(MenuItem*)
 		bCancelMacro = bCancelRun = false;
 		if (BuiltInFiles[currentFileIndex.nFileIndex].function) {
 			ShowLeds(1);    // get ready for preview
+			ShowLeds(5);    // turn LEDs off
 			(*BuiltInFiles[currentFileIndex.nFileIndex].function)();
 			ShowLeds(2);    // go back to normal
 		}
@@ -3523,7 +3522,7 @@ void ShowBmp(MenuItem*)
 		DisplayLine(13, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
 		DisplayLine(14, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 		// calculate display time
-		float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+		float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * (ImgInfo.nFrameHold + ImgInfo.nStutterTime) / 1000.0 + imgHeight * .008);
 		DisplayLine(15, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
 #endif
 		while (!bDone) {
@@ -3690,7 +3689,7 @@ void ShowBmp(MenuItem*)
 					DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
 					DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 					// calculate display time
-					float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * ImgInfo.nFrameHold / 1000.0 + imgHeight * .008);
+					float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * (ImgInfo.nFrameHold + ImgInfo.nStutterTime) / 1000.0 + imgHeight * .008);
 					DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
 					bShowingSize = true;
 					bRedraw = false;
@@ -3726,7 +3725,7 @@ void DisplayLine(int line, String text, int16_t color, int16_t backColor)
 {
 	if (line >= 0 && line < nMenuLineCount) {
 		// don't show if running and displaying file on LCD
-		if (!(bIsRunning && SystemInfo.bShowDuringBmpFile)) {
+		if (!(bIsRunning && SystemInfo.bShowLEDsOnLcdWhileRunning)) {
 			if (TextLines[line].Line != text || TextLines[line].backColor != backColor || TextLines[line].foreColor != color) {
 				int pixels = tft.textWidth(text);
 				if (pixels > tft.width()) {
@@ -3971,12 +3970,12 @@ void ShowProgressBar(int percent)
 		if (lastpercent && (lastpercent == percent))
 			return;
 		int x = tft.width() - 1;
-		int y = SystemInfo.bShowDuringBmpFile ? 0 : (tft.fontHeight() + 4);
-		int h = SystemInfo.bShowDuringBmpFile ? 4 : 8;
+		int y = SystemInfo.bShowLEDsOnLcdWhileRunning ? 0 : (tft.fontHeight() + 4);
+		int h = SystemInfo.bShowLEDsOnLcdWhileRunning ? 4 : 8;
 		if (percent == 0) {
 			tft.fillRect(0, y, x, h, TFT_BLACK);
 		}
-		DrawProgressBar(0, y, x, h, percent, !SystemInfo.bShowDuringBmpFile);
+		DrawProgressBar(0, y, x, h, percent, !SystemInfo.bShowLEDsOnLcdWhileRunning);
 		lastpercent = percent;
 	}
 }
@@ -5714,6 +5713,8 @@ WebSettings WebSettingsPage[] = {
 	{WST_BOOL,NULL,true,"Use Fixed Image Time","use_fixed_time",&ImgInfo.bFixedTime},
 	{WST_NUMBER,&ImgInfo.bFixedTime,true,"Fixed Time Value (S)","fixed_time",&ImgInfo.nFixedImageTime,4,0},
 	{WST_NUMBER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time",&ImgInfo.nFrameHold,4,0},
+	{WST_NUMBER,&ImgInfo.bFixedTime,false,"Stutter Time(mS)","stutter_time",&ImgInfo.nStutterTime,4,0},
+	{WST_BOOL,NULL,true,"Stutter White","stutter_white",&ImgInfo.bStutterWhite},
 	//{WST_SLIDER,&ImgInfo.bFixedTime,false,"Column Time(mS)","column_time_slider",&ImgInfo.nFrameHold,4,0,0,500},
 	{WST_NUMBER,NULL,true,"Start Delay (S)","start_delay",&ImgInfo.startDelay,4,1},
 	{WST_BOOL,NULL,true,"Upside Down","upside_down",&ImgInfo.bUpsideDown},
@@ -6104,9 +6105,11 @@ void File_Upload()
 // show on leds or display
 // mode 0 is normal, mode 1 is prepare for LCD, mode 2 is reset to normal
 // mode 3 writes to LCD, 4 adds a pixel to the buffer
+// mode 5 turns the LED's off, used for previewing the built-ins
 constexpr int BMP_LCD_SKIP_TOP = 4;
 void ShowLeds(int mode, CRGB colorval, int imgHeight)
 {
+	static bool bNoLED = false;	// don't show the LED's
 	static bool bSkipCol = false;
 	static bool bSkipRow = false;
 	static bool bHalfSize = false;
@@ -6119,23 +6122,30 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	int height;
 	// reset the sleep timer
 	ResetSleepAndDimTimers();
-	// just send to the LEDs
-	if (scrBuf == nullptr && mode == 0) {
-		FastLED.show();
-		return;
-	}
 	switch (mode) {
-	case 0:	// get column from leds array
-		height = tft.height();
-		height = constrain(height, 0, LedInfo.nTotalLeds - BMP_LCD_SKIP_TOP);
-		for (int ix = top; ix < height - top; ++ix) {
-			color = tft.color565(leds[ix + BMP_LCD_SKIP_TOP].r, leds[ix + BMP_LCD_SKIP_TOP].g, leds[ix + BMP_LCD_SKIP_TOP].b);
-			sbcolor;
-			// the memory image colors are byte swapped
-			swab(&color, &sbcolor, sizeof(uint16_t));
-			scrBuf[ix - top] = sbcolor;
+	case 0:
+		// see if need to do the stutter time
+		if (ImgInfo.nStutterTime) {
+			// copy the led array
+			memcpy(tmpLeds, leds, sizeof(CRGB) * LedInfo.nTotalLeds);
+			// fill with black or white
+			memset(leds, ImgInfo.bStutterWhite ? 0xff : 0x00, sizeof(CRGB) * LedInfo.nTotalLeds);
+			FastLED.show();
+			// wait for the specified mSeconds
+			unsigned long startmS = millis();
+			while (millis() < startmS + ImgInfo.nStutterTime)
+				ResetSleepAndDimTimers();
+			// restore the leds
+			memcpy(leds, tmpLeds, sizeof(CRGB) * LedInfo.nTotalLeds);
 		}
-		ShowLeds(3);
+		// send it to the LED's
+		if (!bNoLED) {
+			FastLED.show();
+		}
+		// check if LCD also needs updating
+		if (scrBuf != nullptr) {
+			ShowLeds(3);
+		}
 		break;
 	case 1:	// initialize
 		row = col = 0;
@@ -6156,8 +6166,22 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 	case 2:	// clean up and leave
 		free(scrBuf);
 		scrBuf = NULL;
+		bNoLED = false;
 		break;
-	case 3:	// output to tft
+	case 3:	// output to tft lCD using data from the LED buffer
+		// sanity check, scrBuf must not be null
+		if (scrBuf == nullptr)
+			break;
+		// get LCD column data from leds array
+		height = tft.height();
+		height = constrain(height, 0, LedInfo.nTotalLeds - BMP_LCD_SKIP_TOP);
+		for (int ix = top; ix < height - top; ++ix) {
+			color = tft.color565(leds[ix + BMP_LCD_SKIP_TOP].r, leds[ix + BMP_LCD_SKIP_TOP].g, leds[ix + BMP_LCD_SKIP_TOP].b);
+			sbcolor;
+			// the memory image colors are byte swapped
+			swab(&color, &sbcolor, sizeof(uint16_t));
+			scrBuf[ix - top] = sbcolor;
+		}
 		row = 0;
 		if (bHalfSize) {
 			bSkipCol = !bSkipCol;
@@ -6187,6 +6211,9 @@ void ShowLeds(int mode, CRGB colorval, int imgHeight)
 			}
 			++row;
 		}
+		break;
+	case 5:	// turn LED's off
+		bNoLED = true;
 		break;
 	default:
 		break;

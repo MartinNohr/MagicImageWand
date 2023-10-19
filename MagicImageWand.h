@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.87";
+const char* MIW_Version = "2.88";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -158,6 +158,8 @@ bool bAutoLoadSettings = false;
 
 // The array of leds, up to 512
 CRGB* leds;
+// temporary array for various uses
+CRGB* tmpLeds;
 // 0 feed from center, 1 serial from end, 2 from outsides
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
 const char* StripsWiringText[] = { "Middle","Serial","Outside" };
@@ -184,7 +186,7 @@ const char* DialImgText[] = { "None","Brightness","Speed" };
 
 // image settings
 typedef struct IMG_INFO {
-    int nFrameHold = 10;                      // default for the frame delay
+    int nFrameHold = 10;                      // default for the frame delay,mS
     bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
     int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
     int nFramePulseCount = 0;                 // advance frame when button pressed this many times, 0 means ignore
@@ -214,6 +216,8 @@ typedef struct IMG_INFO {
     int nStartCol = 0;                        // starting column to display
     int nEndCol = 0;                          // ending column to display, ignored if 0 or same as start
     bool bAutoColumnReset = true;             // reset the start and end columns when the file is changed
+    int nStutterTime = 0;                     // black/white band between columns time in mS
+    bool bStutterWhite = false;               // stutter column black or white
 };
 RTC_DATA_ATTR IMG_INFO ImgInfo;
 
@@ -250,7 +254,7 @@ typedef struct SYSTEM_INFO {
 #endif
     bool bAllowMenuWrap = false;                // allows menus to wrap around from end and start instead of pinning
     bool bShowNextFiles = true;                 // show the next files in the main display
-    bool bShowDuringBmpFile = false;            // set this to display the bmp on the LCD and the LED during BMP display
+    bool bShowLEDsOnLcdWhileRunning = false;    // set this to display the bmp on the LCD and the LED during BMP display
     int nSidewayScrollSpeed = 25;               // mSec for pixel scroll
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
@@ -470,7 +474,7 @@ volatile int nTimerSeconds;
 
 // esp timers
 // set this to the delay time while we get the next frame, also used for delay timers
-volatile bool bStripWaiting = false;
+volatile bool g_bStripWaiting = false;
 esp_timer_handle_t oneshot_LED_timer;
 esp_timer_create_args_t oneshot_LED_timer_args;
 // use this timer for seconds countdown
@@ -863,7 +867,7 @@ MenuItem DialMenu[] = {
 };
 MenuItem HomeScreenMenu[] = {
     {eExit,"Run Screen Settings"},
-    {eBool,"Show BMP on LCD: %s",ToggleBool,&SystemInfo.bShowDuringBmpFile,0,0,0,"Yes","No"},
+    {eBool,"Show LEDs on LCD: %s",ToggleBool,&SystemInfo.bShowLEDsOnLcdWhileRunning,0,0,0,"Yes","No"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No",UpdateKeepOnTop},
@@ -960,6 +964,8 @@ MenuItem ImageMenu[] = {
     {eElse},
         {eTextInt,"Image Time: %d S",GetIntegerValue,&ImgInfo.nFixedImageTime,1,120,0,NULL,NULL,NULL,NULL,HelpImageTime},
     {eEndif},
+    {eTextInt,"Stutter Time: %d mS",GetIntegerValue,&ImgInfo.nStutterTime,0,500,0,NULL,NULL,NULL,NULL,HelpImageColumnTime},
+    {eBool,"Stutter B/W: %s",ToggleBool,&ImgInfo.bStutterWhite,0,0,0,"White","Black"},
     {eTextInt,"Start Delay: %d.%d S",GetIntegerValue,&ImgInfo.startDelay,0,100,1},
     {eTextInt,"Fade I/O Columns: %d",GetIntegerValue,&ImgInfo.nFadeInOutFrames,0,255,0,NULL,NULL,NULL,NULL,HelpImageFade},
     {eBool,"Upside Down: %s",ToggleBool,&ImgInfo.bUpsideDown,0,0,0,"Yes","No"},
@@ -1226,7 +1232,7 @@ struct SETTINGVAR SettingsVarList[] = {
     {"CHAIN WAIT FOR KEY",&ImgInfo.bChainWaitKey,vtBool},
     {"DISPLAY BRIGHTNESS",&SystemInfo.nDisplayBrightness,vtInt,0,100},
     {"DISPLAY MENULINE COLOR",&SystemInfo.menuTextColor,vtInt},
-    {"SHOW BMP ON LCD",&SystemInfo.bShowDuringBmpFile,vtBool},
+    {"SHOW BMP ON LCD",&SystemInfo.bShowLEDsOnLcdWhileRunning,vtBool},
     {"MENU STAR",&SystemInfo.bMenuStar,vtBool},
     {"HILITE FILE",&SystemInfo.bHiLiteCurrentFile,vtBool},
     {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
