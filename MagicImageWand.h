@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.88";
+const char* MIW_Version = "2.89";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -261,9 +261,10 @@ typedef struct SYSTEM_INFO {
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
     int nBatteryFullLevel = 1760;               // 100% battery
     int nBatteryEmptyLevel = 1230;              // 0% battery, should cause a shutdown to save the batteries
-    int bShowBatteryLevel = HAS_BATTERY_LEVEL;  // display the battery level on the bottom line
-    int bSleepOnLowBattery = false;             // sleep on low battery
-    int bCriticalBatteryLevel = false;          // set true if battery too low
+    bool bShowBatteryLevel = HAS_BATTERY_LEVEL; // display the battery level on the bottom line
+    bool bShowFilePosition = true;              // display the current selected file position and count
+    bool bSleepOnLowBattery = false;            // sleep on low battery
+    bool bCriticalBatteryLevel = false;         // set true if battery too low
     //int bShowBatteryLevel = 0;  // display the battery level on the bottom line
     int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
@@ -866,12 +867,13 @@ MenuItem DialMenu[] = {
     {eTerminate}
 };
 MenuItem HomeScreenMenu[] = {
-    {eExit,"Run Screen Settings"},
+    {eExit,"Home Screen Settings"},
     {eBool,"Show LEDs on LCD: %s",ToggleBool,&SystemInfo.bShowLEDsOnLcdWhileRunning,0,0,0,"Yes","No"},
     {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No",UpdateKeepOnTop},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
+    {eBool,"Show File Index/Total: %s",ToggleBool,&SystemInfo.bShowFilePosition,0,0,0,"Yes","No"},
     {eBool,"Progress Bar: %s",ToggleBool,&SystemInfo.bShowProgress,0,0,0,"On","Off"},
     {eExit,PreviousMenu},
     // make sure this one is last
@@ -936,7 +938,7 @@ MenuItem WiFiMenu[] = {
 MenuItem SystemMenu[] = {
     {eExit,"System Settings"},
     {eMenu,"Display Settings",{.menu = DisplayMenu}},
-    {eMenu,"Run Screen Settings",{.menu = HomeScreenMenu}},
+    {eMenu,"Home Screen Settings",{.menu = HomeScreenMenu}},
     {eMenu,"Dial & Button Settings",{.menu = DialMenu}},
     {eMenu,"Preview Settings",{.menu = PreviewMenu}},
 #if HAS_BATTERY_LEVEL

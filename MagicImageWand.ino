@@ -50,6 +50,7 @@ const int resolution = 8;
 TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite" with pointer to "tft" object
 #define BATTERY_BAR_HEIGHT 5
 TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
+TFT_eSprite FileCountSprite = TFT_eSprite(&tft);	// shows the file position and count
 
 void setup()
 {
@@ -197,6 +198,12 @@ void setup()
 	BatterySprite.fillSprite(TFT_BLACK);
 	BatterySprite.setFreeFont(&Dialog_bold_16);
 	BatterySprite.setTextPadding(tft.width());
+	// get the file count sprite ready
+	FileCountSprite.setColorDepth(16);
+	FileCountSprite.createSprite(100, tft.fontHeight() + 2);
+	FileCountSprite.fillSprite(TFT_BLACK);
+	FileCountSprite.setFreeFont(&Dialog_bold_16);
+	FileCountSprite.setTextPadding(tft.width());
 	// get the menu system ready
 	menuPtr = new MenuInfo;
 	MenuStack.push(menuPtr);
@@ -558,6 +565,10 @@ void loop()
 	if (didsomething) {
 		didsomething = false;
 		delay(1);
+	}
+	// show file index if on
+	if (SystemInfo.bShowFilePosition) {
+		ShowFilePosition();
 	}
 	// show battery level if on
 	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
@@ -1444,7 +1455,7 @@ bool HandleRunMode()
 {
 	bool bRedraw = false;
 	bool didsomething = true;
-	int maxMenuLine = nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 2 : 1);
+	int maxMenuLine = nMenuLineCount - ((SystemInfo.bShowBatteryLevel || SystemInfo.bShowFilePosition) ? 2 : 1);
 	CRotaryDialButton::Button button = ReadButton();
 	int btnRepeatCount = 1;
 	switch (button) {
@@ -3936,7 +3947,7 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 	}
 	// fill in the rest of the files if wanted
 	if (!bIsRunning && SystemInfo.bShowNextFiles) {
-		for (int ix = 0; ix < nMenuLineCount - (SystemInfo.bShowBatteryLevel ? 1 : 0); ++ix) {
+		for (int ix = 0; ix < nMenuLineCount - ((SystemInfo.bShowBatteryLevel || SystemInfo.bShowFilePosition) ? 1 : 0); ++ix) {
 			// skip the current one unless previous folder, we already did it above
 			if (ix == currentFileIndex.nFileCursor)
 				continue;
@@ -6292,6 +6303,20 @@ void ShowBattery(MenuItem* menu)
 		else
 			break;
 	}
+}
+
+// this code shows the current file position and count on the main display when menu is NULL
+void ShowFilePosition()
+{
+	FileCountSprite.fillSprite(TFT_BLACK);
+	FileCountSprite.setTextColor(SystemInfo.menuTextColor);
+	// see if this is the root, we need to modify the numbers if so
+	int nAdjust = currentFolder.length() == 1 ? 0 : 1;
+	// show the text
+	String pc = String(currentFileIndex.nFileIndex + 1 - nAdjust) + "/" + String(FileNames.size() - nAdjust);
+	FileCountSprite.drawString(pc, 0, 0);
+	// push the sprite to the display
+	FileCountSprite.pushSprite(0, tft.height() - FileCountSprite.height() + 2);
 }
 
 // load the filename filter, also used for setting macro names
