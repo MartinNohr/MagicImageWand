@@ -566,20 +566,22 @@ void loop()
 		didsomething = false;
 		delay(1);
 	}
-	// show file index if on
-	if (SystemInfo.bShowFilePosition) {
-		ShowFilePosition();
-	}
-	// show battery level if on
-	if (SystemInfo.bShowBatteryLevel && !bSettingsMode) {
-		int raw;
-		ReadBattery(&raw);
-		//Serial.println(String("bat:") + String(raw));
-		ShowBattery(NULL);
-		if (raw > 900 && SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
-			SystemInfo.bCriticalBatteryLevel = false;
-			WriteMessage("Entering sleep mode\ndue to low battery", true, 10000);
-			Sleep(NULL);
+	if (!bSettingsMode) {
+		// show file index if on
+		if (SystemInfo.bShowFilePosition) {
+			ShowFilePosition();
+		}
+		// show battery level if on
+		if (SystemInfo.bShowBatteryLevel) {
+			int raw;
+			ReadBattery(&raw);
+			//Serial.println(String("bat:") + String(raw));
+			ShowBattery(NULL);
+			if (raw > 900 && SystemInfo.bSleepOnLowBattery && SystemInfo.bCriticalBatteryLevel) {
+				SystemInfo.bCriticalBatteryLevel = false;
+				WriteMessage("Entering sleep mode\ndue to low battery", true, 10000);
+				Sleep(NULL);
+			}
 		}
 	}
 }
