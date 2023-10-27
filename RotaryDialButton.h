@@ -86,28 +86,30 @@ private:
                         btn = BTN2_LONGPRESS;
                     }
                 }
-                // check for both left and right T4 btn's down
-                if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[4])) || (m_nWhichButton == 4 && !gpio_get_level(gpioNums[3]))) {
-                    // make sure both buttons are still down
-                    delay(1000);
-                    if (!gpio_get_level(gpioNums[4]) && !gpio_get_level(gpioNums[3])) {
-                        btn = BTN_LEFT_RIGHT_LONG;
+				if (gpioNums[3] != -1 && gpioNums[4] != -1) {
+                    // check for both left and right T4 btn's down
+                    if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[4])) || (m_nWhichButton == 4 && !gpio_get_level(gpioNums[3]))) {
+                        // make sure both buttons are still down
+                        delay(1000);
+                        if (!gpio_get_level(gpioNums[4]) && !gpio_get_level(gpioNums[3])) {
+                            btn = BTN_LEFT_RIGHT_LONG;
+                        }
                     }
-                }
-                // check for both left and center T4 btn's down
-                if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[3]))) {
-                    // make sure both buttons are still down
-                    delay(1000);
-                    if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[3])) {
-                        btn = BTN0_CLICK;
+                    // check for both left and center T4 btn's down
+                    if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[3]))) {
+                        // make sure both buttons are still down
+                        delay(1000);
+                        if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[3])) {
+                            btn = BTN0_CLICK;
+                        }
                     }
-                }
-                // check for both right and center T4 btn's down
-                if ((m_nWhichButton == 4 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[4]))) {
-                    // make sure both buttons are still down
-                    delay(1000);
-                    if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[4])) {
-                        btn = BTN1_CLICK;
+                    // check for both right and center T4 btn's down
+                    if ((m_nWhichButton == 4 && !gpio_get_level(gpioNums[0])) || (m_nWhichButton == 0 && !gpio_get_level(gpioNums[4]))) {
+                        // make sure both buttons are still down
+                        delay(1000);
+                        if (!gpio_get_level(gpioNums[0]) && !gpio_get_level(gpioNums[4])) {
+                            btn = BTN1_CLICK;
+                        }
                     }
                 }
                 m_nWaitRelease = 20;
@@ -200,6 +202,7 @@ private:
 
     // public things
 public:
+    // set the alt ones to -1, they will be ignored for T1 chip
 	static void begin(gpio_num_t a, gpio_num_t b, gpio_num_t c, gpio_num_t btn0, gpio_num_t btn1, gpio_num_t altLeft, gpio_num_t altRight, ROTARY_DIAL_SETTINGS* ps) {
         // first time, set things up
         pSettings = ps;

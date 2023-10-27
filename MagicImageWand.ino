@@ -200,7 +200,7 @@ void setup()
 	BatterySprite.setTextPadding(tft.width());
 	// get the file count sprite ready
 	FileCountSprite.setColorDepth(16);
-	FileCountSprite.createSprite(100, tft.fontHeight() + 2);
+	FileCountSprite.createSprite(110, tft.fontHeight() + 2);
 	FileCountSprite.fillSprite(TFT_BLACK);
 	FileCountSprite.setFreeFont(&Dialog_bold_16);
 	FileCountSprite.setTextPadding(tft.width());
@@ -1562,9 +1562,9 @@ enum CRotaryDialButton::Button ReadButton()
 	// reboot?
 	if (retValue == BTN_B2_LONG)
 		ESP.restart();
-	// turn the b1 button into a dial long click
-	if (retValue == BTN_B1_CLICK)
-		retValue = BTN_LONG;
+	//// turn the b1 button into a dial long click
+	//if (retValue == BTN_B1_CLICK)
+	//	retValue = BTN_LONG;
 	if (retValue != BTN_NONE) {
 		ResetSleepAndDimTimers();
 	}
@@ -3478,7 +3478,7 @@ void ShowBmp(MenuItem*)
 		uint32_t imgSize = readLong();
 		uint32_t imgWidth = readLong();
 		uint32_t imgHeight = readLong();
-		uint32_t imgOriginalHeight = imgHeight;	// keep around for later use, since imgHeight might get changed due to column restrictions
+		//uint32_t imgOriginalHeight = imgHeight;	// keep around for later use, since imgHeight might get changed due to column restrictions
 		uint16_t imgPlanes = readInt();
 		uint16_t imgBitCount = readInt();
 		uint32_t imgCompression = readLong();
@@ -3503,14 +3503,15 @@ void ShowBmp(MenuItem*)
 			// also divide the width (height in the file) by 2
 			imgHeight /= 2;
 		}
-		// now see if column restrictions are set, first see if end needs to be fixed
-		if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
-			// set it to the end
-			ImgInfo.nEndCol = imgHeight - 1;
-		}
-		if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
-			imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
-		}
+		// this code limits the displayed range, not sure we like it, so comment for now, more below
+		//// now see if column restrictions are set, first see if end needs to be fixed
+		//if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
+		//	// set it to the end
+		//	ImgInfo.nEndCol = imgHeight - 1;
+		//}
+		//if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
+		//	imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+		//}
 		/* compute the line length */
 		uint32_t lineLength = imgWidth * 3;
 		// fix for padding to 4 byte words
@@ -3592,13 +3593,21 @@ void ShowBmp(MenuItem*)
 					int startHere;
 					// if the image is rotated we need to reverse the direction reading the file
 					if (ImgInfo.bRotate180) {
-						startHere = imgOriginalHeight - 1 - (col + imgStartCol) - ImgInfo.nStartCol;
+						startHere = imgHeight - 1 - (col + imgStartCol);
 					}
 					else {
-						startHere = col + imgStartCol + ImgInfo.nStartCol;
+						startHere = col + imgStartCol;
 					}
+					//// This is code to limit the display to the selected columns, not sure we like it yet
+					//if (ImgInfo.bRotate180) {
+					//	startHere = imgOriginalHeight - 1 - (col + imgStartCol) - ImgInfo.nStartCol;
+					//}
+					//else {
+					//	startHere = col + imgStartCol + ImgInfo.nStartCol;
+					//}
 					// get to start of pixel data for this column
 					FileSeekBuf((uint32_t)bmpOffBits + ((startHere * (bHalfSize ? 2 : 1)) * lineLength));
+					//Serial.println(String("start: ") + startHere + " " + ImgInfo.nStartCol + " : " + ImgInfo.nEndCol);
 					for (int x = 0; x < imgWidth; ++x) {
 						// this reads a three byte pixel RGB
 						pixel = getRGBwithGamma();
@@ -3614,6 +3623,18 @@ void ShowBmp(MenuItem*)
 							uint16_t sbcolor;
 							// the memory image colors are byte swapped
 							swab(&color, &sbcolor, 2);
+							if (ImgInfo.nStartCol != ImgInfo.nEndCol) {
+								if (ImgInfo.bUpsideDown != ImgInfo.bRotate180) {
+									if (startHere == imgHeight - 1 - ImgInfo.nStartCol || startHere == imgHeight - 1 - ImgInfo.nEndCol) {
+										sbcolor = TFT_WHITE;
+									}
+								}
+								else {
+									if (startHere == ImgInfo.nStartCol || startHere == ImgInfo.nEndCol) {
+										sbcolor = TFT_WHITE;
+									}
+								}
+							}
 							// add to the display memory, organized as rows from top to bottom in memory
 							scrBuf[row * tftWide + col] = sbcolor;
 						}
@@ -3628,7 +3649,6 @@ void ShowBmp(MenuItem*)
 			ResetSleepAndDimTimers();
 			switch (ReadButton()) {
 			case BTN_NONE:
-			case BTN_B1_CLICK:
 			case BTN_B2_LONG:
 				break;
 			case BTN_RIGHT_LONG:
@@ -3638,7 +3658,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_RIGHT:
-				if (SystemInfo.bPreviewScrollFiles) {
+				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_FILE) {
 					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
 						// stop if this is a folder
 						if (!IsFolder(currentFileIndex.nFileIndex + 1)) {
@@ -3647,7 +3667,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else {
+				else if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 						imgStartCol = max(0, imgStartCol);
@@ -3661,7 +3681,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_LEFT:
-				if (SystemInfo.bPreviewScrollFiles) {
+				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_FILE) {
 					if (currentFileIndex.nFileIndex > 0) {
 						// stop if this is a folder
 						if (!IsFolder(currentFileIndex.nFileIndex - 1)) {
@@ -3670,7 +3690,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else {
+				else if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol += SystemInfo.nPreviewScrollCols;
 						imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
@@ -3678,6 +3698,28 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B0_CLICK:
+				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+					ImgInfo.nStartCol = imgStartCol;
+					// make sure that the end column is not to the left of the start column
+					if (ImgInfo.nEndCol <= ImgInfo.nStartCol)
+						ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					bRedraw = true;
+				}
+				else {
+					bDone = true;
+					bKeepShowing = false;
+				}
+				break;
+			case BTN_B1_CLICK:
+				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+					ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					bRedraw = true;
+				}
+				else {	// leave preview on btn1 also when not setting columns
+					bDone = true;
+					bKeepShowing = false;
+				}
+				break;
 			case BTN_LONG:
 				bDone = true;
 				bKeepShowing = false;
@@ -3698,11 +3740,16 @@ void ShowBmp(MenuItem*)
 					ClearScreen();
 					DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
 					DisplayLine(1, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
-					float walk = (float)imgHeight / (float)imgWidth;
-					DisplayLine(3, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
+					int tmpHeight = imgHeight;
+					// account for column limits
+					if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
+						tmpHeight = _min(tmpHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+					}
+					float walk = (float)tmpHeight / (float)imgWidth;
+					DisplayLine(3, String(imgWidth) + " x " + String(tmpHeight) + " pixels", SystemInfo.menuTextColor);
 					DisplayLine(4, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 					// calculate display time
-					float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (imgHeight * (ImgInfo.nFrameHold + ImgInfo.nStutterTime) / 1000.0 + imgHeight * .008);
+					float dspTime = ImgInfo.bFixedTime ? ImgInfo.nFixedImageTime : (tmpHeight * (ImgInfo.nFrameHold + ImgInfo.nStutterTime) / 1000.0 + tmpHeight * .008);
 					DisplayLine(5, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
 					bShowingSize = true;
 					bRedraw = false;
@@ -3711,9 +3758,14 @@ void ShowBmp(MenuItem*)
 #endif
 			case BTN_LEFT_RIGHT_LONG:
 			case BTN_B1_LONG:	// change scroll mode
-				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
+				// choose next mode
+				++SystemInfo.nPreviewFilesMode;
+				// wrap if needed
+				SystemInfo.nPreviewFilesMode %= sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText);
+//				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
-				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
+//				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
+				WriteMessage(String("Dial: ") + PreviewFileModeText[SystemInfo.nPreviewFilesMode], false, 1000);
 				break;
 			}
 			if (oldImgStartCol != imgStartCol) {
@@ -5226,7 +5278,7 @@ void handleFileUpload()
 		if (UploadFile)          // If the file was successfully created
 		{
 			UploadFile.close();   // Close the file again
-			Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
+			//Serial.print("Upload Size: "); Serial.println(uploadfile.totalSize);
 			webpage = "";
 			load_page_header(false);
 			webpage += F("<h3>File was successfully uploaded</h3>");
@@ -6307,15 +6359,15 @@ void ShowBattery(MenuItem* menu)
 	}
 }
 
-// this code shows the current file position and count on the main display when menu is NULL
+// this code shows "the current file position and count on the main display when menu is NULL
 void ShowFilePosition()
 {
 	FileCountSprite.fillSprite(TFT_BLACK);
 	FileCountSprite.setTextColor(SystemInfo.menuTextColor);
 	// see if this is the root, we need to modify the numbers if so
 	int nAdjust = currentFolder.length() == 1 ? 0 : 1;
-	// show the text
-	String pc = String(currentFileIndex.nFileIndex + 1 - nAdjust) + "/" + String(FileNames.size() - nAdjust);
+	// show the text with the current file index and total
+	String pc = " " + String(currentFileIndex.nFileIndex + 1 - nAdjust) + " / " + String(FileNames.size() - nAdjust);
 	FileCountSprite.drawString(pc, 0, 0);
 	// push the sprite to the display
 	FileCountSprite.pushSprite(0, tft.height() - FileCountSprite.height() + 2);

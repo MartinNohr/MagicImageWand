@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.90";
+const char* MIW_Version = "2.91";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -237,9 +237,10 @@ enum BTN_LONG_FUNCTIONS { BTN_LONG_ROTATION = 0, BTN_LONG_LIGHTBAR };
 const char* BtnLongText[] = { "DisplayRotate","LightBar" };
 
 // display dim modes, make sure sensor mode is last
-enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE, DISPLAY_DIM_MODE_TIME, DISPLAY_DIM_MODE_SENSOR };
+enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE = 0, DISPLAY_DIM_MODE_TIME, DISPLAY_DIM_MODE_SENSOR };
 const char* DisplayDimModeText[] = { "None","Timer","Sensor" };
-
+enum PREVIEW_FILE_MODE { PREVIEW_MODE_SCROLL = 0, PREVIEW_MODE_FILE, PREVIEW_MODE_COLUMNS_SELECT };
+const char* PreviewFileModeText[] = { "Sideways Scroll","Browse Images","Set Columns" };
 typedef struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
@@ -285,7 +286,8 @@ typedef struct SYSTEM_INFO {
     bool bHasLightSensor = false;               // set to true if the light sensor is detected
     int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
     int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
-    bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
+    //bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
+    int nPreviewFilesMode = PREVIEW_MODE_SCROLL;// default to sideways scroll, choose file browse or column limits setting
 #if TTGO_T == 1
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
 #elif TTGO_T == 4
@@ -905,7 +907,8 @@ MenuItem DisplayMenu[] = {
 };
 MenuItem PreviewMenu[] = {
     {eExit,"Preview Settings"},
-    {eBool,"Scroll Mode: %s",ToggleBool,&SystemInfo.bPreviewScrollFiles,0,0,0,"Files","Sideways"},
+    {eList,"Dial: %s",GetSelectChoice,&SystemInfo.nPreviewFilesMode,0,sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText) - 1,0,NULL,NULL,NULL,PreviewFileModeText},
+	//{eBool,"Scroll Mode: %s",ToggleBool,&SystemInfo.bPreviewScrollFiles,0,0,0,"Files","Sideways"},
     {eTextInt,"Top Start Offset: %d px",GetIntegerValue,&SystemInfo.nPreviewStartOffset,0,10},
     {eTextInt,"Dial Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eTextInt,"Auto Scroll Time: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
