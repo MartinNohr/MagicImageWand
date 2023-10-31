@@ -40,6 +40,10 @@ void periodic_Second_timer_callback(void* arg)
 			displayDimNow = true;
 		}
 	}
+	if (g_nB0Pressed)
+		--g_nB0Pressed;
+	if (g_nB1Pressed)
+		--g_nB1Pressed;
 }
 
 constexpr int TFT_ENABLE = 4;
@@ -3523,6 +3527,9 @@ void ShowBmp(MenuItem*)
 		// column offset for showing the image
 		int imgStartCol = 0;
 		int oldImgStartCol = 0;
+		// if column set, change the startcol
+		if (ImgInfo.nStartCol != ImgInfo.nEndCol)
+			oldImgStartCol = imgStartCol = ImgInfo.nStartCol;
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
 		// this is the current vertical offset
@@ -3658,7 +3665,29 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_RIGHT:
-				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_FILE) {
+				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
+					if (g_nB0Pressed) {
+						// move start
+						++ImgInfo.nStartCol;
+						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					}
+					else {
+						// move end column to the right
+						if (ImgInfo.nEndCol < imgHeight - 1)
+							++ImgInfo.nEndCol;
+						// do we need adjust the view?
+						if (ImgInfo.nEndCol >= imgStartCol + tftWide) {
+							++imgStartCol;
+							++oldImgStartCol;
+						}
+						g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					}
+					bRedraw = true;
+				}
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
+					if (ImgInfo.bAutoColumnReset) {
+						ImgInfo.nStartCol = ImgInfo.nEndCol;
+					}
 					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
 						// stop if this is a folder
 						if (!IsFolder(currentFileIndex.nFileIndex + 1)) {
@@ -3667,7 +3696,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 						imgStartCol = max(0, imgStartCol);
@@ -3681,7 +3710,28 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_LEFT:
-				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_FILE) {
+				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
+					if (g_nB0Pressed) {
+						// move the start back
+						if (ImgInfo.nStartCol)
+							--ImgInfo.nStartCol;
+						// see if we need to adjust the view
+						if (ImgInfo.nStartCol < imgStartCol) {
+							--imgStartCol;
+							--oldImgStartCol;
+						}
+						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					}
+					else {
+						--ImgInfo.nEndCol;
+						g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					}
+					bRedraw = true;
+				}
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
+					if (ImgInfo.bAutoColumnReset) {
+						ImgInfo.nStartCol = ImgInfo.nEndCol;
+					}
 					if (currentFileIndex.nFileIndex > 0) {
 						// stop if this is a folder
 						if (!IsFolder(currentFileIndex.nFileIndex - 1)) {
@@ -3690,7 +3740,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol += SystemInfo.nPreviewScrollCols;
 						imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
@@ -3698,12 +3748,14 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B0_CLICK:
-				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					ImgInfo.nStartCol = imgStartCol;
 					// make sure that the end column is not to the left of the start column
 					if (ImgInfo.nEndCol <= ImgInfo.nStartCol)
 						ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					bRedraw = true;
+					// set a timer to watch for fine rotation setting
+					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
 				}
 				else {
 					bDone = true;
@@ -3711,9 +3763,11 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B1_CLICK:
-				if (SystemInfo.nPreviewFilesMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
 					ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					bRedraw = true;
+					// set a timer to watch for fine rotation setting
+					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 				}
 				else {	// leave preview on btn1 also when not setting columns
 					bDone = true;
@@ -3759,13 +3813,13 @@ void ShowBmp(MenuItem*)
 			case BTN_LEFT_RIGHT_LONG:
 			case BTN_B1_LONG:	// change scroll mode
 				// choose next mode
-				++SystemInfo.nPreviewFilesMode;
+				++SystemInfo.nPreviewMode;
 				// wrap if needed
-				SystemInfo.nPreviewFilesMode %= sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText);
+				SystemInfo.nPreviewMode %= sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText);
 //				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
 //				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
-				WriteMessage(String("Dial: ") + PreviewFileModeText[SystemInfo.nPreviewFilesMode], false, 1000);
+				WriteMessage(String("Dial: ") + PreviewFileModeText[SystemInfo.nPreviewMode], false, 1000);
 				break;
 			}
 			if (oldImgStartCol != imgStartCol) {

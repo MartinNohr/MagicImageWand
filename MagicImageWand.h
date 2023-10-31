@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.91";
+const char* MIW_Version = "2.92";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -286,8 +286,7 @@ typedef struct SYSTEM_INFO {
     bool bHasLightSensor = false;               // set to true if the light sensor is detected
     int nPreviewAutoScroll = 0;                 // mSec for preview autoscroll, 0 means no scroll
     int nPreviewAutoScrollAmount = 1;           // now many pixels to auto scroll
-    //bool bPreviewScrollFiles = false;           // set for preview to scroll files instead of sideways
-    int nPreviewFilesMode = PREVIEW_MODE_SCROLL;// default to sideways scroll, choose file browse or column limits setting
+    int nPreviewMode = PREVIEW_MODE_SCROLL;     // default to sideways scroll, choose file browse or column limits setting
 #if TTGO_T == 1
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
 #elif TTGO_T == 4
@@ -303,6 +302,7 @@ typedef struct SYSTEM_INFO {
     bool bStartUniverseOne = true;              // some controllers need 1, others 0 (false)
     bool bRunWebServer = false;                 // run the web server
     bool bAutoLoadFileOnRun = true;             // load the associated file when an image is run
+    int nB0B1SetColumnsTimer = 3;               // seconds to wait after B0/B1 to do single column moving of column with the dial
     //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -485,6 +485,8 @@ volatile int sleepTimer = 0;
 // seconds before dimming the display
 volatile int displayDimTimer = 30;
 volatile bool displayDimNow = false;
+volatile int g_nB0Pressed = 0;
+volatile int g_nB1Pressed = 0;
 esp_timer_handle_t periodic_Second_timer;
 esp_timer_create_args_t periodic_Second_timer_args;
 
@@ -907,12 +909,13 @@ MenuItem DisplayMenu[] = {
 };
 MenuItem PreviewMenu[] = {
     {eExit,"Preview Settings"},
-    {eList,"Dial: %s",GetSelectChoice,&SystemInfo.nPreviewFilesMode,0,sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText) - 1,0,NULL,NULL,NULL,PreviewFileModeText},
+    {eList,"Dial: %s",GetSelectChoice,&SystemInfo.nPreviewMode,0,sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText) - 1,0,NULL,NULL,NULL,PreviewFileModeText},
 	//{eBool,"Scroll Mode: %s",ToggleBool,&SystemInfo.bPreviewScrollFiles,0,0,0,"Files","Sideways"},
     {eTextInt,"Top Start Offset: %d px",GetIntegerValue,&SystemInfo.nPreviewStartOffset,0,10},
     {eTextInt,"Dial Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eTextInt,"Auto Scroll Time: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
     {eTextInt,"Auto Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewAutoScrollAmount,1,240},
+    {eTextInt,"Column Adjust B0B1 Timer: %d S",GetIntegerValue,&SystemInfo.nB0B1SetColumnsTimer,0,10},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
