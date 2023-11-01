@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.92";
+const char* MIW_Version = "2.93";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -239,8 +239,8 @@ const char* BtnLongText[] = { "DisplayRotate","LightBar" };
 // display dim modes, make sure sensor mode is last
 enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE = 0, DISPLAY_DIM_MODE_TIME, DISPLAY_DIM_MODE_SENSOR };
 const char* DisplayDimModeText[] = { "None","Timer","Sensor" };
-enum PREVIEW_FILE_MODE { PREVIEW_MODE_SCROLL = 0, PREVIEW_MODE_FILE, PREVIEW_MODE_COLUMNS_SELECT };
-const char* PreviewFileModeText[] = { "Sideways Scroll","Browse Images","Set Columns" };
+enum PREVIEW_FILE_MODE { PREVIEW_MODE_SCROLL = 0, PREVIEW_MODE_FILE, PREVIEW_MODE_CROP_SELECT };
+const char* PreviewFileModeText[] = { "Sideways Scroll","Browse Images","Set Cropping" };
 typedef struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
@@ -303,6 +303,7 @@ typedef struct SYSTEM_INFO {
     bool bRunWebServer = false;                 // run the web server
     bool bAutoLoadFileOnRun = true;             // load the associated file when an image is run
     int nB0B1SetColumnsTimer = 3;               // seconds to wait after B0/B1 to do single column moving of column with the dial
+    //bool bShowCroppedView = true;               // show the cropped view in scroll view or browse mode
     //
 };
 RTC_DATA_ATTR SYSTEM_INFO SystemInfo;
@@ -915,7 +916,9 @@ MenuItem PreviewMenu[] = {
     {eTextInt,"Dial Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewScrollCols,1,240},
     {eTextInt,"Auto Scroll Time: %d mS",GetIntegerValue,&SystemInfo.nPreviewAutoScroll,0,1000},
     {eTextInt,"Auto Scroll Pixels: %d px",GetIntegerValue,&SystemInfo.nPreviewAutoScrollAmount,1,240},
-    {eTextInt,"Column Adjust B0B1 Timer: %d S",GetIntegerValue,&SystemInfo.nB0B1SetColumnsTimer,0,10},
+    {eBool,"Reset Crop on Change: %s",ToggleBool,&ImgInfo.bAutoColumnReset,0,0,0,"Yes","No"},
+    {eTextInt,"Crop Adjust B0B1 Timer: %d S",GetIntegerValue,&SystemInfo.nB0B1SetColumnsTimer,0,10},
+    //{eBool,"Cropped View: %s",ToggleBool,&SystemInfo.bShowCroppedView,0,0,0,"Yes","No"},
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
@@ -990,9 +993,8 @@ MenuItem ImageMenu[] = {
             {eTextInt,"Mirror Delay: %d.%d S",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
-        {eTextInt,"Start Column: %d",GetIntegerValue,&ImgInfo.nStartCol,0,2048,0,NULL,NULL,NULL,NULL,HelpStartCol},
-        {eTextInt,"End Column: %d",GetIntegerValue,&ImgInfo.nEndCol,0,2048,0,NULL,NULL,NULL,NULL,HelpEndCol},
-        {eBool,"Reset Columns on Change: %s",ToggleBool,&ImgInfo.bAutoColumnReset,0,0,0,"Yes","No"},
+        {eTextInt,"Left Crop: %d",GetIntegerValue,&ImgInfo.nStartCol,0,2048,0,NULL,NULL,NULL,NULL,HelpStartCol},
+        {eTextInt,"Right Crop: %d",GetIntegerValue,&ImgInfo.nEndCol,0,2048,0,NULL,NULL,NULL,NULL,HelpEndCol},
     {eEndif},
     {eBool,"144 to 288 Pixels: %s",ToggleBool,&ImgInfo.bDoublePixels,0,0,0,"Yes","No"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},

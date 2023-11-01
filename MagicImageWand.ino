@@ -3506,15 +3506,18 @@ void ShowBmp(MenuItem*)
 			bHalfSize = true;
 			// also divide the width (height in the file) by 2
 			imgHeight /= 2;
+			//imgOriginalHeight = imgHeight;
 		}
-		// this code limits the displayed range, not sure we like it, so comment for now, more below
-		//// now see if column restrictions are set, first see if end needs to be fixed
-		//if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
-		//	// set it to the end
-		//	ImgInfo.nEndCol = imgHeight - 1;
-		//}
-		//if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
-		//	imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+		//if (SystemInfo.bShowCroppedView) {
+		//	//this code limits the displayed range
+		//	// now see if column restrictions are set, first see if end needs to be fixed
+		//	if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
+		//		// set it to the end
+		//		ImgInfo.nEndCol = imgHeight - 1;
+		//	}
+		//	if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
+		//		imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+		//	}
 		//}
 		/* compute the line length */
 		uint32_t lineLength = imgWidth * 3;
@@ -3598,6 +3601,16 @@ void ShowBmp(MenuItem*)
 					int bufpos = 0;
 					CRGB pixel;
 					int startHere;
+					//if (SystemInfo.bShowCroppedView) {
+					//	// This is code to limit the display to the selected columns
+					//	if (ImgInfo.bRotate180) {
+					//		startHere = imgOriginalHeight - 1 - (col + imgStartCol) - ImgInfo.nStartCol;
+					//	}
+					//	else {
+					//		startHere = col + imgStartCol + ImgInfo.nStartCol;
+					//	}
+					//}
+					//else {
 					// if the image is rotated we need to reverse the direction reading the file
 					if (ImgInfo.bRotate180) {
 						startHere = imgHeight - 1 - (col + imgStartCol);
@@ -3605,12 +3618,6 @@ void ShowBmp(MenuItem*)
 					else {
 						startHere = col + imgStartCol;
 					}
-					//// This is code to limit the display to the selected columns, not sure we like it yet
-					//if (ImgInfo.bRotate180) {
-					//	startHere = imgOriginalHeight - 1 - (col + imgStartCol) - ImgInfo.nStartCol;
-					//}
-					//else {
-					//	startHere = col + imgStartCol + ImgInfo.nStartCol;
 					//}
 					// get to start of pixel data for this column
 					FileSeekBuf((uint32_t)bmpOffBits + ((startHere * (bHalfSize ? 2 : 1)) * lineLength));
@@ -3630,6 +3637,7 @@ void ShowBmp(MenuItem*)
 							uint16_t sbcolor;
 							// the memory image colors are byte swapped
 							swab(&color, &sbcolor, 2);
+							//if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 							if (ImgInfo.nStartCol != ImgInfo.nEndCol) {
 								if (ImgInfo.bUpsideDown != ImgInfo.bRotate180) {
 									if (startHere == imgHeight - 1 - ImgInfo.nStartCol || startHere == imgHeight - 1 - ImgInfo.nEndCol) {
@@ -3642,6 +3650,7 @@ void ShowBmp(MenuItem*)
 									}
 								}
 							}
+							//}
 							// add to the display memory, organized as rows from top to bottom in memory
 							scrBuf[row * tftWide + col] = sbcolor;
 						}
@@ -3665,7 +3674,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_RIGHT:
-				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
+				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
 					if (g_nB0Pressed) {
 						// move start
 						++ImgInfo.nStartCol;
@@ -3696,7 +3705,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
 						imgStartCol = max(0, imgStartCol);
@@ -3710,7 +3719,7 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_LEFT:
-				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
+				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
 					if (g_nB0Pressed) {
 						// move the start back
 						if (ImgInfo.nStartCol)
@@ -3740,7 +3749,7 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
-				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol += SystemInfo.nPreviewScrollCols;
 						imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
@@ -3748,11 +3757,18 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B0_CLICK:
-				if (SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				// if B0 was active, cancel it
+				if (g_nB0Pressed) {
+					g_nB0Pressed = 0;
+					break;
+				}
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					ImgInfo.nStartCol = imgStartCol;
 					// make sure that the end column is not to the left of the start column
-					if (ImgInfo.nEndCol <= ImgInfo.nStartCol)
+					if (ImgInfo.nEndCol <= ImgInfo.nStartCol) {
+						//Serial.println(String("start: ") + imgStartCol + " h: " + imgHeight);
 						ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
 					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
@@ -3763,7 +3779,12 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B1_CLICK:
-				if (SystemInfo.nPreviewMode == PREVIEW_MODE_COLUMNS_SELECT) {
+				// if B1 was active, cancel it
+				if (g_nB1Pressed) {
+					g_nB1Pressed = 0;
+					break;
+				}
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
