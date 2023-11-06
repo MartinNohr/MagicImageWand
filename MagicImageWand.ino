@@ -3825,6 +3825,9 @@ void ShowBmp(MenuItem*)
 				// if B1 is active, just change over without moving the crop mark
 				if (g_nB1Pressed) {
 					g_nB1Pressed = 0;
+					// make sure left crop is visible
+					if (imgStartCol > ImgInfo.nLeftCrop)
+						imgStartCol = ImgInfo.nLeftCrop;
 					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					break;
 				}
@@ -3853,6 +3856,9 @@ void ShowBmp(MenuItem*)
 				// if B0 is active, just change over without moving the crop mark
 				if (g_nB0Pressed) {
 					g_nB0Pressed = 0;
+					// make sure right crop is visible
+					if (imgStartCol < ImgInfo.nRightCrop - tftWide)
+						imgStartCol = ImgInfo.nRightCrop - tftWide;
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					break;
 				}
