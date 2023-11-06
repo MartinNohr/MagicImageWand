@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.95";
+const char* MIW_Version = "2.96";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -1248,8 +1248,8 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
     {"ROTATE 180",&ImgInfo.bRotate180,vtBool},
-    {"START COLUMN",&ImgInfo.nLeftCrop,vtInt,0,2048},
-    {"END COLUMN",&ImgInfo.nRightCrop,vtInt,0,2048},
+    {"LEFT CROP",&ImgInfo.nLeftCrop,vtInt,0,2048},
+    {"RIGHT CROP",&ImgInfo.nRightCrop,vtInt,0,2048},
 };
 
 RTC_DATA_ATTR int nMenuLineCount = 7;
