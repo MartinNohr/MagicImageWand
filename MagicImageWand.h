@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.93";
+const char* MIW_Version = "2.94";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -213,8 +213,8 @@ typedef struct IMG_INFO {
     bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
     int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
     int nDialDuringImgInc = 1;                // how much to change by during image display
-    int nStartCol = 0;                        // starting column to display
-    int nEndCol = 0;                          // ending column to display, ignored if 0 or same as start
+    int nLeftCrop = 0;                        // starting column to display
+    int nRightCrop = 0;                       // ending column to display, ignored if 0 or same as start
     bool bAutoColumnReset = true;             // reset the start and end columns when the file is changed
     int nStutterTime = 0;                     // black/white band between columns time in mS
     bool bStutterWhite = false;               // stutter column black or white
@@ -993,8 +993,8 @@ MenuItem ImageMenu[] = {
             {eTextInt,"Mirror Delay: %d.%d S",GetIntegerValue,&ImgInfo.nMirrorDelay,0,10,1},
         {eEndif},
         {eBool,"Scale Height to Fit: %s",ToggleBool,&ImgInfo.bScaleHeight,0,0,0,"On","Off"},
-        {eTextInt,"Left Crop: %d",GetIntegerValue,&ImgInfo.nStartCol,0,2048,0,NULL,NULL,NULL,NULL,HelpStartCol},
-        {eTextInt,"Right Crop: %d",GetIntegerValue,&ImgInfo.nEndCol,0,2048,0,NULL,NULL,NULL,NULL,HelpEndCol},
+        {eTextInt,"Left Crop: %d",GetIntegerValue,&ImgInfo.nLeftCrop,0,2048,0,NULL,NULL,NULL,NULL,HelpStartCol},
+        {eTextInt,"Right Crop: %d",GetIntegerValue,&ImgInfo.nRightCrop,0,2048,0,NULL,NULL,NULL,NULL,HelpEndCol},
     {eEndif},
     {eBool,"144 to 288 Pixels: %s",ToggleBool,&ImgInfo.bDoublePixels,0,0,0,"Yes","No"},
     {eIfEqual,"",NULL,&ImgInfo.bShowBuiltInTests,false},
@@ -1248,8 +1248,8 @@ struct SETTINGVAR SettingsVarList[] = {
     {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
     {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
     {"ROTATE 180",&ImgInfo.bRotate180,vtBool},
-    {"START COLUMN",&ImgInfo.nStartCol,vtInt,0,2048},
-    {"END COLUMN",&ImgInfo.nEndCol,vtInt,0,2048},
+    {"START COLUMN",&ImgInfo.nLeftCrop,vtInt,0,2048},
+    {"END COLUMN",&ImgInfo.nRightCrop,vtInt,0,2048},
 };
 
 RTC_DATA_ATTR int nMenuLineCount = 7;

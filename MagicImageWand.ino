@@ -1479,7 +1479,7 @@ bool HandleRunMode()
 	case BTN_RIGHT_LONG:
 	case BTN_RIGHT:
 		if (ImgInfo.bAutoColumnReset)
-			ImgInfo.nStartCol = ImgInfo.nEndCol = 0;
+			ImgInfo.nLeftCrop = ImgInfo.nRightCrop = 0;
 		while (btnRepeatCount--) {
 			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor < maxMenuLine) {
 				++currentFileIndex.nFileCursor;
@@ -1498,7 +1498,7 @@ bool HandleRunMode()
 	case BTN_LEFT_LONG:
 	case BTN_LEFT:
 		if (ImgInfo.bAutoColumnReset)
-			ImgInfo.nStartCol = ImgInfo.nEndCol = 0;
+			ImgInfo.nLeftCrop = ImgInfo.nRightCrop = 0;
 		while (btnRepeatCount--) {
 			if (!SystemInfo.bKeepFileOnTopLine && currentFileIndex.nFileCursor > 0) {
 				--currentFileIndex.nFileCursor;
@@ -3203,12 +3203,12 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	// also remember that height and width are effectively swapped since we rotated the BMP image CCW for ease of reading and displaying here
 	// if start and end columns are different we need to adjust the imgHeight value
 	// first see if end needs to be fixed
-	if (ImgInfo.nStartCol > ImgInfo.nEndCol) {
+	if (ImgInfo.nLeftCrop > ImgInfo.nRightCrop) {
 		// set it to the end
-		ImgInfo.nEndCol = imgHeight - 1;
+		ImgInfo.nRightCrop = imgHeight - 1;
 	}
-	if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
-		imgHeight = _min(imgHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+	if (ImgInfo.nRightCrop > ImgInfo.nLeftCrop) {
+		imgHeight = _min(imgHeight, ImgInfo.nRightCrop + 1) - ImgInfo.nLeftCrop;
 	}
 	for (int column = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? column >= 0 : column < imgHeight; bReverseImage ? --column : ++column) {
 		// approximate time left
@@ -3261,7 +3261,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		}
 		int bufpos = 0;
 		CRGB pixel;
-		int startHere = bReverseImage ? imgOriginalHeight - ImgInfo.nStartCol - (imgHeight - column) : column + ImgInfo.nStartCol;
+		int startHere = bReverseImage ? imgOriginalHeight - ImgInfo.nLeftCrop - (imgHeight - column) : column + ImgInfo.nLeftCrop;
 		//Serial.print(String("startHere:") + startHere + " col:" + column + "\n");
 		FileSeekBuf((uint32_t)bmpOffBits + (startHere * lineLength));
 		//uint32_t offset = (bmpOffBits + (y * lineLength));
@@ -3421,13 +3421,20 @@ void ShowBmp(MenuItem*)
 		bCancelMacro = bCancelRun = false;
 		return;
 	}
-	// true until cancel selected
+	tft.setSwapBytes(true);
+	int tftTall = _min(144, tft.height());
+	int tftWide = tft.width();
+	// create the crop sprite
+	TFT_eSprite CropSprite = TFT_eSprite(&tft);
+	CropSprite.setColorDepth(16);
+	CropSprite.createSprite(1, tftTall, 1);
+	CropSprite.fillSprite(TFT_WHITE);
+	// screen memory buffer
 	uint16_t* scrBuf = NULL;
 	bool bOldGamma = LedInfo.bGammaCorrection;
 	LedInfo.bGammaCorrection = false;
+	// true until cancel selected
 	bool bKeepShowing = true;
-	int tftTall = _min(144, tft.height());
-	int tftWide = tft.width();
 	while (bKeepShowing) {
 		String fn = currentFolder + FileNames[currentFileIndex.nFileIndex];
 		// make sure this is a bmp file, if not just quietly go away
@@ -3438,11 +3445,11 @@ void ShowBmp(MenuItem*)
 			break;
 		}
 		// get a buffer if we don't already have one
-		uint32_t scrBufSize = tft.width() * tftTall * sizeof(uint16_t);
+		uint32_t scrBufSize = tftWide * tftTall * sizeof(uint16_t);
 		if (scrBuf == NULL)
-			scrBuf = (uint16_t*)calloc(tft.width() * tftTall, sizeof(uint16_t));
+			scrBuf = (uint16_t*)calloc(tftWide * tftTall, sizeof(uint16_t));
 		if (scrBuf == NULL) {
-			WriteMessage("Not enough memory", true, 5000);
+			WriteMessage("Not enough memory for screen buffer", true, 5000);
 			bKeepShowing = false;
 			scrBufSize = 0;
 			break;
@@ -3531,8 +3538,8 @@ void ShowBmp(MenuItem*)
 		int imgStartCol = 0;
 		int oldImgStartCol = 0;
 		// if column set, change the startcol
-		if (ImgInfo.nStartCol != ImgInfo.nEndCol)
-			oldImgStartCol = imgStartCol = ImgInfo.nStartCol;
+		if (ImgInfo.nLeftCrop != ImgInfo.nRightCrop)
+			oldImgStartCol = imgStartCol = ImgInfo.nLeftCrop;
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
 		// this is the current vertical offset
@@ -3633,32 +3640,33 @@ void ShowBmp(MenuItem*)
 						int row = (ImgInfo.bUpsideDown != ImgInfo.bRotate180) ? (imgWidth - 1 - x) : x;
 						row -= SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < tftTall) {
-							uint16_t color = tft.color565(pixel.r, pixel.g, pixel.b);
-							uint16_t sbcolor;
-							// the memory image colors are byte swapped
-							swab(&color, &sbcolor, 2);
-							//if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-							if (ImgInfo.nStartCol != ImgInfo.nEndCol) {
-								if (ImgInfo.bUpsideDown != ImgInfo.bRotate180) {
-									if (startHere == imgHeight - 1 - ImgInfo.nStartCol || startHere == imgHeight - 1 - ImgInfo.nEndCol) {
-										sbcolor = TFT_WHITE;
-									}
-								}
-								else {
-									if (startHere == ImgInfo.nStartCol || startHere == ImgInfo.nEndCol) {
-										sbcolor = TFT_WHITE;
-									}
-								}
-							}
-							//}
 							// add to the display memory, organized as rows from top to bottom in memory
-							scrBuf[row * tftWide + col] = sbcolor;
+							scrBuf[row * tftWide + col] = tft.color565(pixel.r, pixel.g, pixel.b);
 						}
 					}
 				}
 				oldImgStartCol = imgStartCol;
 				// got it all, go show it
-				tft.pushRect(0, 0, tftWide, tftTall, scrBuf);
+				tft.pushImage(0, 0, tftWide, tftTall, scrBuf);
+				//tft.pushRect(0, 0, tftWide, tftTall, scrBuf);
+				// add the crop marks if needed
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
+					// only show if crop is set
+					if (ImgInfo.nLeftCrop != ImgInfo.nRightCrop) {
+						CropSprite.fillSprite(TFT_WHITE);
+						int cropColumn;
+						// the start crop
+						cropColumn = ImgInfo.nLeftCrop - imgStartCol;
+						if (cropColumn >= 0 && cropColumn < tftWide) {
+							CropSprite.pushSprite(cropColumn, 0);
+						}
+						// and the end crop
+						cropColumn = ImgInfo.nRightCrop - imgStartCol;
+						if (cropColumn >= 0 && cropColumn < tftWide) {
+							CropSprite.pushSprite(cropColumn, 0);
+						}
+					}
+				}
 				// don't draw it again until something changes
 				bRedraw = false;
 			}
@@ -3676,26 +3684,49 @@ void ShowBmp(MenuItem*)
 			case BTN_RIGHT:
 				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
 					if (g_nB0Pressed) {
-						// move start
-						++ImgInfo.nStartCol;
+						// move start, I.E. left crop
+						// first restore the original column data from scrBuf
+						for (int row = 0; row < tftTall; ++row) {
+							uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nLeftCrop - imgStartCol];
+							CropSprite.drawPixel(0, row, pixel);
+						}
+						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+						// move to the right if possible
+						if (ImgInfo.nLeftCrop < ImgInfo.nRightCrop - 1)
+							++ImgInfo.nLeftCrop;
+						// now make the new column white
+						CropSprite.fillSprite(TFT_WHITE);
+						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+						// reset the timer to keep it going
 						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					}
 					else {
 						// move end column to the right
-						if (ImgInfo.nEndCol < imgHeight - 1)
-							++ImgInfo.nEndCol;
-						// do we need adjust the view?
-						if (ImgInfo.nEndCol >= imgStartCol + tftWide) {
-							++imgStartCol;
-							++oldImgStartCol;
+						if (ImgInfo.nRightCrop < imgHeight - 1) {
+							for (int row = 0; row < tftTall; ++row) {
+								uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
+								CropSprite.drawPixel(0, row, pixel);
+							}
+							CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+							// move to the right, we already checked above to make sure there is room
+							++ImgInfo.nRightCrop;
+							// now make the new column white if scrolling not needed
+							if (ImgInfo.nRightCrop - imgStartCol < tftWide) {
+								CropSprite.fillSprite(TFT_WHITE);
+								CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+							}
+							else {
+								// scroll left
+								++imgStartCol;
+							}
 						}
+						// reset the timer
 						g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					}
-					bRedraw = true;
 				}
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
 					if (ImgInfo.bAutoColumnReset) {
-						ImgInfo.nStartCol = ImgInfo.nEndCol;
+						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
 					}
 					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
 						// stop if this is a folder
@@ -3721,25 +3752,54 @@ void ShowBmp(MenuItem*)
 			case BTN_LEFT:
 				if ((SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) && (g_nB0Pressed || g_nB1Pressed)) {
 					if (g_nB0Pressed) {
-						// move the start back
-						if (ImgInfo.nStartCol)
-							--ImgInfo.nStartCol;
-						// see if we need to adjust the view
-						if (ImgInfo.nStartCol < imgStartCol) {
-							--imgStartCol;
-							--oldImgStartCol;
+						// move start, I.E. left crop
+						// first restore the original column data from scrBuf
+						for (int row = 0; row < tftTall; ++row) {
+							uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nLeftCrop - imgStartCol];
+							CropSprite.drawPixel(0, row, pixel);
 						}
+						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+						// scroll right by moving crop left
+						if (ImgInfo.nLeftCrop) {
+							--ImgInfo.nLeftCrop;
+						}
+						// see if we need to adjust the view, will force redraw as necessary
+						if (ImgInfo.nLeftCrop < imgStartCol) {
+							--imgStartCol;
+						}
+						// now make the new column is white
+						CropSprite.fillSprite(TFT_WHITE);
+						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+						// reset the timer to keep it going
 						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					}
-					else {
-						--ImgInfo.nEndCol;
+					else {	// handle B1, right crop
+						if (ImgInfo.nRightCrop > ImgInfo.nLeftCrop + 1) {
+							// first restore the original column data from scrBuf
+							for (int row = 0; row < tftTall; ++row) {
+								uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
+								CropSprite.drawPixel(0, row, pixel);
+							}
+							CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+							// move the crop left
+							--ImgInfo.nRightCrop;
+							// do we need to scroll right?
+							if (ImgInfo.nRightCrop < imgStartCol) {
+								// this will cause scroll and new crop line
+								++imgStartCol;
+							}
+							else {
+								// just draw the white crop line
+								CropSprite.fillSprite(TFT_WHITE);
+								CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+							}
+						}
 						g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					}
-					bRedraw = true;
 				}
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
 					if (ImgInfo.bAutoColumnReset) {
-						ImgInfo.nStartCol = ImgInfo.nEndCol;
+						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
 					}
 					if (currentFileIndex.nFileIndex > 0) {
 						// stop if this is a folder
@@ -3762,12 +3822,18 @@ void ShowBmp(MenuItem*)
 					g_nB0Pressed = 0;
 					break;
 				}
+				// if B1 is active, just change over without moving the crop mark
+				if (g_nB1Pressed) {
+					g_nB1Pressed = 0;
+					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					break;
+				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-					ImgInfo.nStartCol = imgStartCol;
+					ImgInfo.nLeftCrop = imgStartCol;
 					// make sure that the end column is not to the left of the start column
-					if (ImgInfo.nEndCol <= ImgInfo.nStartCol) {
+					if (ImgInfo.nRightCrop <= ImgInfo.nLeftCrop) {
 						//Serial.println(String("start: ") + imgStartCol + " h: " + imgHeight);
-						ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+						ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
@@ -3779,13 +3845,19 @@ void ShowBmp(MenuItem*)
 				}
 				break;
 			case BTN_B1_CLICK:
-				// if B1 was active, cancel it
+				// if B1 is active, cancel it
 				if (g_nB1Pressed) {
 					g_nB1Pressed = 0;
 					break;
 				}
+				// if B0 is active, just change over without moving the crop mark
+				if (g_nB0Pressed) {
+					g_nB0Pressed = 0;
+					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
+					break;
+				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-					ImgInfo.nEndCol = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
@@ -3817,8 +3889,8 @@ void ShowBmp(MenuItem*)
 					DisplayLine(1, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
 					int tmpHeight = imgHeight;
 					// account for column limits
-					if (ImgInfo.nEndCol > ImgInfo.nStartCol) {
-						tmpHeight = _min(tmpHeight, ImgInfo.nEndCol + 1) - ImgInfo.nStartCol;
+					if (ImgInfo.nRightCrop > ImgInfo.nLeftCrop) {
+						tmpHeight = _min(tmpHeight, ImgInfo.nRightCrop + 1) - ImgInfo.nLeftCrop;
 					}
 					float walk = (float)tmpHeight / (float)imgWidth;
 					DisplayLine(3, String(imgWidth) + " x " + String(tmpHeight) + " pixels", SystemInfo.menuTextColor);
@@ -3858,6 +3930,7 @@ void ShowBmp(MenuItem*)
 	ClearScreen();
 	// kill the cancel flag
 	bCancelRun = bCancelMacro = false;
+	tft.setSwapBytes(false);
 }
 
 // display a line in selected colors and clear to the end of the line
