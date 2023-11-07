@@ -3786,7 +3786,7 @@ void ShowBmp(MenuItem*)
 							// do we need to scroll right?
 							if (ImgInfo.nRightCrop < imgStartCol) {
 								// this will cause scroll and new crop line
-								++imgStartCol;
+								--imgStartCol;
 							}
 							else {
 								// just draw the white crop line
