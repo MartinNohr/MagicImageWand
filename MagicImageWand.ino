@@ -3433,6 +3433,7 @@ void ShowBmp(MenuItem*)
 	uint16_t* scrBuf = NULL;
 	bool bOldGamma = LedInfo.bGammaCorrection;
 	LedInfo.bGammaCorrection = false;
+	bool bForceDisplay = true;	// used to start the display
 	// true until cancel selected
 	bool bKeepShowing = true;
 	while (bKeepShowing) {
@@ -3575,6 +3576,7 @@ void ShowBmp(MenuItem*)
 				}
 			}
 			if (bRedraw) {
+				bool bDidRedraw = false;
 				// this code has been optimized so on a sideways scroll it first moves the
 				// existing pixels on the display by the move amount
 				// following that the rest of the screen is read from the SD card
@@ -3583,7 +3585,7 @@ void ShowBmp(MenuItem*)
 				int endCol = (imgHeight > tftWide ? tftWide : imgHeight);
 				uint16_t* base = scrBuf;
 				int diff = abs(imgStartCol - oldImgStartCol);
-				if (imgStartCol != oldImgStartCol) {
+				if (diff) {
 					if (imgStartCol > oldImgStartCol) {
 						// move the display columns to the left
 						startCol = tftWide - diff;
@@ -3604,7 +3606,13 @@ void ShowBmp(MenuItem*)
 				}
 				// now we read the missing data from the SD card
 				// loop through the image, col is the image width, and x is the image height
-				for (int col = startCol; col < endCol; ++col) {
+				if (bForceDisplay) {
+					diff = -1;
+					bForceDisplay = false;
+				}
+				for (int col = startCol; col < endCol && diff; ++col) {
+					bForceDisplay = false;
+					bDidRedraw = true;
 					int bufpos = 0;
 					CRGB pixel;
 					int startHere;
@@ -3647,7 +3655,9 @@ void ShowBmp(MenuItem*)
 				}
 				oldImgStartCol = imgStartCol;
 				// got it all, go show it
-				tft.pushImage(0, 0, tftWide, tftTall, scrBuf);
+				if (bDidRedraw) {
+					tft.pushImage(0, 0, tftWide, tftTall, scrBuf);
+				}
 				//tft.pushRect(0, 0, tftWide, tftTall, scrBuf);
 				// add the crop marks if needed
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
@@ -3725,6 +3735,7 @@ void ShowBmp(MenuItem*)
 					}
 				}
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
+					bForceDisplay = true;
 					if (ImgInfo.bAutoColumnReset) {
 						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
 					}
@@ -3798,6 +3809,7 @@ void ShowBmp(MenuItem*)
 					}
 				}
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_FILE) {
+					bForceDisplay = true;
 					if (ImgInfo.bAutoColumnReset) {
 						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
 					}
@@ -3835,7 +3847,6 @@ void ShowBmp(MenuItem*)
 					ImgInfo.nLeftCrop = imgStartCol;
 					// make sure that the end column is not to the left of the start column
 					if (ImgInfo.nRightCrop <= ImgInfo.nLeftCrop) {
-						//Serial.println(String("start: ") + imgStartCol + " h: " + imgHeight);
 						ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					}
 					bRedraw = true;
@@ -3911,6 +3922,7 @@ void ShowBmp(MenuItem*)
 #endif
 			case BTN_LEFT_RIGHT_LONG:
 			case BTN_B1_LONG:	// change scroll mode
+				bForceDisplay = true;
 				// choose next mode
 				++SystemInfo.nPreviewMode;
 				// wrap if needed
