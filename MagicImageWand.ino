@@ -3870,7 +3870,9 @@ void ShowBmp(MenuItem*)
 						CropSprite.drawPixel(0, row, pixel);
 					}
 					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
-					ImgInfo.nLeftCrop = imgStartCol;
+					// set to the left of the screen if not already set
+					if (ImgInfo.nLeftCrop == ImgInfo.nRightCrop)
+						ImgInfo.nLeftCrop = imgStartCol;
 					// make sure that the end column is not to the left of the start column
 					if (ImgInfo.nRightCrop <= ImgInfo.nLeftCrop) {
 						ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
@@ -3902,20 +3904,25 @@ void ShowBmp(MenuItem*)
 					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					g_nB0Pressed = 0;
 					// make sure right crop is visible
-					if (imgStartCol < ImgInfo.nRightCrop - tftWide) {
-						imgStartCol = ImgInfo.nRightCrop - tftWide;
+					if (ImgInfo.nRightCrop > imgStartCol + tftWide) {
+						imgStartCol = ImgInfo.nRightCrop - tftWide + 1;
 					}
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					break;
 				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-					// first restore the original column data from scrBuf
-					for (int row = 0; row < tftTall; ++row) {
-						uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
-						CropSprite.drawPixel(0, row, pixel);
+					// first restore the original column data from scrBuf if it is non-zero
+					if (ImgInfo.nRightCrop) {
+						for (int row = 0; row < tftTall; ++row) {
+							uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
+							CropSprite.drawPixel(0, row, pixel);
+						}
+						CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					}
-					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
-					ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					// set to the right of the screen if not already set
+					if (ImgInfo.nLeftCrop == ImgInfo.nRightCrop) {
+						ImgInfo.nRightCrop = imgStartCol + tftWide - 1;
+					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
