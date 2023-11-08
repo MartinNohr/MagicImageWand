@@ -40,6 +40,10 @@ void periodic_Second_timer_callback(void* arg)
 			displayDimNow = true;
 		}
 	}
+	// check if about to time out
+	if (g_nB0Pressed == 1 || g_nB1Pressed == 1)
+		g_bB0B1Cleared = true;
+
 	if (g_nB0Pressed)
 		--g_nB0Pressed;
 	if (g_nB1Pressed)
@@ -3663,16 +3667,17 @@ void ShowBmp(MenuItem*)
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					// only show if crop is set
 					if (ImgInfo.nLeftCrop != ImgInfo.nRightCrop) {
-						CropSprite.fillSprite(TFT_WHITE);
 						int cropColumn;
 						// the start crop
 						cropColumn = ImgInfo.nLeftCrop - imgStartCol;
 						if (cropColumn >= 0 && cropColumn < tftWide) {
+							CropSprite.fillSprite(g_nB0Pressed ? TFT_GREEN : TFT_WHITE);
 							CropSprite.pushSprite(cropColumn, 0);
 						}
 						// and the end crop
 						cropColumn = ImgInfo.nRightCrop - imgStartCol;
 						if (cropColumn >= 0 && cropColumn < tftWide) {
+							CropSprite.fillSprite(g_nB1Pressed ? TFT_GREEN : TFT_WHITE);
 							CropSprite.pushSprite(cropColumn, 0);
 						}
 					}
@@ -3681,6 +3686,13 @@ void ShowBmp(MenuItem*)
 				bRedraw = false;
 			}
 			ResetSleepAndDimTimers();
+			// clear the crop mark colors when timer expired
+			if (g_bB0B1Cleared) {
+				g_bB0B1Cleared = false;
+				CropSprite.fillSprite(TFT_WHITE);
+				CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+				CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+			}
 			switch (ReadButton()) {
 			case BTN_NONE:
 			case BTN_B2_LONG:
@@ -3705,7 +3717,7 @@ void ShowBmp(MenuItem*)
 						if (ImgInfo.nLeftCrop < ImgInfo.nRightCrop - 1)
 							++ImgInfo.nLeftCrop;
 						// now make the new column white
-						CropSprite.fillSprite(TFT_WHITE);
+						CropSprite.fillSprite(TFT_GREEN);
 						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 						// reset the timer to keep it going
 						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
@@ -3722,7 +3734,7 @@ void ShowBmp(MenuItem*)
 							++ImgInfo.nRightCrop;
 							// now make the new column white if scrolling not needed
 							if (ImgInfo.nRightCrop - imgStartCol < tftWide) {
-								CropSprite.fillSprite(TFT_WHITE);
+								CropSprite.fillSprite(TFT_GREEN);
 								CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 							}
 							else {
@@ -3779,7 +3791,7 @@ void ShowBmp(MenuItem*)
 							--imgStartCol;
 						}
 						// now make the new column is white
-						CropSprite.fillSprite(TFT_WHITE);
+						CropSprite.fillSprite(TFT_GREEN);
 						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 						// reset the timer to keep it going
 						g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
@@ -3801,7 +3813,7 @@ void ShowBmp(MenuItem*)
 							}
 							else {
 								// just draw the white crop line
-								CropSprite.fillSprite(TFT_WHITE);
+								CropSprite.fillSprite(TFT_GREEN);
 								CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 							}
 						}
@@ -3831,11 +3843,19 @@ void ShowBmp(MenuItem*)
 			case BTN_B0_CLICK:
 				// if B0 was active, cancel it
 				if (g_nB0Pressed) {
+					// restore the crop mark color
+					CropSprite.fillSprite(TFT_WHITE);
+					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 					g_nB0Pressed = 0;
 					break;
 				}
 				// if B1 is active, just change over without moving the crop mark
 				if (g_nB1Pressed) {
+					// restore the other crop mark color
+					CropSprite.fillSprite(TFT_WHITE);
+					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
+					CropSprite.fillSprite(TFT_GREEN);
+					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 					g_nB1Pressed = 0;
 					// make sure left crop is visible
 					if (imgStartCol > ImgInfo.nLeftCrop)
@@ -3844,6 +3864,12 @@ void ShowBmp(MenuItem*)
 					break;
 				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
+					// first restore the original column data from scrBuf
+					for (int row = 0; row < tftTall; ++row) {
+						uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nLeftCrop - imgStartCol];
+						CropSprite.drawPixel(0, row, pixel);
+					}
+					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 					ImgInfo.nLeftCrop = imgStartCol;
 					// make sure that the end column is not to the left of the start column
 					if (ImgInfo.nRightCrop <= ImgInfo.nLeftCrop) {
@@ -3861,19 +3887,34 @@ void ShowBmp(MenuItem*)
 			case BTN_B1_CLICK:
 				// if B1 is active, cancel it
 				if (g_nB1Pressed) {
+					// restore the crop mark color
+					CropSprite.fillSprite(TFT_WHITE);
+					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					g_nB1Pressed = 0;
 					break;
 				}
 				// if B0 is active, just change over without moving the crop mark
 				if (g_nB0Pressed) {
+					// restore the other crop mark color
+					CropSprite.fillSprite(TFT_WHITE);
+					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
+					CropSprite.fillSprite(TFT_GREEN);
+					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					g_nB0Pressed = 0;
 					// make sure right crop is visible
-					if (imgStartCol < ImgInfo.nRightCrop - tftWide)
+					if (imgStartCol < ImgInfo.nRightCrop - tftWide) {
 						imgStartCol = ImgInfo.nRightCrop - tftWide;
+					}
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 					break;
 				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
+					// first restore the original column data from scrBuf
+					for (int row = 0; row < tftTall; ++row) {
+						uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
+						CropSprite.drawPixel(0, row, pixel);
+					}
+					CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting

@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "2.98";
+const char* MIW_Version = "2.99";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -488,6 +488,7 @@ volatile int displayDimTimer = 30;
 volatile bool displayDimNow = false;
 volatile int g_nB0Pressed = 0;
 volatile int g_nB1Pressed = 0;
+volatile bool g_bB0B1Cleared = false;
 esp_timer_handle_t periodic_Second_timer;
 esp_timer_create_args_t periodic_Second_timer_args;
 
