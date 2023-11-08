@@ -3589,7 +3589,7 @@ void ShowBmp(MenuItem*)
 				int endCol = (imgHeight > tftWide ? tftWide : imgHeight);
 				uint16_t* base = scrBuf;
 				int diff = abs(imgStartCol - oldImgStartCol);
-				if (diff) {
+				if (diff && diff < tftWide - 1) {
 					if (imgStartCol > oldImgStartCol) {
 						// move the display columns to the left
 						startCol = tftWide - diff;
@@ -3864,18 +3864,23 @@ void ShowBmp(MenuItem*)
 					break;
 				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-					// first restore the original column data from scrBuf
-					for (int row = 0; row < tftTall; ++row) {
-						uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nLeftCrop - imgStartCol];
-						CropSprite.drawPixel(0, row, pixel);
+					// first restore the original column data from scrBuf if visible
+					if (ImgInfo.nLeftCrop - imgStartCol >= 0) {
+						for (int row = 0; row < tftTall; ++row) {
+							CropSprite.drawPixel(0, row, scrBuf[row * tftWide + ImgInfo.nLeftCrop - imgStartCol]);
+						}
+						CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 					}
-					CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
 					// set to the left of the screen if not already set
 					if (ImgInfo.nLeftCrop == ImgInfo.nRightCrop)
 						ImgInfo.nLeftCrop = imgStartCol;
 					// make sure that the end column is not to the left of the start column
 					if (ImgInfo.nRightCrop <= ImgInfo.nLeftCrop) {
 						ImgInfo.nRightCrop = min((int)imgHeight - 1, imgStartCol + tftWide - 1);
+					}
+					// make sure the crop is visible
+					if (imgStartCol > ImgInfo.nLeftCrop || ImgInfo.nLeftCrop > imgStartCol + tftWide - 1) {
+						imgStartCol = ImgInfo.nLeftCrop;
 					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
@@ -3911,17 +3916,20 @@ void ShowBmp(MenuItem*)
 					break;
 				}
 				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
-					// first restore the original column data from scrBuf if it is non-zero
-					if (ImgInfo.nRightCrop) {
+					// first restore the original column data from scrBuf if it is visible
+					if (ImgInfo.nRightCrop - imgStartCol >= 0) {
 						for (int row = 0; row < tftTall; ++row) {
-							uint16_t pixel = scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol];
-							CropSprite.drawPixel(0, row, pixel);
+							CropSprite.drawPixel(0, row, scrBuf[row * tftWide + ImgInfo.nRightCrop - imgStartCol]);
 						}
 						CropSprite.pushSprite(ImgInfo.nRightCrop - imgStartCol, 0);
 					}
 					// set to the right of the screen if not already set
 					if (ImgInfo.nLeftCrop == ImgInfo.nRightCrop) {
 						ImgInfo.nRightCrop = imgStartCol + tftWide - 1;
+					}
+					// make sure the crop mark is visible
+					if (imgStartCol > ImgInfo.nRightCrop || ImgInfo.nRightCrop > imgStartCol + tftWide - 1) {
+						imgStartCol = ImgInfo.nRightCrop - tftWide + 1;
 					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
