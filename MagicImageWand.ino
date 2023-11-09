@@ -3549,6 +3549,10 @@ void ShowBmp(MenuItem*)
 		if (imgStartCol + tftWide > imgHeight) {
 			oldImgStartCol = imgStartCol = imgHeight - tftWide;
 		}
+		// just make sure we aren't negative here
+		if (imgStartCol < 0)
+			imgStartCol = 0;
+		oldImgStartCol = imgStartCol;
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
 		// this is the current vertical offset
@@ -3566,6 +3570,9 @@ void ShowBmp(MenuItem*)
 		DisplayLine(15, "About " + String((int)round(dspTime)) + " Seconds", SystemInfo.menuTextColor);
 #endif
 		while (!bDone) {
+			// make sure starting col is not -ve
+			if (imgStartCol < 0)
+				imgStartCol = 0;
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
