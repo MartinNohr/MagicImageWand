@@ -3545,6 +3545,10 @@ void ShowBmp(MenuItem*)
 		// if column set, change the startcol
 		if (ImgInfo.nLeftCrop != ImgInfo.nRightCrop)
 			oldImgStartCol = imgStartCol = ImgInfo.nLeftCrop;
+		// check to make sure we don't try to display past the end of the file
+		if (imgStartCol + tftWide > imgHeight) {
+			oldImgStartCol = imgStartCol = imgHeight - tftWide;
+		}
 		bool bShowingSize = false;
 		unsigned long mSecAuto = millis();
 		// this is the current vertical offset
@@ -3882,6 +3886,10 @@ void ShowBmp(MenuItem*)
 					if (imgStartCol > ImgInfo.nLeftCrop || ImgInfo.nLeftCrop > imgStartCol + tftWide - 1) {
 						imgStartCol = ImgInfo.nLeftCrop;
 					}
+					// check to make sure we don't try to display past the end of the file
+					if (imgStartCol + tftWide > imgHeight) {
+						imgStartCol = imgHeight - tftWide;
+					}
 					bRedraw = true;
 					// set a timer to watch for fine rotation setting
 					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
@@ -3947,13 +3955,13 @@ void ShowBmp(MenuItem*)
 			case BTN_B0_LONG:	// rotate row offsets
 				startOffsetIndex = (++startOffsetIndex) % (sizeof(startOffsetList) / sizeof(*startOffsetList));
 				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
-				bRedraw = true;
+				bForceDisplay = bRedraw = true;
 				break;
 #if TTGO_T == 1
 			case BTN_SELECT:	// show the bmp information
 				if (bShowingSize) {
 					bShowingSize = false;
-					bRedraw = true;
+					bRedraw = bForceDisplay = true;
 					ClearScreen();
 				}
 				else {
