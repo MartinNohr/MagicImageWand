@@ -3695,7 +3695,7 @@ void ShowBmp(MenuItem*)
 			}
 			ResetSleepAndDimTimers();
 			// clear the crop mark colors when timer expired
-			if (g_bB0B1Cleared) {
+			if (g_bB0B1Cleared && !bShowingSize) {
 				g_bB0B1Cleared = false;
 				CropSprite.fillSprite(TFT_WHITE);
 				CropSprite.pushSprite(ImgInfo.nLeftCrop - imgStartCol, 0);
@@ -3975,6 +3975,8 @@ void ShowBmp(MenuItem*)
 					ClearScreen();
 				}
 				else {
+					// we don't want the crop lines to show up
+					g_nB0Pressed = g_nB1Pressed = 0;
 					ClearScreen();
 					DisplayLine(0, currentFolder, SystemInfo.menuTextColor);
 					DisplayLine(1, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
@@ -4076,7 +4078,7 @@ void ResetTextLines()
 void DisplayMenuLine(int line, int displine, String text)
 {
 	bool hilite = MenuStack.top()->index == line;
-	String mline = (hilite && SystemInfo.bMenuStar ? "*" : " ") + text;
+	String mline = (hilite && SystemInfo.bMenuStar ? "* " : " ") + text;
 	if (displine >= 0 && displine < nMenuLineCount) {
 		if (SystemInfo.bMenuStar) {
 			DisplayLine(displine, mline, SystemInfo.menuTextColor, TFT_BLACK);
@@ -4213,7 +4215,7 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 			DisplayLine(currentFileIndex.nFileCursor, FileNames[currentFileIndex.nFileIndex], TFT_BLACK, SystemInfo.menuTextColor);
 		}
 		else {
-			DisplayLine(currentFileIndex.nFileCursor, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
+			DisplayLine(currentFileIndex.nFileCursor, "* " + FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor, TFT_BLACK);
 		}
 	}
 	else {
@@ -4228,7 +4230,7 @@ void DisplayCurrentFile(bool bShowPath, bool bFirstOnly)
 				DisplayLine(currentFileIndex.nFileCursor, name, TFT_BLACK, SystemInfo.menuTextColor);
 			}
 			else {
-				DisplayLine(currentFileIndex.nFileCursor, name, SystemInfo.menuTextColor, TFT_BLACK);
+				DisplayLine(currentFileIndex.nFileCursor, "* " + name, SystemInfo.menuTextColor, TFT_BLACK);
 			}
 		}
 		else {

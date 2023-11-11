@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.04";
+const char* MIW_Version = "3.05";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -876,7 +876,7 @@ MenuItem DialMenu[] = {
 MenuItem HomeScreenMenu[] = {
     {eExit,"Home Screen Settings"},
     {eBool,"Show LEDs on LCD: %s",ToggleBool,&SystemInfo.bShowLEDsOnLcdWhileRunning,0,0,0,"Yes","No"},
-    {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","Normal"},
+    {eBool,"Current File: %s",ToggleBool,&SystemInfo.bHiLiteCurrentFile,0,0,0,"Color","*"},
     {eBool,"Show More Files: %s",ToggleBool,&SystemInfo.bShowNextFiles,0,0,0,"Yes","No"},
     {eBool,"File on Top Line: %s",ToggleBool,&SystemInfo.bKeepFileOnTopLine,0,0,0,"Yes","No",UpdateKeepOnTop},
     {eBool,"Show Folder: %s",ToggleBool,&SystemInfo.bShowFolder,0,0,0,"Yes","No"},
