@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.03";
+const char* MIW_Version = "3.04";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -91,19 +91,20 @@ const char* prefsDialReverse = "dialreverse";
 // the display
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 
-#define BTN_SELECT      CRotaryDialButton::BTN_CLICK
-#define BTN_NONE        CRotaryDialButton::BTN_NONE
-#define BTN_LEFT        CRotaryDialButton::BTN_LEFT
-#define BTN_LEFT_LONG   CRotaryDialButton::BTN_LEFT_LONG
-#define BTN_RIGHT       CRotaryDialButton::BTN_RIGHT
-#define BTN_RIGHT_LONG  CRotaryDialButton::BTN_RIGHT_LONG
-#define BTN_LONG        CRotaryDialButton::BTN_LONGPRESS
-#define BTN_B0_CLICK    CRotaryDialButton::BTN0_CLICK
-#define BTN_B0_LONG     CRotaryDialButton::BTN0_LONGPRESS
-#define BTN_B1_CLICK    CRotaryDialButton::BTN1_CLICK
-#define BTN_B1_LONG     CRotaryDialButton::BTN1_LONGPRESS
-#define BTN_B2_LONG     CRotaryDialButton::BTN2_LONGPRESS
+#define BTN_SELECT          CRotaryDialButton::BTN_CLICK
+#define BTN_NONE            CRotaryDialButton::BTN_NONE
+#define BTN_LEFT            CRotaryDialButton::BTN_LEFT
+#define BTN_LEFT_LONG       CRotaryDialButton::BTN_LEFT_LONG
+#define BTN_RIGHT           CRotaryDialButton::BTN_RIGHT
+#define BTN_RIGHT_LONG      CRotaryDialButton::BTN_RIGHT_LONG
+#define BTN_LONG            CRotaryDialButton::BTN_LONGPRESS
+#define BTN_B0_CLICK        CRotaryDialButton::BTN0_CLICK
+#define BTN_B0_LONG         CRotaryDialButton::BTN0_LONGPRESS
+#define BTN_B1_CLICK        CRotaryDialButton::BTN1_CLICK
+#define BTN_B1_LONG         CRotaryDialButton::BTN1_LONGPRESS
+#define BTN_B2_LONG         CRotaryDialButton::BTN2_LONGPRESS
 #define BTN_LEFT_RIGHT_LONG CRotaryDialButton::BTN_LEFT_RIGHT_LONG
+#define BTN1DIAL_LONGPRESS  CRotaryDialButton::BTN1DIAL_LONGPRESS
 
 // functions
 void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);

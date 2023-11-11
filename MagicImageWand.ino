@@ -1568,11 +1568,8 @@ enum CRotaryDialButton::Button ReadButton()
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
 	// reboot?
-	if (retValue == BTN_B2_LONG)
+	if (retValue == BTN1DIAL_LONGPRESS)
 		ESP.restart();
-	//// turn the b1 button into a dial long click
-	//if (retValue == BTN_B1_CLICK)
-	//	retValue = BTN_LONG;
 	if (retValue != BTN_NONE) {
 		ResetSleepAndDimTimers();
 	}
@@ -3706,7 +3703,13 @@ void ShowBmp(MenuItem*)
 			}
 			switch (ReadButton()) {
 			case BTN_NONE:
-			case BTN_B2_LONG:
+				break;
+			case BTN_B2_LONG:	// reset the crop marks
+				if (SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
+					ImgInfo.nLeftCrop = ImgInfo.nRightCrop = 0;
+					g_nB0Pressed = g_nB1Pressed = 0;
+					bForceDisplay = bRedraw = true;
+				}
 				break;
 			case BTN_RIGHT_LONG:
 				if (!bShowingSize && bAllowScroll) {
@@ -3998,10 +4001,10 @@ void ShowBmp(MenuItem*)
 				++SystemInfo.nPreviewMode;
 				// wrap if needed
 				SystemInfo.nPreviewMode %= sizeof(PreviewFileModeText) / sizeof(*PreviewFileModeText);
-//				SystemInfo.bPreviewScrollFiles = !SystemInfo.bPreviewScrollFiles;
 				bDone = true;
-//				WriteMessage(SystemInfo.bPreviewScrollFiles ? "Dial: Browse Images" : "Dial: Sideways Scroll", false, 1000);
 				WriteMessage(String("Dial: ") + PreviewFileModeText[SystemInfo.nPreviewMode], false, 1000);
+				// make sure the crop lines don't reappear
+				g_nB0Pressed = g_nB1Pressed = 0;
 				break;
 			}
 			if (oldImgStartCol != imgStartCol) {

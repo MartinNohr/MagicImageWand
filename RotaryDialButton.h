@@ -7,10 +7,11 @@ public:
 		BTN_NONE = 0, BTN_CLICK, BTN_LONGPRESS,
         BTN0_CLICK, BTN0_LONGPRESS,
         BTN1_CLICK, BTN1_LONGPRESS,
-        BTN2_LONGPRESS,
+        BTN2_LONGPRESS,     // BTN0 + BTN1
         BTN_LEFT, BTN_RIGHT,
         BTN_LEFT_LONG, BTN_RIGHT_LONG,
         BTN_LEFT_RIGHT_LONG,
+        BTN1DIAL_LONGPRESS, // BTN1 + DIAL
 	};
     struct ROTARY_DIAL_SETTINGS {
         int m_nLongPressTimerValue; // mS for long press
@@ -86,7 +87,15 @@ private:
                         btn = BTN2_LONGPRESS;
                     }
                 }
-				if (gpioNums[3] != -1 && gpioNums[4] != -1) {
+                // check for both btn1 and the dial PCB down
+                if ((m_nWhichButton == 0 && !gpio_get_level(gpioNums[2])) || (m_nWhichButton == 2 && !gpio_get_level(gpioNums[0]))) {
+                    // make sure both buttons are still down
+                    delay(1000);
+                    if (!gpio_get_level(gpioNums[2]) && !gpio_get_level(gpioNums[0])) {
+                        btn = BTN1DIAL_LONGPRESS;
+                    }
+                }
+                if (gpioNums[3] != -1 && gpioNums[4] != -1) {
                     // check for both left and right T4 btn's down
                     if ((m_nWhichButton == 3 && !gpio_get_level(gpioNums[4])) || (m_nWhichButton == 4 && !gpio_get_level(gpioNums[3]))) {
                         // make sure both buttons are still down
