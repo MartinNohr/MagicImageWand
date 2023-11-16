@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.05";
+const char* MIW_Version = "3.06";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -304,6 +304,7 @@ typedef struct SYSTEM_INFO {
     bool bRunWebServer = false;                 // run the web server
     bool bAutoLoadFileOnRun = true;             // load the associated file when an image is run
     int nB0B1SetColumnsTimer = 3;               // seconds to wait after B0/B1 to do single column moving of column with the dial
+    int nRunningDisplayBrightness = -1;         // display brightness while running, -1 is default, 0 to 100%
     //bool bShowCroppedView = true;               // show the cropped view in scroll view or browse mode
     //
 };
@@ -887,22 +888,21 @@ MenuItem HomeScreenMenu[] = {
     {eTerminate}
 };
 #define MAX_DIM_MODE (sizeof(DisplayDimModeText) / sizeof(*DisplayDimModeText) - 1)
+const char* HelpDisplayRunningBrightness = "Display brightness while running. -1 to use default, 0 for off, 100 for max";
 MenuItem DisplayMenu[] = {
     {eExit,"Display Settings"},
     {eList, "Display Rotation: %s", GetSelectChoice, &SystemInfo.nDisplayRotation, 0, sizeof(DisplayRotationText) / sizeof(*DisplayRotationText) - 1, 0, NULL, NULL, UpdateDisplayRotation, DisplayRotationText},
+    {eTextInt,"Run Brightness: %d%%",GetIntegerValue,&SystemInfo.nRunningDisplayBrightness,-1,100,0,NULL,NULL,NULL,NULL,HelpDisplayRunningBrightness},
+    {eTextInt,"Main Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
     {eList, "Dimming Mode: %s", GetSelectChoice, &SystemInfo.eDisplayDimMode, 0, MAX_DIM_MODE, 0, NULL, NULL, UpdateDisplayDimMode, DisplayDimModeText},
-    {eTextInt,"Bright Value: %d%%",GetIntegerValue,&SystemInfo.nDisplayBrightness,1,100,0,NULL,NULL,UpdateDisplayBrightness},
-    {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_NONE},
-    {eElse},
-        {eTextInt,"Dim Value: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,1,100},
-    {eEndif},
     {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_TIME},
-        {eTextInt,"Display Dim Time: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
+        {eTextInt,"Dim Brightness: %d%%",GetIntegerValue,&SystemInfo.nDisplayDimValue,1,100},
+        {eTextInt,"Dim Timer: %d S",GetIntegerValue,&SystemInfo.nDisplayDimTime,0,120},
     {eEndif},
     {eIfIntEqual,"",NULL,&SystemInfo.eDisplayDimMode,DISPLAY_DIM_MODE_SENSOR},
         {eMenu,"Light Sensor",{.menu = LightSensorMenu}},
     {eEndif},
-    {eMenu,"Sideways Scroll Settings",{.menu = SidewaysScrollMenu}},
+    {eMenu,"Sideways Scrolling",{.menu = SidewaysScrollMenu}},
     {eBool,"Menu Choice: %s",ToggleBool,&SystemInfo.bMenuStar,0,0,0,"*","Color"},
     {eText,"Text Color",SetMenuColor},
     {eBool,"Menu Wrap: %s",ToggleBool,&SystemInfo.bAllowMenuWrap,0,0,0,"Yes","No"},

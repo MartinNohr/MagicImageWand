@@ -2862,6 +2862,8 @@ void PopFileIndex()
 // run file or built-in
 void ProcessFileOrBuiltin()
 {
+	if (SystemInfo.nRunningDisplayBrightness != -1)
+		SetDisplayBrightness(SystemInfo.nRunningDisplayBrightness);
 	// clear the cancel flag
 	bCancelRun = false;
 	unsigned long recordingTimeStart = 0;                // holds the start time for the current recording part
@@ -3078,6 +3080,7 @@ void ProcessFileOrBuiltin()
 		WriteOrDeleteConfigFile(String(ImgInfo.nCurrentMacro), false, false, true);
 		DisplayCurrentFile(SystemInfo.bShowFolder, true);
 	}
+	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	// clear buttons
 	CRotaryDialButton::clear();
 }
