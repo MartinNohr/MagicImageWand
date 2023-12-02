@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.06";
+const char* MIW_Version = "3.07";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -110,7 +110,7 @@ TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 void ShowLeds(int mode = 0, CRGB colorval = TFT_BLACK, int imgHeight = 144);
 void SetDisplayBrightness(int val);
 void DisplayCurrentFile(bool bShowPath = true, bool bFirstOnly = false);
-void DisplayLine(int line, String text, int16_t color = TFT_WHITE, int16_t backColor = TFT_BLACK);
+void DisplayLine(int line, String text, uint16_t color = TFT_WHITE, uint16_t backColor = TFT_BLACK);
 void DisplayMenuLine(int line, int displine, String text);
 void fixRGBwithGamma(byte* rp, byte* gp, byte* bp);
 void WriteMessage(String txt, bool error = false, int wait = 2000, bool process = false);

@@ -4031,7 +4031,7 @@ void ShowBmp(MenuItem*)
 }
 
 // display a line in selected colors and clear to the end of the line
-void DisplayLine(int line, String text, int16_t color, int16_t backColor)
+void DisplayLine(int line, String text, uint16_t color, uint16_t backColor)
 {
 	if (line >= 0 && line < nMenuLineCount) {
 		// don't show if running and displaying file on LCD
