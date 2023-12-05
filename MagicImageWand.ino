@@ -976,7 +976,26 @@ void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
 	char line[50];
 	CRotaryDialButton::Button button = BTN_NONE;
 	bool done = false;
-	const char* fmt = menu->decimals ? "%ld.%ld" : "%ld";
+	const char* fmt;
+	sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
+	if (menu->decimals) {
+		static char fmtInfo[30];
+		//String st = String("%ld.%0") + menu->decimals + "ld";
+		sprintf(fmtInfo, "%%ld.%%0%dld", menu->decimals);
+		fmt = fmtInfo;
+	}
+	else {
+		fmt = "%ld";
+	}
+	// get the hue value
+	if (bShowHue) {
+		CHSV hue = CHSV(*(int*)menu->value, 255, 255);
+		CRGB rgb = CRGB(hue);
+		DisplayLine(0, line, tft.color565(rgb.r, rgb.g, rgb.b));
+	}
+	else {
+		DisplayLine(0, line, SystemInfo.menuTextColor);
+	}
 	char minstr[20], maxstr[20], valstr[20];
 	sprintf(minstr, fmt, menu->min / (int)pow10(menu->decimals), menu->min % (int)pow10(menu->decimals));
 	sprintf(maxstr, fmt, menu->max / (int)pow10(menu->decimals), menu->max % (int)pow10(menu->decimals));
@@ -984,8 +1003,25 @@ void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
 	DisplayLine(5, "Long Press B0 to reset", SystemInfo.menuTextColor);
 	DisplayLine(6, "Long Press to Accept", SystemInfo.menuTextColor);
 	int oldVal = *(int*)menu->value;
+	bool bChange = true;
 	do {
-		//Serial.println("button: " + String(button));
+		button = ReadButton();
+		if (bChange) {
+			// make sure within limits
+			*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
+			// show slider bar
+			tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
+			DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100), true);
+			sprintf(valstr, fmt, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
+			DisplayLine(3, String("Value: ") + valstr, SystemInfo.menuTextColor);
+			sprintf(valstr, fmt, stepSize / (int)pow10(menu->decimals), stepSize % (int)pow10(menu->decimals));
+			DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "Step: " + String(valstr) + " (Click +)", SystemInfo.menuTextColor);
+			if (menu->change != NULL && oldVal != *(int*)menu->value) {
+				(*menu->change)(menu, 0);
+				oldVal = *(int*)menu->value;
+			}
+			bChange = false;
+		}
 		switch (button) {
 		case BTN_LEFT:
 			if (stepSize != -1)
@@ -1003,7 +1039,7 @@ void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
 			else {
 				stepSize *= 10;
 			}
-			if (stepSize > (menu->max / 10)) {
+			if (stepSize > (menu->max / 2)) {
 				stepSize = -1;
 			}
 			break;
@@ -1021,30 +1057,7 @@ void GetIntegerValueHelper(MenuItem* menu, bool bShowHue)
 			}
 			break;
 		}
-		// make sure within limits
-		*(int*)menu->value = constrain(*(int*)menu->value, menu->min, menu->max);
-		// show slider bar
-		tft.fillRect(0, 2 * tft.fontHeight(), tft.width() - 1, 6, TFT_BLACK);
-		DrawProgressBar(0, 2 * tft.fontHeight() + 4, tft.width() - 1, 12, map(*(int*)menu->value, menu->min, menu->max, 0, 100), true);
-		sprintf(line, menu->text, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
-		// get the hue value
-		if (bShowHue) {
-			CHSV hue = CHSV(*(int*)menu->value, 255, 255);
-			CRGB rgb = CRGB(hue);
-			DisplayLine(0, line, tft.color565(rgb.r, rgb.g, rgb.b));
-		}
-		else {
-			DisplayLine(0, line, SystemInfo.menuTextColor);
-		}
-		sprintf(valstr, fmt, *(int*)menu->value / (int)pow10(menu->decimals), *(int*)menu->value % (int)pow10(menu->decimals));
-		DisplayLine(3, String("Value: ") + valstr, SystemInfo.menuTextColor);
-		sprintf(valstr, fmt, stepSize / (int)pow10(menu->decimals), stepSize % (int)pow10(menu->decimals));
-		DisplayLine(4, stepSize == -1 ? "Reset: long press (Click +)" : "Step: " + String(valstr) + " (Click +)", SystemInfo.menuTextColor);
-		if (menu->change != NULL && oldVal != *(int*)menu->value) {
-			(*menu->change)(menu, 0);
-			oldVal = *(int*)menu->value;
-		}
-		button = ReadButton();
+		bChange = button != BTN_NONE;
 	} while (!done);
 }
 
@@ -2940,7 +2953,7 @@ void ProcessFileOrBuiltin()
 			if (ImgInfo.bChainFiles && !ImgInfo.bShowBuiltInTests) {
 				line = "Remaining: " + String(chainCount + 1);
 				DisplayLine(4, line, SystemInfo.menuTextColor);
-				if (currentFileIndex.nFileIndex < chainFileCount - 1) {
+				if (chainCount) {
 					line = "Next: " + FileNames[currentFileIndex.nFileIndex + 1];
 				}
 				else {
@@ -3491,17 +3504,17 @@ void ShowBmp(MenuItem*)
 		}
 
 		/* Read info header */
-		uint32_t imgSize = readLong();
+		uint32_t imgSize = readLong();			// size of this header
 		uint32_t imgWidth = readLong();
 		uint32_t imgHeight = readLong();
 		//uint32_t imgOriginalHeight = imgHeight;	// keep around for later use, since imgHeight might get changed due to column restrictions
 		uint16_t imgPlanes = readInt();
-		uint16_t imgBitCount = readInt();
+		uint16_t imgBitCount = readInt();			// if 8 we need to read the color palette
 		uint32_t imgCompression = readLong();
 		uint32_t imgSizeImage = readLong();
 		uint32_t imgXPelsPerMeter = readLong();
 		uint32_t imgYPelsPerMeter = readLong();
-		uint32_t imgClrUsed = readLong();
+		uint32_t imgClrUsed = readLong();		// colors in the color palette
 		uint32_t imgClrImportant = readLong();
 
 		/* Check info header */
@@ -5504,7 +5517,7 @@ void handleFileUpload()
 		String filepath = String("/");
 		if (!filename.startsWith("/"))
 			filename = "/" + filename;
-		Serial.print("Upload File Name: " + filename);
+		//Serial.print("Upload File Name: " + filename);
 		SD.remove(filename);   // Remove a previous version just to start clean
 #if USE_STANDARD_SD
 		UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
@@ -5915,7 +5928,7 @@ void DecreaseRepeatButton()
 void IncRepeat()
 {
 	String str = server.uri();
-	Serial.println("uri: " + str);
+	//Serial.println("uri: " + str);
 }
 
 #if 0
@@ -6937,11 +6950,11 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 // scan for networks
 int ScanForNetworks()
 {
-	//Serial.println("scan start");
+	Serial.println("scan start");
 	WiFi.disconnect();
 	// WiFi.scanNetworks will return the number of networks found
 	int retval = WiFi.scanNetworks();
-	//Serial.println("scan done");
+	Serial.println("scan done");
 	if (retval == 0) {
 		Serial.println("no networks found");
 	}
