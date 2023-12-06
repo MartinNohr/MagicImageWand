@@ -3187,18 +3187,31 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	//Serial.println("imgSizeImage: " + String(imgSizeImage));
 	/* Check info header */
 	if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-		imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
+		(imgBitCount != 24 && imgBitCount != 8) || imgCompression != MYBMP_BI_RGB)
 	{
-		WriteMessage(String("Unsupported, must be 24bpp, 1 plane, uncompressed, and non-zero size:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
+		WriteMessage(String("Unsupported, must be 24 or 8 bpp, 1 plane, uncompressed, and non-zero size:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 		return;
 	}
 	int displayWidth = imgWidth;
 	if (imgWidth > LedInfo.nTotalLeds) {
 		displayWidth = LedInfo.nTotalLeds;           //only display the number of led's we have
 	}
+	// if this is 8 bpp we need to read the color palette
+	CRGB* colorPalette = NULL;
+	if (imgBitCount == 8) {
+		colorPalette = (CRGB*)calloc(sizeof(CRGB), imgClrUsed);
+		if (colorPalette == NULL) {
+			WriteMessage("Not enough memory for color palette", true, 5000);
+			return;
+		}
+	}
+	for (int ix = 0; ix < imgClrUsed; ++ix) {
+		colorPalette[ix] = getRGBwithGamma();
+		readByte(false);
+	}
 
 	/* compute the line length */
-	uint32_t lineLength = imgWidth * 3;
+	uint32_t lineLength = imgWidth * (colorPalette ? sizeof(byte) : sizeof(CRGB));
 	// fix for padding to 4 byte words
 	if ((lineLength % 4) != 0)
 		lineLength = (lineLength / 4 + 1) * 4;
@@ -3285,8 +3298,14 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		//dataFile.seekSet(offset);
 		// add the column row data here
 		for (int row = displayWidth - 1; row >= 0; --row) {
-			// this reads three bytes
-			pixel = getRGBwithGamma();
+			if (colorPalette) {
+				// read the color index and look up the color from the table
+				pixel = colorPalette[readByte(false)];
+			}
+			else {
+				// this reads three bytes
+				pixel = getRGBwithGamma();
+			}
 			// see if we want this one
 			if (ImgInfo.bScaleHeight && (row * displayWidth) % imgWidth) {
 				continue;
@@ -3375,6 +3394,8 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 		if (bCancelRun)
 			break;
 	}
+	if (colorPalette)
+		free(colorPalette);
 	// all done
 	readByte(true);
 	if (SystemInfo.bShowLEDsOnLcdWhileRunning) {
@@ -3448,6 +3469,9 @@ void ShowBmp(MenuItem*)
 	CropSprite.fillSprite(TFT_WHITE);
 	// screen memory buffer
 	uint16_t* scrBuf = NULL;
+	// color palette for 8 bit bmp files
+	CRGB* colorPalette = NULL;
+
 	bool bOldGamma = LedInfo.bGammaCorrection;
 	LedInfo.bGammaCorrection = false;
 	bool bForceDisplay = true;	// used to start the display
@@ -3519,9 +3543,9 @@ void ShowBmp(MenuItem*)
 
 		/* Check info header */
 		if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
-			imgBitCount != 24 || imgCompression != MYBMP_BI_RGB)
+			(imgBitCount != 24 && imgBitCount != 8) || imgCompression != MYBMP_BI_RGB)
 		{
-			WriteMessage(String("Unsupported, must be 24bpp:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
+			WriteMessage(String("Unsupported, must be 24 or 8 bpp, 1 plane, uncompressed, and non-zero size:\n") + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
 			bKeepShowing = false;
 			break;
 		}
@@ -3532,6 +3556,19 @@ void ShowBmp(MenuItem*)
 			// also divide the width (height in the file) by 2
 			imgHeight /= 2;
 			//imgOriginalHeight = imgHeight;
+		}
+		// if this is 8 bpp we need to read the color palette
+		if (imgBitCount == 8) {
+			colorPalette = (CRGB*)calloc(sizeof(CRGB), imgClrUsed);
+			if (colorPalette == NULL) {
+				WriteMessage("Not enough memory for color palette", true, 5000);
+				bKeepShowing = false;
+				break;
+			}
+		}
+		for (int ix = 0; ix < imgClrUsed; ++ix) {
+			colorPalette[ix] = getRGBwithGamma();
+			readByte(false);
 		}
 		//if (SystemInfo.bShowCroppedView) {
 		//	//this code limits the displayed range
@@ -3545,7 +3582,7 @@ void ShowBmp(MenuItem*)
 		//	}
 		//}
 		/* compute the line length */
-		uint32_t lineLength = imgWidth * 3;
+		uint32_t lineLength = imgWidth * (colorPalette ? sizeof(byte) : sizeof(CRGB));
 		// fix for padding to 4 byte words
 		if ((lineLength % 4) != 0)
 			lineLength = (lineLength / 4 + 1) * 4;
@@ -3666,11 +3703,19 @@ void ShowBmp(MenuItem*)
 					FileSeekBuf((uint32_t)bmpOffBits + ((startHere * (bHalfSize ? 2 : 1)) * lineLength));
 					//Serial.println(String("start: ") + startHere + " " + ImgInfo.nStartCol + " : " + ImgInfo.nEndCol);
 					for (int x = 0; x < imgWidth; ++x) {
-						// this reads a three byte pixel RGB
-						pixel = getRGBwithGamma();
-						// throw a pixel away if we're dividing by 2 for the 288 pixel image
-						if (bHalfSize)
+						if (colorPalette) {
+							// ignore one pixel if doing halfsize for the 288 pixel image
+							if (bHalfSize)
+								readByte(false);
+							pixel = colorPalette[readByte(false)];
+						}
+						else {
+							// this reads a three byte pixel RGB
 							pixel = getRGBwithGamma();
+							// throw a pixel away if we're dividing by 2 for the 288 pixel image
+							if (bHalfSize)
+								pixel = getRGBwithGamma();
+						}
 						// because tftTall (might be 135) row display is less than 144 image
 						// if upsidedown xor (boolean !=) rotated180 we need to make it upside down
 						int row = (ImgInfo.bUpsideDown != ImgInfo.bRotate180) ? (imgWidth - 1 - x) : x;
@@ -4031,6 +4076,8 @@ void ShowBmp(MenuItem*)
 			delay(1);
 		}
 	}
+	if (colorPalette)
+		free(colorPalette);
 	// all done
 	if (scrBuf)
 		free(scrBuf);
