@@ -4075,9 +4075,11 @@ void ShowBmp(MenuItem*)
 			}
 			delay(1);
 		}
+		if (colorPalette) {
+			free(colorPalette);
+			colorPalette = NULL;
+		}
 	}
-	if (colorPalette)
-		free(colorPalette);
 	// all done
 	if (scrBuf)
 		free(scrBuf);
