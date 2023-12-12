@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.10";
+const char* MIW_Version = "3.11";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -211,6 +211,7 @@ typedef struct IMG_INFO {
 	int nCurrentMacro = 0;                    // the number of the macro to select or run
 	int nRepeatWaitMacro = 0;                 // time between macro repeats, in 1/10 seconds
 	int nRepeatCountMacro = 1;                // repeat count for macros
+    bool bMacroWaitKey = false;               // wait for keypress after each macro file display
     bool bShowBuiltInTests = false;           // list the internal file instead of the SD card
     int nDialDuringImgAction = DIAL_IMG_NONE; // dial action during image display
     int nDialDuringImgInc = 1;                // how much to change by during image display
@@ -1100,6 +1101,7 @@ MenuItem MacroMenu[] = {
     {eIfEqual,"",NULL,&bRecordingMacro,false},
         {eMenu,"Select Macro: #%d",{.menu = MacroSelectMenu},&ImgInfo.nCurrentMacro},
         {eTextInt,"Run Macro: #%d",RunMacro,&ImgInfo.nCurrentMacro},
+        {eBool,"Macro Wait Key: %s",ToggleBool,&ImgInfo.bMacroWaitKey,0,0,0,"Yes","No"},
         {eBool,"Override Settings: %s",ToggleBool,&SystemInfo.bMacroUseCurrentSettings,0,0,0,"Yes","No"},
     {eElse},
         {eTextInt,"Recording Macro: #%d",NULL,&ImgInfo.nCurrentMacro},
@@ -1248,10 +1250,12 @@ struct SETTINGVAR SettingsVarList[] = {
     {"MENU STAR",&SystemInfo.bMenuStar,vtBool},
     {"HILITE FILE",&SystemInfo.bHiLiteCurrentFile,vtBool},
     {"SELECT BUILTINS",&ImgInfo.bShowBuiltInTests,vtBuiltIn},       // this must be before the SHOW FILE command
-    {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
     {"ROTATE 180",&ImgInfo.bRotate180,vtBool},
     {"LEFT CROP",&ImgInfo.nLeftCrop,vtInt,0,2048},
     {"RIGHT CROP",&ImgInfo.nRightCrop,vtInt,0,2048},
+    {"MACRO WAIT FOR KEY",&ImgInfo.bMacroWaitKey,vtBool},
+    // keep this one last so all the settigs are in place first during a macro run
+    {"SHOW FILE",&FileToShow,vtShowFile},   // used in macros
 };
 
 RTC_DATA_ATTR int nMenuLineCount = 7;

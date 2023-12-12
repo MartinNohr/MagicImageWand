@@ -4457,6 +4457,9 @@ bool ProcessConfigFile(String filename)
 #endif
 	rdfile = SD.open(filepath);
 	if (rdfile.available()) {
+		bool bSavedMacroWaitKey = ImgInfo.bMacroWaitKey;
+		int nMacroFileIx = 0;	// keep track of which macro file
+		int nMacroFileCount = MacroInfo[ImgInfo.nCurrentMacro].fileNames.size();
 		String line, command, args;
 		while (line = rdfile.readStringUntil('\n'), line.length()) {
 			if (CheckCancel())
@@ -4502,6 +4505,9 @@ bool ProcessConfigFile(String filename)
 							break;
 							case vtShowFile:
 							{
+								// always override the macro wait key setting, that seems to make sense since the user might change it before running a macro
+								if (bRunningMacro)
+									ImgInfo.bMacroWaitKey = bSavedMacroWaitKey;
 								// get the folder and set it first
 								String folder;
 								String name;
@@ -4525,6 +4531,27 @@ bool ProcessConfigFile(String filename)
 									if (!bRunningMacro)
 										ClearScreen();
 									ProcessFileOrBuiltin();
+									// wait for button/dial if option selected
+									if (ImgInfo.bMacroWaitKey && nMacroFileIx < nMacroFileCount - 1) {
+										DisplayLine(2, "Click Next:" + MacroInfo[ImgInfo.nCurrentMacro].fileNames[nMacroFileIx + 1], SystemInfo.menuTextColor);
+										bool waitNext = true;
+										int wbtn;
+										while (waitNext) {
+											delay(10);
+											wbtn = ReadButton();
+											if (wbtn == BTN_NONE)
+												continue;
+											if (wbtn == BTN_LONG) {
+												CRotaryDialButton::pushButton(CRotaryDialButton::BTN_LONGPRESS);
+											}
+											else {
+												waitNext = false;
+											}
+											if (CheckCancel()) {
+												waitNext = false;
+											}
+										}
+									}
 								}
 								if (oldFolder.length()) {
 									currentFolder = oldFolder;
@@ -4532,6 +4559,8 @@ bool ProcessConfigFile(String filename)
 								}
 								currentFileIndex.nFileIndex = oldFileIndex;
 							}
+							// next macro file
+							++nMacroFileIx;
 							break;
 							case vtRGB:
 							{
@@ -6105,6 +6134,7 @@ WebSettings WebSettingsPage[] = {
 	{WST_TEXT_ONLY,NULL,true,"Macro Repeat Settings",NULL},
 	{WST_NUMBER,NULL,true,"Repeat Count","macro_repeat_count",&ImgInfo.nRepeatCountMacro,4,0},
 	{WST_NUMBER,NULL,true,"Repeat Delay (S)","macro_repeat_delay",&ImgInfo.nRepeatWaitMacro,4,1},
+	{WST_BOOL,NULL,true,"Macro Wait Key","macro_wait_key",&ImgInfo.bMacroWaitKey},
 	{WST_TEXT_ONLY,NULL,true,"LED Settings",NULL},
 	{WST_NUMBER,NULL,true,"LED Brightness (1-255)","LED_brightness",&LedInfo.nLEDBrightness,4,0},
 	{WST_BOOL,NULL,true,"Gamma Correction","gamma_correction",&LedInfo.bGammaCorrection},
