@@ -3627,7 +3627,7 @@ void ShowBmp(MenuItem*)
 #if TTGO_T == 4
 		DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
 		DisplayLine(11, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
-		float walk = (float)imgHeight / (float)imgWidth;
+		float walk = (float)imgHeight * fScaleImageHeight / (float)imgWidth;
 		DisplayLine(13, String(imgWidth) + " x " + String(imgHeight) + " pixels", SystemInfo.menuTextColor);
 		DisplayLine(14, String(walk, 1) + " (" + String(walk * 3.28084, 1) + ") meters(feet)", SystemInfo.menuTextColor);
 		// calculate display time
