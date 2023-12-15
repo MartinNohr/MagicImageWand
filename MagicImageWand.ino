@@ -3177,6 +3177,9 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	uint32_t imgYPelsPerMeter = readLong();
 	uint32_t imgClrUsed = readLong();
 	uint32_t imgClrImportant = readLong();
+	// fix if 0 and 8 bits
+	if (imgBitCount == 8 && imgClrUsed == 0)
+		imgClrUsed = 256;
 
 	//Serial.println("imgSize: " + String(imgSize));
 	//Serial.println("imgWidth: " + String(imgWidth));
@@ -3240,6 +3243,17 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 	if (ImgInfo.nRightCrop > ImgInfo.nLeftCrop) {
 		imgHeight = _min(imgHeight, ImgInfo.nRightCrop + 1) - ImgInfo.nLeftCrop;
 	}
+	// set a scaling factor if more than 144 or 288 pixels
+	float fScaleImageHeight = 1.0;
+	if (LedInfo.bSecondController && imgWidth > 288) {
+		// this will cause some rows to vanish from the columns, e.g. 288 will lose half the rows
+		fScaleImageHeight = 288.0 / imgWidth;
+	}
+	if (!LedInfo.bSecondController && imgWidth > 144) {
+		// this will cause some rows to vanish from the columns, e.g. 288 will lose half the rows
+		fScaleImageHeight = 144.0 / imgWidth;
+	}
+
 	for (int column = bReverseImage ? imgHeight - 1 : 0; bReverseImage ? column >= 0 : column < imgHeight; bReverseImage ? --column : ++column) {
 		// approximate time left
 		if (bReverseImage)
@@ -3310,7 +3324,7 @@ void ReadAndDisplayFile(bool doingFirstHalf) {
 			if (ImgInfo.bScaleHeight && (row * displayWidth) % imgWidth) {
 				continue;
 			}
-			SetPixel(row, pixel, column);
+			SetPixel(row * fScaleImageHeight, pixel, column);
 			if (SystemInfo.bShowLEDsOnLcdWhileRunning) {
 				ShowLeds(4, pixel);
 			}
@@ -3489,7 +3503,7 @@ void ShowBmp(MenuItem*)
 		// get a buffer if we don't already have one
 		uint32_t scrBufSize = tftWide * tftTall * sizeof(uint16_t);
 		if (scrBuf == NULL)
-			scrBuf = (uint16_t*)calloc(tftWide * tftTall, sizeof(uint16_t));
+			scrBuf = (uint16_t*)calloc(tftWide * tftTall, sizeof(CRGB));
 		if (scrBuf == NULL) {
 			WriteMessage("Not enough memory for screen buffer", true, 5000);
 			bKeepShowing = false;
@@ -3538,8 +3552,11 @@ void ShowBmp(MenuItem*)
 		uint32_t imgSizeImage = readLong();
 		uint32_t imgXPelsPerMeter = readLong();
 		uint32_t imgYPelsPerMeter = readLong();
-		uint32_t imgClrUsed = readLong();		// colors in the color palette
+		uint32_t imgClrUsed = readLong();		// colors in the color palette, 0 means 256
 		uint32_t imgClrImportant = readLong();
+		// fix if 0 and 8 bits
+		if (imgBitCount == 8 && imgClrUsed == 0)
+			imgClrUsed = 256;
 
 		/* Check info header */
 		if (imgWidth <= 0 || imgHeight <= 0 || imgPlanes != 1 ||
@@ -3549,19 +3566,17 @@ void ShowBmp(MenuItem*)
 			bKeepShowing = false;
 			break;
 		}
-		bool bHalfSize = false;
 		// see if this is too tall for the TFT
+		float fScaleImageHeight = 1.0;
 		if (imgWidth > 144) {
-			bHalfSize = true;
-			// also divide the width (height in the file) by 2
-			imgHeight /= 2;
-			//imgOriginalHeight = imgHeight;
+			// this will cause some rows to vanish from the columns, e.g. 288 will lose half the rows
+			fScaleImageHeight = 144.0 / imgWidth;
 		}
 		// if this is 8 bpp we need to read the color palette
 		if (imgBitCount == 8) {
 			colorPalette = (CRGB*)calloc(sizeof(CRGB), imgClrUsed);
 			if (colorPalette == NULL) {
-				WriteMessage("Not enough memory for color palette", true, 5000);
+				Serial.println(imgClrImportant);
 				bKeepShowing = false;
 				break;
 			}
@@ -3698,27 +3713,26 @@ void ShowBmp(MenuItem*)
 					else {
 						startHere = col + imgStartCol;
 					}
+					// adjust the horizontal scaling
+					startHere /= fScaleImageHeight;
 					//}
 					// get to start of pixel data for this column
-					FileSeekBuf((uint32_t)bmpOffBits + ((startHere * (bHalfSize ? 2 : 1)) * lineLength));
+					FileSeekBuf((uint32_t)bmpOffBits + (startHere * lineLength));
 					//Serial.println(String("start: ") + startHere + " " + ImgInfo.nStartCol + " : " + ImgInfo.nEndCol);
 					for (int x = 0; x < imgWidth; ++x) {
 						if (colorPalette) {
-							// ignore one pixel if doing halfsize for the 288 pixel image
-							if (bHalfSize)
-								readByte(false);
 							pixel = colorPalette[readByte(false)];
 						}
 						else {
 							// this reads a three byte pixel RGB
 							pixel = getRGBwithGamma();
-							// throw a pixel away if we're dividing by 2 for the 288 pixel image
-							if (bHalfSize)
-								pixel = getRGBwithGamma();
 						}
 						// because tftTall (might be 135) row display is less than 144 image
 						// if upsidedown xor (boolean !=) rotated180 we need to make it upside down
 						int row = (ImgInfo.bUpsideDown != ImgInfo.bRotate180) ? (imgWidth - 1 - x) : x;
+						// now scale in case image > LED size
+						row *= fScaleImageHeight;
+						// adjust for offset due to limited display height of 135
 						row -= SystemInfo.nPreviewStartOffset;
 						if (row >= 0 && row < tftTall) {
 							// add to the display memory, organized as rows from top to bottom in memory
@@ -3774,7 +3788,7 @@ void ShowBmp(MenuItem*)
 				break;
 			case BTN_RIGHT_LONG:
 				if (!bShowingSize && bAllowScroll) {
-					imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+					imgStartCol -= SystemInfo.nPreviewScrollCols;
 					imgStartCol = max(0, imgStartCol);
 				}
 				break;
@@ -3836,7 +3850,7 @@ void ShowBmp(MenuItem*)
 				}
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
-						imgStartCol -= bHalfSize ? (SystemInfo.nPreviewScrollCols * 2) : SystemInfo.nPreviewScrollCols;
+						imgStartCol -= SystemInfo.nPreviewScrollCols;
 						imgStartCol = max(0, imgStartCol);
 					}
 				}
@@ -3911,7 +3925,7 @@ void ShowBmp(MenuItem*)
 				else if (SystemInfo.nPreviewMode == PREVIEW_MODE_SCROLL || SystemInfo.nPreviewMode == PREVIEW_MODE_CROP_SELECT) {
 					if (!bShowingSize && bAllowScroll) {
 						imgStartCol += SystemInfo.nPreviewScrollCols;
-						imgStartCol = min((int)imgHeight - tftWide, imgStartCol);
+						imgStartCol = min((int)(imgHeight * fScaleImageHeight) - tftWide, imgStartCol);
 					}
 				}
 				break;
