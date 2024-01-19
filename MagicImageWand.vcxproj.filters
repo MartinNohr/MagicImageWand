@@ -15,7 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="MagicImageWand.ino" />
     <None Include="TTGO Magic Image Wand Remote.pdf" />
     <None Include="TTGO Magic Image Wand Schematic.pdf" />
     <None Include="Release\MagicImageWand.bin">
@@ -47,5 +46,6 @@
     <ClCompile Include="WebServerX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MagicImageWand.ino" />
   </ItemGroup>
 </Project>
