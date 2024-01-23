@@ -50,7 +50,7 @@ void periodic_Second_timer_callback(void* arg)
 		--g_nB1Pressed;
 }
 
-constexpr int TFT_ENABLE = 4;
+constexpr int tftEnable = TFT_PWM_PIN;
 // use these to control the LCD brightness
 const int freq = 5000;
 const int ledChannel = 0;
@@ -75,12 +75,12 @@ void setup()
 	// create a mutex
 	macroMutex = xSemaphoreCreateMutex();
 
-	// configure LCD PWM functionalitites
-	pinMode(TFT_ENABLE, OUTPUT);
-	digitalWrite(TFT_ENABLE, 1);
+	// configure LCD PWM functionality
+	pinMode(tftEnable, OUTPUT);
+	digitalWrite(tftEnable, 1);
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
-	ledcAttachPin(TFT_ENABLE, ledChannel);
+	ledcAttachPin(tftEnable, ledChannel);
 #if TTGO_T == 1
 	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
 #elif TTGO_T == 4
@@ -92,10 +92,12 @@ void setup()
 	gpio_set_direction((gpio_num_t)FRAMEBUTTON_GPIO, GPIO_MODE_INPUT);
 	gpio_set_pull_mode((gpio_num_t)FRAMEBUTTON_GPIO, GPIO_PULLUP_ONLY);
 	// init the onboard buttons
-	gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
-	gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
-	gpio_set_direction(GPIO_NUM_35, GPIO_MODE_INPUT);
-
+	gpio_set_direction(ONBBTN0, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(ONBBTN0, GPIO_PULLUP_ONLY);
+	gpio_set_direction(ONBBTN1, GPIO_MODE_INPUT);
+#if TTGO_T == 3
+	gpio_set_pull_mode(ONBBTN1, GPIO_PULLUP_ONLY);
+#endif
 	oneshot_LED_timer_args = {
 				oneshot_LED_timer_callback,
 				/* argument specified here will be passed to timer callback function */

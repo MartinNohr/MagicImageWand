@@ -1,7 +1,7 @@
 #pragma once
 // ***** Various switches for options are set here *****
 
-// use TTGO T 1, 3 or 4, define only one
+// use TTGO T 1, 3 or 4, define only one of these
 #define TTGO_T 1
 //#define TTGO_T_S3 3
 //#define TTGO_T 4
@@ -17,6 +17,11 @@
 #define USE_STANDARD_SD 0
 
 #if TTGO_T == 1
+	// onboard buttons
+	#define ONBBTN0 GPIO_NUM_0
+	#define ONBBTN1 GPIO_NUM_35
+	// TFT PWM control pin
+	#define TFT_PWM_PIN 4
 	// SD details
 	#define SDcsPin    33  // GPIO33
 	#define SDSckPin   25  // GIPO25
@@ -34,7 +39,7 @@
 	// the optional light sensor GPIO to control the LCD brightness
 	#define LIGHT_SENSOR_GPIO 39
 	// The push button setting, set to 1 for onboard PS version 1.4 (NOTE: PCB not ever created)
-#if 0
+	#if 0
 		#define DIAL_BTN 37
 	#else
 		#define DIAL_BTN 15
@@ -43,6 +48,11 @@
 	#define DIAL_A 13
 	#define DIAL_B 12
 #elif TTGO_T == 3
+	// onboard buttons
+	#define ONBBTN0 GPIO_NUM_0
+	#define ONBBTN1 GPIO_NUM_14
+	// TFT PWM control pin
+	#define TFT_PWM_PIN 38
 	// SD details
 	#define SDcsPin    10
 	#define SDSckPin   12
@@ -64,6 +74,11 @@
 	#define DIAL_A 1
 	#define DIAL_B 2
 #elif TTGO_T == 4
+	// onboard buttons
+	#define ONBBTN0 GPIO_NUM_0
+	#define ONBBTN1 GPIO_NUM_35
+	// TFT PWM control pin
+	#define TFT_PWM_PIN 4
 	// SD details
 	#define SDcsPin    13
 	#define SDSckPin   14
