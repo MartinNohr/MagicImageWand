@@ -81,7 +81,7 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(tftEnable, ledChannel);
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
 	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
 #elif TTGO_T == 4
 	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)-1, (gpio_num_t)38, (gpio_num_t)39, &SystemInfo.DialSettings);
@@ -119,7 +119,7 @@ void setup()
 
 	SystemInfo.bCriticalBatteryLevel = false;
 	tft.setFreeFont(&Dialog_bold_16);
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
 	SystemInfo.nDisplayRotation = 3;
 #elif TTGO_T == 4
 	SystemInfo.nDisplayRotation = 0;
@@ -146,8 +146,14 @@ void setup()
 		}
 	}
 	else {
+#if TTGO_T == 1 || TTGO_T == 4
 		// set the dial type
 		CheckRotaryDialType();
+#else
+		// for the S3 so far we know the dial type
+		SystemInfo.DialSettings.m_bToggleDial = true;
+		SystemInfo.DialSettings.m_nDialPulseCount = 1;
+#endif
 		// see if there is a light sensor, read it until it is stable
 		int lastVal = 0;
 		int val = 0;
@@ -4044,7 +4050,7 @@ void ShowBmp(MenuItem*)
 				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
 				bForceDisplay = bRedraw = true;
 				break;
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
 			case BTN_SELECT:	// show the bmp information
 				if (bShowingSize) {
 					bShowingSize = false;

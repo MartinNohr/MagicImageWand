@@ -56,7 +56,7 @@ String file_size(int bytes){
 #include <FastLED.h>
 #include <Preferences.h>
 #include "RotaryDialButton.h"
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
     #include <TFT_eSPI.h>
 #elif TTGO_T == 4
     #include <TFT_eSPI.h>
@@ -250,7 +250,7 @@ typedef struct SYSTEM_INFO {
     int nPreviewScrollCols = 20;                // now many columns to scroll with dial during preview
     bool bShowProgress = true;                  // show the progress bar
     bool bShowFolder = false;                   // show the path in front of the file
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
     int nDisplayBrightness = 50;                // this is in %
 #elif TTGO_T == 4
     int nDisplayBrightness = 75;                // this is in %
@@ -275,7 +275,7 @@ typedef struct SYSTEM_INFO {
     int eDisplayDimMode = DISPLAY_DIM_MODE_NONE;// 0 is none, 1 is dimtime, 2 is light sensor
     int nDisplayDimTime = 0;                    // seconds before lcd is dimmed
     int nDisplayDimValue = 10;                  // the value to dim to
-#if TTGO_T == 1
+#if TTGO_T == 1 || TTGO_T == 3
     int nDisplayRotation = 1;                   // rotates display 0, 180, 90, 270
 #elif TTGO_T == 4
     int nDisplayRotation = 0;                   // rotates display 0, 180, 90, 270
@@ -291,7 +291,7 @@ typedef struct SYSTEM_INFO {
     int nPreviewMode = PREVIEW_MODE_SCROLL;     // default to sideways scroll, choose file browse or column limits setting
 #if TTGO_T == 1
     int nPreviewStartOffset = 5;                // how many pixels to offset the start, the display is only 135, not 144
-#elif TTGO_T == 4
+#else
     int nPreviewStartOffset = 0;                // how many pixels to offset the start, the display is only 135, not 144
 #endif
     bool bKeepFileOnTopLine = false;            // keep the active file on the top line
