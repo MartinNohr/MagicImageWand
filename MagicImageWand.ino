@@ -2959,7 +2959,7 @@ void ProcessFileOrBuiltin()
 		while (chainCount-- > 0) {
 			DisplayCurrentFile(true, true);
 			if (ImgInfo.bChainFiles && !ImgInfo.bShowBuiltInTests) {
-				line = "Remaining: " + String(chainCount + 1);
+				line = "Remaining: " + String(chainCount);
 				DisplayLine(4, line, SystemInfo.menuTextColor);
 				if (chainCount) {
 					line = "Next: " + FileNames[currentFileIndex.nFileIndex + 1];
