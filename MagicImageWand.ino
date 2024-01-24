@@ -82,7 +82,7 @@ void setup()
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(tftEnable, ledChannel);
 #if TTGO_T == 1 || TTGO_T == 3
-	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)35, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
+	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, ONBBTN1, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
 #elif TTGO_T == 4
 	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, (gpio_num_t)-1, (gpio_num_t)38, (gpio_num_t)39, &SystemInfo.DialSettings);
 #endif
