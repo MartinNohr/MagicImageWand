@@ -4050,12 +4050,14 @@ void ShowBmp(MenuItem*)
 				bDone = true;
 				bKeepShowing = false;
 				break;
+#if TTGO_T == 1	// only need for the small display
 			case BTN_B0_LONG:	// rotate row offsets
 				startOffsetIndex = (++startOffsetIndex) % (sizeof(startOffsetList) / sizeof(*startOffsetList));
 				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
 				bForceDisplay = bRedraw = true;
 				break;
-#if TTGO_T == 1 || TTGO_T == 3
+#endif
+#if TTGO_T != 4
 			case BTN_SELECT:	// show the bmp information
 				if (bShowingSize) {
 					bShowingSize = false;
