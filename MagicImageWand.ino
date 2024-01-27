@@ -81,6 +81,11 @@ void setup()
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(tftEnable, ledChannel);
+	// on the S3 we need to turn on GPIO15 in order to have backlight with batteries
+#if TTGO_T == 3
+	pinMode(15, OUTPUT);
+	digitalWrite(15, HIGH);
+#endif
 #if TTGO_T == 1 || TTGO_T == 3
 	CRotaryDialButton::begin((gpio_num_t)DIAL_A, (gpio_num_t)DIAL_B, (gpio_num_t)DIAL_BTN, (gpio_num_t)0, ONBBTN1, (gpio_num_t)-1, (gpio_num_t)-1, &SystemInfo.DialSettings);
 #elif TTGO_T == 4

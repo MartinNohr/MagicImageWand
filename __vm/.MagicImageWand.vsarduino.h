@@ -20,7 +20,7 @@
 #define UNITY_INCLUDE_CONFIG_H 1
 #define WITH_POSIX 1
 #define _GNU_SOURCE 1
-#define IDF_VER "v4.4.6-dirty"
+#define IDF_VER "v4.4.5"
 #define ESP_PLATFORM 1
 #define _POSIX_READER_WRITER_LOCKS 1
 #define F_CPU 240000000L

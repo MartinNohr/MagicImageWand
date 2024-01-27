@@ -66,7 +66,7 @@
 	// the wheel frame advance gpio port
 	#define FRAMEBUTTON_GPIO 18
 	// battery sensor GPIO
-	#define BATTERY_SENSOR_GPIO 17
+	#define BATTERY_SENSOR_GPIO 4
 	// the optional light sensor GPIO to control the LCD brightness
 	#define LIGHT_SENSOR_GPIO 18
 	// set the push button GPIO port

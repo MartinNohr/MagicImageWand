@@ -1,6 +1,6 @@
 #pragma once
 
-const char* MIW_Version = "3.15";
+const char* MIW_Version = "3.16";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
@@ -262,14 +262,19 @@ typedef struct SYSTEM_INFO {
     int nSidewaysScrollPause = 20;              // how long to wait at each end
     int nSidewaysScrollReverse = 3;             // reverse speed multiplier
     bool bMacroUseCurrentSettings = false;      // ignore settings in macro files when this is true
+#if TTGO_T == 3
+    int nBatteryFullLevel = 2534;               // 100% battery
+    int nBatteryEmptyLevel = 1660;              // 0% battery, should cause a shutdown to save the batteries
+    int nBatteries = 1;                         // how many batteries
+#else
     int nBatteryFullLevel = 1760;               // 100% battery
     int nBatteryEmptyLevel = 1230;              // 0% battery, should cause a shutdown to save the batteries
+    int nBatteries = 2;                         // how many batteries
+#endif
     bool bShowBatteryLevel = HAS_BATTERY_LEVEL; // display the battery level on the bottom line
     bool bShowFilePosition = true;              // display the current selected file position and count
     bool bSleepOnLowBattery = false;            // sleep on low battery
     bool bCriticalBatteryLevel = false;         // set true if battery too low
-    //int bShowBatteryLevel = 0;  // display the battery level on the bottom line
-    int nBatteries = 2;                         // how many batteries
     CRotaryDialButton::ROTARY_DIAL_SETTINGS DialSettings;
     int nSleepTime = 0;                         // value in minutes before going to sleep, 0 means never
     int eDisplayDimMode = DISPLAY_DIM_MODE_NONE;// 0 is none, 1 is dimtime, 2 is light sensor
@@ -839,7 +844,9 @@ MenuItem BatteryMenu[] = {
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,900,4200},
     {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,500,3000},
-    {eTextInt,"Battery Count: %d",GetIntegerValue,&SystemInfo.nBatteries,1,4,0,NULL,NULL,UpdateBatteries},
+#if TTGO_T != 3
+    { eTextInt,"Battery Count: %d",GetIntegerValue,&SystemInfo.nBatteries,1,4,0,NULL,NULL,UpdateBatteries },
+#endif
     {eExit,PreviousMenu},
     // make sure this one is last
     {eTerminate}
