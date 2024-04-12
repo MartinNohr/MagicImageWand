@@ -56,7 +56,7 @@ const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
 TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite" with pointer to "tft" object
-#define BATTERY_BAR_HEIGHT 5
+#define BATTERY_BAR_HEIGHT 4
 TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
 TFT_eSprite FileCountSprite = TFT_eSprite(&tft);	// shows the file position and count
 
@@ -215,7 +215,7 @@ void setup()
 	LineSprite.setTextPadding(tft.width());
 	// get our Battery sprite ready
 	BatterySprite.setColorDepth(16);
-	BatterySprite.createSprite(100, tft.fontHeight() + BATTERY_BAR_HEIGHT);
+	BatterySprite.createSprite(100, tft.fontHeight() - 1 + BATTERY_BAR_HEIGHT);
 	BatterySprite.fillSprite(TFT_BLACK);
 	BatterySprite.setFreeFont(&Dialog_bold_16);
 	BatterySprite.setTextPadding(tft.width());
@@ -261,7 +261,11 @@ void setup()
 		tft.setFreeFont(&Irish_Grover_Regular_24);
 		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
 		tft.drawRect(1, 1, tft.width() - 2, tft.height() - 2, SystemInfo.menuTextColor);
+#if TTGO_T == 1
 		tft.drawString("Magic Image Wand", 5, 10);
+#else
+		tft.drawString("Magic Image Wand", 46, 10);
+#endif
 		tft.setFreeFont(&Dialog_bold_16);
 		tft.drawString(String("Version ") + MIW_Version, 20, 70);
 		tft.setTextSize(1);
@@ -1383,8 +1387,6 @@ bool HandleMenus()
 	}
 	bool didsomething = true;
 	CRotaryDialButton::Button button = ReadButton();
-	if (button == BTN_NONE)
-		return false;
 	int lastOffset = MenuStack.top()->offset;
 	int lastMenu = MenuStack.top()->index;
 	int lastMenuCount = MenuStack.top()->menucount;
@@ -1592,12 +1594,7 @@ enum CRotaryDialButton::Button ReadButton()
 		server.handleClient();
 	}
 	MenuTextScrollSideways();
-	enum CRotaryDialButton::Button retValue = CRotaryDialButton::peek();
-	if (retValue == BTN_NONE) {
-		// let other tasks run, this was necessary also to avoid missing dial rotates
-		vTaskDelay(pdMS_TO_TICKS(1));
-		return retValue;
-	}
+	enum CRotaryDialButton::Button retValue = BTN_NONE;
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
 	// reboot?
@@ -1643,6 +1640,10 @@ enum CRotaryDialButton::Button ReadButton()
 			DisplayLine(nMenuLineCount - 1, "Frame Time: " + String(ImgInfo.nFrameHold) + " mS", SystemInfo.menuTextColor);
 			break;
 		}
+	}
+	if (retValue == BTN_NONE) {
+		// let other tasks run, this was necessary also to avoid missing dial rotates
+		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 	return retValue;
 }
@@ -6744,7 +6745,7 @@ void ShowBattery(MenuItem* menu)
 				BatterySprite.fillRect(percent, sh - 4, 100 - percent, 2, SystemInfo.menuTextColor);
 				// show the text above the bar
 				String pc = String(percent) + "%";
-				BatterySprite.drawString(pc, 100 - tft.textWidth(pc) - 2, 0);
+				BatterySprite.drawString(pc, 100 - tft.textWidth(pc) - 2, 1);
 				// push the sprite to the display
 				BatterySprite.pushSprite(tft.width() - 101, tft.height() - sh + 2);
 				//DisplayLine(MENU_LINES - 1, "          Battery: " + String(percent) + "%", SystemInfo.menuTextColor);
@@ -6885,7 +6886,7 @@ void SetScreenRotation(int rot)
 	}
 	SystemInfo.nDisplayRotation %= 4;
 	tft.setRotation(SystemInfo.nDisplayRotation);
-	nMenuLineCount = tft.height() / tft.fontHeight();
+	nMenuLineCount = (tft.height() + 1) / tft.fontHeight();
 	TextLines.resize(nMenuLineCount);
 }
 

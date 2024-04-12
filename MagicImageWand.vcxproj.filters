@@ -17,11 +17,11 @@
   <ItemGroup>
     <None Include="TTGO Magic Image Wand Remote.pdf" />
     <None Include="TTGO Magic Image Wand Schematic.pdf" />
+    <None Include="HTMLPage.htm" />
+    <None Include="MagicImageWand.docx" />
     <None Include="Release\MagicImageWand.bin">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="HTMLPage.htm" />
-    <None Include="MagicImageWand.docx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.MagicImageWand.vsarduino.h">
