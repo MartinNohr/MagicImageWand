@@ -289,6 +289,7 @@ public:
 		if (!btnBuf.empty())
 			retval = btnBuf.front();
         portEXIT_CRITICAL_ISR(&buttonMux);
+        return retval;
     }
     // get the next button and remove from the queue, return BTN_NONE if nothing there
     static Button dequeue()

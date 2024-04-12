@@ -621,7 +621,7 @@ void RunMenus(int button)
 	for (int ix = 0; !gotmatch && MenuStack.top()->menu[ix].op != eTerminate; ++ix) {
 		// see if this is one is valid
 		if (!bMenuValid[ix]) {
-			continue;	// and don't increment menix
+			continue;	// and don't increment menuix
 		}
 		if (menuix == MenuStack.top()->index) {
 			gotmatch = true;
@@ -1383,6 +1383,8 @@ bool HandleMenus()
 	}
 	bool didsomething = true;
 	CRotaryDialButton::Button button = ReadButton();
+	if (button == BTN_NONE)
+		return false;
 	int lastOffset = MenuStack.top()->offset;
 	int lastMenu = MenuStack.top()->index;
 	int lastMenuCount = MenuStack.top()->menucount;
@@ -1590,7 +1592,12 @@ enum CRotaryDialButton::Button ReadButton()
 		server.handleClient();
 	}
 	MenuTextScrollSideways();
-	enum CRotaryDialButton::Button retValue = BTN_NONE;
+	enum CRotaryDialButton::Button retValue = CRotaryDialButton::peek();
+	if (retValue == BTN_NONE) {
+		// let other tasks run, this was necessary also to avoid missing dial rotates
+		vTaskDelay(pdMS_TO_TICKS(1));
+		return retValue;
+	}
 	// read the next button, or NONE if none there
 	retValue = CRotaryDialButton::dequeue();
 	// reboot?
@@ -3635,8 +3642,21 @@ void ShowBmp(MenuItem*)
 		unsigned long mSecAuto = millis();
 		// this is the current vertical offset
 		// TODO: init to the current value which might be between 0 and 10
+#if TTGO_T == 1
 		int startOffsetList[] = { 0,5,9 };
-		int startOffsetIndex = -1;
+		int startOffsetIndex = 0;
+#else
+		// S3 and T4, larger displays so don't need vertical offset
+		SystemInfo.nPreviewStartOffset = 0;
+		// hold the thumb and its position when sideways scrolling on larger displays
+		int nThumbWidth, nThumbPosition;
+		// calculate thumb width
+		if (imgHeight < tftWide)
+			nThumbWidth = 0;
+		else
+			nThumbWidth = (float)tftWide / imgHeight * tftWide;
+		//Serial.println(String("thumb:") + nThumbWidth);
+#endif
 #if TTGO_T == 4
 		DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
 		DisplayLine(11, FileNames[currentFileIndex.nFileIndex], SystemInfo.menuTextColor);
@@ -3778,6 +3798,19 @@ void ShowBmp(MenuItem*)
 						}
 					}
 				}
+				// draw the thumb horizontal scroll indicator on the bottom of the display
+#if TTGO_T != 1
+				if (nThumbWidth) {
+					// calculate horizontal scroll offset
+					// draw the horizontal thumb bar on the bottom
+					tft.fillRect(0, tft.height() - 11, tft.width(), 8, TFT_BLACK);
+					tft.fillRect(0, tft.height() - 8, tft.width(), 3, TFT_WHITE);
+					nThumbPosition = (imgStartCol / (tft.width() / nThumbWidth)) - (SystemInfo.nPreviewScrollCols * imgStartCol / nThumbWidth);
+					tft.fillRect(nThumbPosition, tft.height() - 11, nThumbWidth, 8, TFT_WHITE);
+				}
+				//Serial.println(String("startcol:") + imgStartCol);
+				//Serial.println(String("tft") + tft.width() + " " + tft.height());
+#endif
 				// don't draw it again until something changes
 				bRedraw = false;
 			}

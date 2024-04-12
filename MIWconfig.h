@@ -1,17 +1,27 @@
 #pragma once
 // ***** Various switches for options are set here *****
 
-// use TTGO T 1, 3 or 4, define only one of these
+// use TTGO_T 1, 3 or 4, define only one of these
 #define TTGO_T 1
-//#define TTGO_T 3
+// choose TTGO T1 for compile type
+//#define TTGO_T 3	// for S3 chip
+// choose LilyGo T-Display S3 for compile type
 //#define TTGO_T 4
+// choose LilyGo T-Display for compile type
+
+// **** NOTE ****
+// If you compile for TTGO 1 and load on S3 the S3 will not run and the boot loader will be disabled
+// To fix this: Press and hold the BOOT button, press and release reset, and then release BOOT.
+// Upload the firmware and then press the reset button. After this all will function normally again.
 
 // also remember to change User_Setup_Select.h correctly
 // use one of these in that file
 //#include <User_Setups/Setup25_TTGO_T_Display.h>    // Setup file for ESP32 and TTGO T-Display ST7789V SPI bus TFT
 //#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>     // For the LilyGo T-Display S3 based ESP32S3 with ST7789 170 x 320 TFT
+//#include <User_Setups/Setup22_TTGO_T4.h>           // Setup file for ESP32 and TTGO T4 version 1.2
+//#include <User_Setups/Setup22_TTGO_T4_v1.3.h>      // Setup file for ESP32 and TTGO T4 version 1.3
 // make sure this one is commented out
-// //#include <User_Setup.h>           // Default setup is root library folder
+//#include <User_Setup.h>           // Default setup is root library folder
 
 // 1 for standard SD library, 0 for the new exFat library which allows > 32GB SD cards
 #define USE_STANDARD_SD 0
