@@ -2101,7 +2101,7 @@ void Sleep(MenuItem* menu)
 	memset(sleepFolder, '\0', sizeof(sleepFolder));
 	strncpy(sleepFolder, currentFolder.c_str(), sizeof(sleepFolder) - 1);
 	esp_sleep_enable_ext0_wakeup((gpio_num_t)DIAL_BTN, LOW);
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	//esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	esp_deep_sleep_start();
 }
 
