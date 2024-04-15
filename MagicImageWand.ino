@@ -9,7 +9,7 @@
 #include "fonts.h"
 #include <nvs_flash.h>
 
-RTC_DATA_ATTR int nBootCount = 0;
+RTC_DATA_ATTR static bool bWakeFromSleep;
 
 // some forward references that Arduino IDE needs
 int readByte(bool clear);
@@ -69,6 +69,7 @@ void setup()
 	while (!Serial.availableForWrite()) {
 		delay(10);
 	}
+	//Serial.println(String("wake:") + bWakeFromSleep);
 	//Serial.println("flash:" + String(ESP.getFlashChipSize()));
 	//Serial.print("setup() is running on core ");
 	//Serial.println(xPortGetCoreID());
@@ -135,7 +136,7 @@ void setup()
 	//ClearScreen();
 	SetDisplayBrightness(SystemInfo.nDisplayBrightness);
 	// see if the button is down, if so clear all settings
-	if (gpio_get_level((gpio_num_t)DIAL_BTN) == 0) {
+	if (!bWakeFromSleep && gpio_get_level((gpio_num_t)DIAL_BTN) == 0) {
 		Preferences prefs;
 		prefs.begin(prefsName);
 		prefs.clear();
@@ -145,7 +146,7 @@ void setup()
 	String msg;
 	// see if we can read the settings
 	if (SaveLoadSettings(false, true, false, true)) {
-		if ((nBootCount == 0) && bAutoLoadSettings) {
+		if (!bWakeFromSleep && bAutoLoadSettings) {
 			SaveLoadSettings(false, false, false, true);
 			msg = "Settings Loaded";
 		}
@@ -155,7 +156,7 @@ void setup()
 		// set the dial type
 		CheckRotaryDialType();
 #else
-		// for the S3 so far we know the dial type
+		// for the S3 MIW PCB we know the dial type
 		SystemInfo.DialSettings.m_bToggleDial = true;
 		SystemInfo.DialSettings.m_nDialPulseCount = 1;
 #endif
@@ -197,7 +198,7 @@ void setup()
 		/////////////////////////// End of Request commands
 		server.begin();
 	}
-	if (nBootCount) {
+	if (bWakeFromSleep) {
 		// see if we need to get the path back
 		if (strlen(sleepFolder))
 			currentFolder = sleepFolder;
@@ -248,7 +249,7 @@ void setup()
 	FastLED.setTemperature(CRGB(LedInfo.whiteBalance.r, LedInfo.whiteBalance.g, LedInfo.whiteBalance.b));
 	FastLED.setBrightness(LedInfo.nLEDBrightness);
 	//FastLED.setMaxPowerInVoltsAndMilliamps(5, LedInfo.nPixelMaxCurrent);
-	if (nBootCount == 0) {
+	if (!bWakeFromSleep) {
 		// this must run on same task as main or only the first few LEDs light using FastLED 3.5, don't know why, 3.3 worked
 		xTaskCreatePinnedToCore(TaskInitTestLed, "LEDTEST", 10000, NULL, 1, &TaskLEDTest, xPortGetCoreID());
 		if (SystemInfo.bRunArtNetDMX) {
@@ -262,21 +263,21 @@ void setup()
 		tft.drawRect(0, 0, tft.width() - 1, tft.height() - 1, SystemInfo.menuTextColor);
 		tft.drawRect(1, 1, tft.width() - 2, tft.height() - 2, SystemInfo.menuTextColor);
 #if TTGO_T == 1
-		tft.drawString("Magic Image Wand", 5, 10);
+		int nIndent = 0;
 #else
-		tft.drawString("Magic Image Wand", 46, 10);
+		int nIndent = 40;
 #endif
+		tft.drawString("Magic Image Wand", 5 + nIndent, 10);
 		tft.setFreeFont(&Dialog_bold_16);
-		tft.drawString(String("Version ") + MIW_Version, 20, 70);
+		tft.drawString(String("Version ") + MIW_Version, 20 + nIndent, 70);
 		tft.setTextSize(1);
-		tft.drawString(__DATE__, 20, 90);
+		tft.drawString(__DATE__, 20 + nIndent, 90);
 		if (msg.length()) {
-			tft.drawString(msg, 20, 110);
+			tft.drawString(msg, 20 + nIndent, 110);
 		}
 	}
 	// clear the button buffer
 	CRotaryDialButton::clear();
-	nBootCount = 0;
 	// load the sleep timer
 	sleepTimer = SystemInfo.nSleepTime * 60;
 	GetFileNamesFromSDorBuiltins(currentFolder);
@@ -1493,7 +1494,12 @@ bool HandleMenus()
 // handle keys in run mode
 bool HandleRunMode()
 {
-	bool bRedraw = false;
+	//if (bWakeFromSleep) {
+	//	Serial.println(String("cursor:") + currentFileIndex.nFileCursor + " file:" + currentFileIndex.nFileCursor);
+	//	Serial.println("clear wake");
+	//}
+	bool bRedraw = bWakeFromSleep;
+	bWakeFromSleep = false;
 	bool didsomething = true;
 	int maxMenuLine = nMenuLineCount - ((SystemInfo.bShowBatteryLevel || SystemInfo.bShowFilePosition) ? 2 : 1);
 	CRotaryDialButton::Button button = ReadButton();
@@ -1692,9 +1698,9 @@ void setupSDcard()
 #define SD_CONFIG SdSpiConfig(SDcsPin, /*DEDICATED_SPI*/SHARED_SPI, SD_SCK_MHZ(10))
 	SPI.begin(SDSckPin, SDMisoPin, SDMosiPin, SDcsPin);	// SCK,MISO,MOSI,CS
 	if (!SD.begin(SD_CONFIG)) {
-		Serial.println("SD initialization failed.");
-		uint8_t err = SD.card()->errorCode();
-		Serial.println("err: " + String(err));
+		//Serial.println("SD initialization failed.");
+		//uint8_t err = SD.card()->errorCode();
+		//Serial.println("err: " + String(err));
 		return;
 	}
 	//Serial.println("Mounted SD card");
@@ -2088,12 +2094,14 @@ void OppositeRunningDots()
 void Sleep(MenuItem* menu)
 {
 	esp_timer_stop(periodic_Second_timer);
-	++nBootCount;
+	bWakeFromSleep = true;
+	delay(1000);
 	//rtc_gpio_pullup_en(BTNPUSH);
 	// save the current folder
 	memset(sleepFolder, '\0', sizeof(sleepFolder));
 	strncpy(sleepFolder, currentFolder.c_str(), sizeof(sleepFolder) - 1);
 	esp_sleep_enable_ext0_wakeup((gpio_num_t)DIAL_BTN, LOW);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	esp_deep_sleep_start();
 }
 
@@ -3597,7 +3605,7 @@ void ShowBmp(MenuItem*)
 		if (imgBitCount == 8) {
 			colorPalette = (CRGB*)calloc(sizeof(CRGB), imgClrUsed);
 			if (colorPalette == NULL) {
-				Serial.println(imgClrImportant);
+				//Serial.println(imgClrImportant);
 				bKeepShowing = false;
 				break;
 			}
@@ -4760,7 +4768,7 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 	// start over
 	// first empty the current file names
 	FileNames.clear();
-	if (nBootCount == 0)
+	if (!bWakeFromSleep)
 		currentFileIndex.nFileIndex = 0;
 	if (!ImgInfo.bShowBuiltInTests) {
 		String startfile;
@@ -7066,7 +7074,7 @@ void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* d
 	{
 		if (universesReceived[i] == 0)
 		{
-			Serial.println("Broke");
+			Serial.println("DMX frame Broke");
 			sendFrame = 0;
 			break;
 		}

@@ -235,7 +235,7 @@ public:
         gpioNums[4] = altRight;
 		if (gpioA != -1) {
 			// create the rotary pulse handler
-			ESP32Encoder::useInternalWeakPullResistors = UP;
+			ESP32Encoder::useInternalWeakPullResistors = puType::up;
 			encoder.attachHalfQuad(gpioB, gpioA);
 			// set starting count value after attaching
 			encoder.clearCount();
