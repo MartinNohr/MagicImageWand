@@ -3659,7 +3659,7 @@ void ShowBmp(MenuItem*)
 		// hold the slope to calculate the thumb position
 		float fThumbScale = 0.0;
 		// calculate thumb width
-		if (imgHeight < tftWide)
+		if (imgHeight * fScaleImageHeight < tftWide)
 			nThumbWidth = 0;
 		else {
 			nThumbWidth = (float)tftWide / imgHeight * tftWide;
