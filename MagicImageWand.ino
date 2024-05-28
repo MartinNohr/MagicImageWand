@@ -1649,7 +1649,8 @@ enum CRotaryDialButton::Button ReadButton()
 	}
 	if (retValue == BTN_NONE) {
 		// let other tasks run, this was necessary also to avoid missing dial rotates
-		vTaskDelay(pdMS_TO_TICKS(1));
+		//vTaskDelay(pdMS_TO_TICKS(1));
+		vTaskDelay(1);
 	}
 	return retValue;
 }
@@ -1872,10 +1873,6 @@ void BarberPole()
 			break;
 		}
 		for (int ledIx = 0; ledIx < LedInfo.nTotalLeds; ++ledIx) {
-			if (CheckCancel()) {
-				done = true;
-				break;
-			}
 			// figure out what color
 			switch (((ledIx + loop) % BARBERCOUNT) / BARBERSIZE) {
 			case 0: // red
@@ -3658,12 +3655,16 @@ void ShowBmp(MenuItem*)
 		// S3 and T4, larger displays so don't need vertical offset
 		SystemInfo.nPreviewStartOffset = 0;
 		// hold the thumb and its position when sideways scrolling on larger displays
-		int nThumbWidth, nThumbPosition;
+		int nThumbWidth;
+		// hold the slope to calculate the thumb position
+		float fThumbScale = 0.0;
 		// calculate thumb width
 		if (imgHeight < tftWide)
 			nThumbWidth = 0;
-		else
+		else {
 			nThumbWidth = (float)tftWide / imgHeight * tftWide;
+			fThumbScale = ((float)tftWide - nThumbWidth) / ((float)imgHeight - tftWide);
+		}
 		//Serial.println(String("thumb:") + nThumbWidth);
 #endif
 #if TTGO_T == 4
@@ -3810,15 +3811,12 @@ void ShowBmp(MenuItem*)
 				// draw the thumb horizontal scroll indicator on the bottom of the display
 #if TTGO_T != 1
 				if (nThumbWidth) {
-					// calculate horizontal scroll offset
-					// draw the horizontal thumb bar on the bottom
 					tft.fillRect(0, tft.height() - 11, tft.width(), 8, TFT_BLACK);
 					tft.fillRect(0, tft.height() - 8, tft.width(), 3, TFT_WHITE);
-					nThumbPosition = (imgStartCol / (tft.width() / nThumbWidth)) - (SystemInfo.nPreviewScrollCols * imgStartCol / nThumbWidth);
-					tft.fillRect(nThumbPosition, tft.height() - 11, nThumbWidth, 8, TFT_WHITE);
+					// figure out the thumb start from slope and image offset (startcol)
+					// draw the horizontal thumb bar on the bottom
+					tft.fillRect(fThumbScale * imgStartCol, tft.height() - 11, nThumbWidth, 8, TFT_WHITE);
 				}
-				//Serial.println(String("startcol:") + imgStartCol);
-				//Serial.println(String("tft") + tft.width() + " " + tft.height());
 #endif
 				// don't draw it again until something changes
 				bRedraw = false;
