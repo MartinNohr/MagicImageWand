@@ -3662,10 +3662,9 @@ void ShowBmp(MenuItem*)
 		if (imgHeight * fScaleImageHeight < tftWide)
 			nThumbWidth = 0;
 		else {
-			nThumbWidth = (float)tftWide / imgHeight * tftWide;
-			fThumbScale = ((float)tftWide - nThumbWidth) / ((float)imgHeight - tftWide);
+			nThumbWidth = (float)tftWide / imgHeight * tftWide / fScaleImageHeight;
+			fThumbScale = ((float)tftWide - nThumbWidth) / ((float)imgHeight * fScaleImageHeight - tftWide);
 		}
-		//Serial.println(String("thumb:") + nThumbWidth);
 #endif
 #if TTGO_T == 4
 		DisplayLine(10, currentFolder, SystemInfo.menuTextColor);
