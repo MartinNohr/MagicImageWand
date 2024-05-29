@@ -52,9 +52,13 @@ void periodic_Second_timer_callback(void* arg)
 
 constexpr int tftEnable = TFT_PWM_PIN;
 // use these to control the LCD brightness
-const int freq = 5000;
+const int freq = 2000;
 const int ledChannel = 0;
-const int resolution = 8;
+#if TTGO_T == 3
+	const int resolution = 10;
+#else
+	const int resolution = 8;
+#endif
 TFT_eSprite LineSprite = TFT_eSprite(&tft);  // Create Sprite object "LineSprite" with pointer to "tft" object
 #define BATTERY_BAR_HEIGHT 4
 TFT_eSprite BatterySprite = TFT_eSprite(&tft);  // Create Sprite object "BatterySprite" with pointer to "tft" object
@@ -78,7 +82,7 @@ void setup()
 
 	// configure LCD PWM functionality
 	pinMode(tftEnable, OUTPUT);
-	digitalWrite(tftEnable, 1);
+	digitalWrite(tftEnable, HIGH);
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
 	ledcAttachPin(tftEnable, ledChannel);
@@ -1292,7 +1296,11 @@ void UpdateDisplayDimMode(MenuItem* menu, int flag)
 
 void SetDisplayBrightness(int val)
 {
+#if TTGO_T == 3
+	ledcWrite(ledChannel, map(val, 0, 100, 0, 1000));
+#else
 	ledcWrite(ledChannel, map(val, 0, 100, 0, 255));
+#endif
 }
 
 uint16_t ColorList[] = {
@@ -4766,11 +4774,14 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 
 bool MatchNameFilter(String name, String pattern)
 {
+	name.toUpperCase();
+	pattern.toUpperCase();
 	// split the patterns and handle each in turn
 	String match;
+	// strip the extension
+	name = name.substring(0, name.indexOf('.'));
 	int ix = pattern.indexOf('|');
 	do {
-		//Serial.println("pattern:" + pattern + " match:" + match);
 		if (ix == -1)
 			match = pattern;
 		else {
@@ -4780,14 +4791,11 @@ bool MatchNameFilter(String name, String pattern)
 			int ixend = match.indexOf('|');
 			if (ixend != -1)
 				match = match.substring(0, ixend);
-			//Serial.println("  pattern:" + pattern + " match:" + match);
 		}
 		if (name.indexOf(match) != -1) {
-			//Serial.println("true");
 			return true;
 		}
 	} while (pattern.length() && ix != -1);
-	//Serial.println("false");
 	return false;
 }
 

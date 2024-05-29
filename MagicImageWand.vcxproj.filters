@@ -22,10 +22,7 @@
     <None Include="Release\MagicImageWand.ino.lilygo_t_display_s3.bin">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="Release\MagicImageWand.ino.lilygo_t_display.bin">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="Release\MagicImageWand.bin">
+    <None Include="Release\MagicImageWand.ino.ttgo-t1.bin">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
