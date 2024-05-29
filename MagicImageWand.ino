@@ -4032,8 +4032,23 @@ void ShowBmp(MenuItem*)
 					g_nB0Pressed = SystemInfo.nB0B1SetColumnsTimer;
 				}
 				else {
+#if TTGO_T == 1	// only need for the small display
 					bDone = true;
 					bKeepShowing = false;
+#else
+					// previous image on S3
+					bForceDisplay = true;
+					if (ImgInfo.bAutoColumnReset) {
+						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
+					}
+					if (currentFileIndex.nFileIndex > 0) {
+						// stop if this is a folder
+						if (!IsFolder(currentFileIndex.nFileIndex - 1)) {
+							--currentFileIndex.nFileIndex;
+							bDone = true;
+						}
+					}
+#endif
 				}
 				break;
 			case BTN_B1_CLICK:
@@ -4081,21 +4096,40 @@ void ShowBmp(MenuItem*)
 					g_nB1Pressed = SystemInfo.nB0B1SetColumnsTimer;
 				}
 				else {	// leave preview on btn1 also when not setting columns
+#if TTGO_T == 1	// only need for the small display
 					bDone = true;
 					bKeepShowing = false;
+#else
+					// next image on S3
+					bForceDisplay = true;
+					if (ImgInfo.bAutoColumnReset) {
+						ImgInfo.nLeftCrop = ImgInfo.nRightCrop;
+					}
+					if (currentFileIndex.nFileIndex < FileNames.size() - 1) {
+						// stop if this is a folder
+						if (!IsFolder(currentFileIndex.nFileIndex + 1)) {
+							++currentFileIndex.nFileIndex;
+							bDone = true;
+						}
+					}
+#endif
 				}
 				break;
 			case BTN_LONG:
 				bDone = true;
 				bKeepShowing = false;
 				break;
-#if TTGO_T == 1	// only need for the small display
 			case BTN_B0_LONG:	// rotate row offsets
+#if TTGO_T == 1	// only need for the small display
 				startOffsetIndex = (++startOffsetIndex) % (sizeof(startOffsetList) / sizeof(*startOffsetList));
 				SystemInfo.nPreviewStartOffset = startOffsetList[startOffsetIndex];
 				bForceDisplay = bRedraw = true;
-				break;
+#else
+				// exit for the larger displays
+				bDone = true;
+				bKeepShowing = false;
 #endif
+				break;
 #if TTGO_T != 4
 			case BTN_SELECT:	// show the bmp information
 				if (bShowingSize) {
