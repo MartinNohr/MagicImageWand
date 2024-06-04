@@ -6,7 +6,7 @@
 			All non-arduino files created by visual micro and all visual studio project or solution files can be freely deleted and are not required to compile a sketch (do not delete your own code!).
 			Note: debugger breakpoints are stored in '.sln' or '.asln' files, knowledge of last uploaded breakpoints is stored in the upload.vmps.xml file. Both files are required to continue a previous debug session without needing to compile and upload again
 	
-	Hardware: TTGO T1(esp32_ttgo-t1), Platform=esp32, Package=esp32
+	Hardware: LilyGo T-Display(esp32_lilygo_t_display), Platform=esp32, Package=esp32
 */
 
 #if defined(_VMICRO_INTELLISENSE)
@@ -25,13 +25,15 @@
 #define _POSIX_READER_WRITER_LOCKS 1
 #define F_CPU 240000000L
 #define ARDUINO 108010
-#define ARDUINO_TTGO_T1 1
+#define ARDUINO_LILYGO_T_DISPLAY 1
 #define ARDUINO_ARCH_ESP32 1
-#define ARDUINO_BOARD "TTGO_T1"
-#define ARDUINO_VARIANT "ttgo-t1"
-#define ARDUINO_PARTITION_min_spiffs 1
+#define ARDUINO_BOARD "LILYGO_T_DISPLAY"
+#define ARDUINO_VARIANT "lilygo_t_display"
+#define ARDUINO_PARTITION_default 1
 #define ESP32 1
 #define CORE_DEBUG_LEVEL 0
+#define ARDUINO_RUNNING_CORE 1
+#define ARDUINO_EVENT_RUNNING_CORE 1
 #define ARDUINO_USB_CDC_ON_BOOT 0
 #define __cplusplus 201103L
 

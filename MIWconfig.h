@@ -1,7 +1,7 @@
 #pragma once
 // ***** Various switches for options are set here *****
 
-// use TTGO_T 1, 3 or 4, define only one of these
+// use TTGO_T 1, 3 or 4, uncomment only one of these
 #define TTGO_T 1
 // choose TTGO T-Display for compile type (or T1 if that doesn't work)
 //#define TTGO_T 3	// for S3 chip

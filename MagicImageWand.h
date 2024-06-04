@@ -1,10 +1,16 @@
 #pragma once
+#include <ArtnetnodeWifi.h>
+#include <NodeReportCodes.h>
+#include <OpCodes.h>
+#include <PollReply.h>
+#include <PriorityCodes.h>
+#include <ProtocolSettings.h>
+#include <StyleCodes.h>
 
-const char* MIW_Version = "3.26";
+const char* MIW_Version = "3.27";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
-#include <ArtnetNodeWifi.h>
 #include <ArduinoJson.h>
 
 const int JSON_DOC_SIZE = 5000;
@@ -605,6 +611,7 @@ void Sleep(MenuItem* menu);
 //void ReadBattery(MenuItem* menu);
 void ShowBmp(MenuItem* menu);
 void ShowBattery(MenuItem* menu);
+void SetHighLowBattery(MenuItem*);
 void SetFilter(MenuItem* menu);
 void ShowLightSensor(MenuItem* menu);
 //void UpdateFilter(MenuItem* menu, int flag);
@@ -844,6 +851,9 @@ MenuItem BatteryMenu[] = {
     {eText,"Read Battery",ShowBattery},
     {eTextInt,"100%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryFullLevel,900,4200},
     {eTextInt,"0%% Battery: %d",GetIntegerValue,&SystemInfo.nBatteryEmptyLevel,500,3000},
+#if TTGO_T == 3
+    {eText,"Set Battery From Full",SetHighLowBattery},
+#endif
 #if TTGO_T != 3
     { eTextInt,"Battery Count: %d",GetIntegerValue,&SystemInfo.nBatteries,1,4,0,NULL,NULL,UpdateBatteries },
 #endif

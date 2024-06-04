@@ -6806,6 +6806,15 @@ void ShowBattery(MenuItem* menu)
 	}
 }
 
+// set the high and low battery level from the current value
+void SetHighLowBattery(MenuItem*)
+{
+	if (GetYesNo("Is the battery fully charged?")) {
+		ReadBattery(&SystemInfo.nBatteryFullLevel);
+		SystemInfo.nBatteryEmptyLevel = 2.75 / 4.2 * SystemInfo.nBatteryFullLevel;
+	}
+}
+
 // this code shows "the current file position and count on the main display when menu is NULL
 void ShowFilePosition()
 {
