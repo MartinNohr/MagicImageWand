@@ -85,6 +85,7 @@ void setup()
 	digitalWrite(tftEnable, HIGH);
 	ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
+//  ledcAttach(tftEnable, freq, resolution);
 	ledcAttachPin(tftEnable, ledChannel);
 	// on the S3 we need to turn on GPIO15 in order to have backlight with batteries
 #if TTGO_T == 3
@@ -3691,7 +3692,7 @@ void ShowBmp(MenuItem*)
 			if (SystemInfo.nPreviewAutoScroll && (millis() > mSecAuto + SystemInfo.nPreviewAutoScroll)) {
 				mSecAuto = millis();
 				// make sure not too long
-				int newColStart = min((int32_t)imgHeight - tftWide, imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
+				int newColStart = min((int)imgHeight - tftWide, imgStartCol + SystemInfo.nPreviewAutoScrollAmount);
 				// if <= 0 we couldn't scroll
 				if (newColStart > 0) {
 					// if no change we must be at the end, so reset it
@@ -7057,7 +7058,7 @@ void TestLEDs(int delay)
 	ShowLeds();
 }
 
-// connect to wifi – returns true if successful or false if not
+// connect to wifi ï¿½ returns true if successful or false if not
 boolean ConnectWifi(void)
 {
 	boolean state = true;

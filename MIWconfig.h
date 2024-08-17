@@ -78,7 +78,7 @@
 	// battery sensor GPIO
 	#define BATTERY_SENSOR_GPIO 4
 	// the optional light sensor GPIO to control the LCD brightness
-	#define LIGHT_SENSOR_GPIO 18
+	#define LIGHT_SENSOR_GPIO 17
 	// set the push button GPIO port
 	#define DIAL_BTN 3
 	#define DIAL_A 1

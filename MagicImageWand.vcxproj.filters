@@ -55,4 +55,7 @@
     </ClCompile>
     <ClCompile Include="MagicImageWand.ino" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="board.txt" />
+  </ItemGroup>
 </Project>
