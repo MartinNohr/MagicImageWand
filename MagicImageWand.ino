@@ -4860,8 +4860,10 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 					else {
 						String uppername = CurrentFilename;
 						uppername.toUpperCase();
-						//find files with our extension only
-						if (uppername.endsWith(".BMP") && (!bnameFilter || MatchNameFilter(uppername, nameFilter))) {
+						// find files with our extension only and ignore MacOS attribute files
+						if (uppername.endsWith(".BMP")
+							&& !uppername.startsWith("._")
+							&& (!bnameFilter || MatchNameFilter(uppername, nameFilter))) {
 							//Serial.println("name: " + CurrentFilename);
 							FileNames.push_back(CurrentFilename);
 						}

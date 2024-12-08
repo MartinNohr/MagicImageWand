@@ -7,7 +7,7 @@
 #include <ProtocolSettings.h>
 #include <StyleCodes.h>
 
-const char* MIW_Version = "3.27";
+const char* MIW_Version = "3.28";
 
 const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
