@@ -13,16 +13,8 @@
 
 #ifndef _VSARDUINO_H_
 #define _VSARDUINO_H_
-#define __ESP32_esp32__ 1
-#define __ESP32_ESP32__ 1
-#define HAVE_CONFIG_H 1
-#define MBEDTLS_CONFIG_FILE "mbedtls/esp_config.h"
-#define UNITY_INCLUDE_CONFIG_H 1
-#define WITH_POSIX 1
-#define _GNU_SOURCE 1
-#define IDF_VER "v4.4.7-dirty"
-#define ESP_PLATFORM 1
-#define _POSIX_READER_WRITER_LOCKS 1
+#define __2302_esp32__ 1
+#define __2302_ESP32__ 1
 #define F_CPU 240000000L
 #define ARDUINO 108010
 #define ARDUINO_LILYGO_T_DISPLAY 1
@@ -30,7 +22,9 @@
 #define ARDUINO_BOARD "LILYGO_T_DISPLAY"
 #define ARDUINO_VARIANT "lilygo_t_display"
 #define ARDUINO_PARTITION_default 1
-#define ESP32 1
+#define ARDUINO_HOST_OS "windows"
+#define ARDUINO_FQBN "{build.fqbn}"
+#define ESP32 ESP32
 #define CORE_DEBUG_LEVEL 0
 #define ARDUINO_RUNNING_CORE 1
 #define ARDUINO_EVENT_RUNNING_CORE 1

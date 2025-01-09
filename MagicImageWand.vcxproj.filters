@@ -19,10 +19,7 @@
     <None Include="TTGO Magic Image Wand Schematic.pdf" />
     <None Include="HTMLPage.htm" />
     <None Include="MagicImageWand.docx" />
-    <None Include="Release\MagicImageWand.ino.lilygo_t_display_s3.bin">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="Release\MagicImageWand.ino.ttgo-t1.bin">
+    <None Include="MagicImageWand\Release\MagicImageWand.bin">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
