@@ -6,29 +6,38 @@
 			All non-arduino files created by visual micro and all visual studio project or solution files can be freely deleted and are not required to compile a sketch (do not delete your own code!).
 			Note: debugger breakpoints are stored in '.sln' or '.asln' files, knowledge of last uploaded breakpoints is stored in the upload.vmps.xml file. Both files are required to continue a previous debug session without needing to compile and upload again
 	
-	Hardware: LilyGo T-Display(esp32_lilygo_t_display), Platform=esp32, Package=esp32
+	Hardware: LilyGo T-Display-S3 (esp32_lilygo_t_display_s3), Platform=esp32, Package=esp32
 */
 
 #if defined(_VMICRO_INTELLISENSE)
 
 #ifndef _VSARDUINO_H_
 #define _VSARDUINO_H_
-#define __2302_esp32__ 1
-#define __2302_ESP32__ 1
+#define __ESP32_esp32s3__ 1
+#define __ESP32_ESP32S3__ 1
+#define HAVE_CONFIG_H 1
+#define MBEDTLS_CONFIG_FILE "mbedtls/esp_config.h"
+#define UNITY_INCLUDE_CONFIG_H 1
+#define WITH_POSIX 1
+#define _GNU_SOURCE 1
+#define IDF_VER "v4.4.7-dirty"
+#define ESP_PLATFORM 1
+#define _POSIX_READER_WRITER_LOCKS 1
 #define F_CPU 240000000L
 #define ARDUINO 108010
-#define ARDUINO_LILYGO_T_DISPLAY 1
+#define ARDUINO_LILYGO_T_DISPLAY_S3 1
 #define ARDUINO_ARCH_ESP32 1
-#define ARDUINO_BOARD "LILYGO_T_DISPLAY"
-#define ARDUINO_VARIANT "lilygo_t_display"
-#define ARDUINO_PARTITION_default 1
-#define ARDUINO_HOST_OS "windows"
-#define ARDUINO_FQBN "{build.fqbn}"
-#define ESP32 ESP32
+#define ARDUINO_BOARD "LILYGO_T_DISPLAY_S3"
+#define ARDUINO_VARIANT "lilygo_t_display_s3"
+#define ARDUINO_PARTITION_app3M_fat9M_16MB 1
+#define ESP32 1
 #define CORE_DEBUG_LEVEL 0
 #define ARDUINO_RUNNING_CORE 1
 #define ARDUINO_EVENT_RUNNING_CORE 1
-#define ARDUINO_USB_CDC_ON_BOOT 0
+#define ARDUINO_USB_MODE 1
+#define ARDUINO_USB_CDC_ON_BOOT 1
+#define ARDUINO_USB_MSC_ON_BOOT 0
+#define ARDUINO_USB_DFU_ON_BOOT 0
 #define __cplusplus 201103L
 
 #define _Pragma(x)
