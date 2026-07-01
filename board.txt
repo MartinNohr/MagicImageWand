@@ -1,4 +1,0 @@
-# MagicImageWand build property overrides
-#
-upload.extra_flags=
-upload.flags=

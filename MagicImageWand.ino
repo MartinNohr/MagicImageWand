@@ -3,7 +3,7 @@
  Created:	12/18/2020 6:12:01 PM
  Author:	Martin Nohr
 */
-
+#include <Arduino.h>
 #include <TFT_eSPI.h>
 #include "MagicImageWand.h"
 #include "fonts.h"
@@ -83,10 +83,10 @@ void setup()
 	// configure LCD PWM functionality
 	pinMode(tftEnable, OUTPUT);
 	digitalWrite(tftEnable, HIGH);
-	ledcSetup(ledChannel, freq, resolution);
+	// ledcSetup(ledChannel, freq, resolution);
 	// attach the channel to the GPIO to be controlled
-//  ledcAttach(tftEnable, freq, resolution);
-	ledcAttachPin(tftEnable, ledChannel);
+	ledcAttach(tftEnable, freq, resolution);
+	// ledcAttachPin(tftEnable, ledChannel);
 	// on the S3 we need to turn on GPIO15 in order to have backlight with batteries
 #if TTGO_T == 3
 	pinMode(15, OUTPUT);
@@ -1298,9 +1298,9 @@ void UpdateDisplayDimMode(MenuItem* menu, int flag)
 void SetDisplayBrightness(int val)
 {
 #if TTGO_T == 3
-	ledcWrite(ledChannel, map(val, 0, 100, 0, 1000));
+	ledcWrite(tftEnable, map(val, 0, 100, 0, 1023));
 #else
-	ledcWrite(ledChannel, map(val, 0, 100, 0, 255));
+	ledcWrite(tftEnable, map(val, 0, 100, 0, 255));
 #endif
 }
 
@@ -6214,8 +6214,8 @@ struct WEB_SETTINGS {
 	WEB_SETTINGS_TYPE type;		// what type of data
 	bool* display;				// if not NULL, compare with displayTest to display this line
 	bool displayTest;			// compare with display to see if this line should display or not
-	char* text;					// show on page
-	char* name;					// the data name
+	const char* text;			// show on page
+	const char* name;			// the data name
 	void* data;					// a pointer to the data
 	int width;					// how wide to make the field
 	int decimals;				// decimals for floats, although stored as ints, also used for max string length

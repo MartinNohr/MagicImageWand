@@ -171,7 +171,7 @@ CRGB* tmpLeds;
 enum LED_STRIPS_WIRING_MODE { STRIPS_MIDDLE_WIRED = 0, STRIPS_CHAINED, STRIPS_OUTSIDE_WIRED };
 const char* StripsWiringText[] = { "Middle","Serial","Outside" };
 const char* DisplayRotationText[] = { "90","180","270","0" };
-typedef struct LED_INFO {
+struct LED_INFO {
     bool bSecondController = false; // enable the second controller
     bool bSwapControllers = false;  // swap the 1st and 2nd LED controller output pins
     int nLEDBrightness = 25;
@@ -192,7 +192,7 @@ enum DIAL_IMG_FUNCTIONS { DIAL_IMG_NONE = 0, DIAL_IMG_BRIGHTNESS, DIAL_IMB_SPEED
 const char* DialImgText[] = { "None","Brightness","Speed" };
 
 // image settings
-typedef struct IMG_INFO {
+struct IMG_INFO {
     int nFrameHold = 10;                      // default for the frame delay,mS
     bool bFixedTime = false;                  // set to use imagetime instead of framehold, the frame time will be calculated
     int nFixedImageTime = 5;                  // time to display image when fixedtime is used, in seconds
@@ -230,7 +230,7 @@ typedef struct IMG_INFO {
 RTC_DATA_ATTR IMG_INFO ImgInfo;
 
 // a stack to hold the file indexes as we navigate folders, put it in RTC memory for waking from sleep
-typedef struct FILEINDEXINFO {
+struct FILEINDEXINFO {
     int nFileIndex;     // current file index
     int nFileCursor;    // used when scrolling cursor, IE current file not always on top
 };
@@ -249,7 +249,7 @@ enum DISPLAY_DIM_MODES { DISPLAY_DIM_MODE_NONE = 0, DISPLAY_DIM_MODE_TIME, DISPL
 const char* DisplayDimModeText[] = { "None","Timer","Sensor" };
 enum PREVIEW_FILE_MODE { PREVIEW_MODE_SCROLL = 0, PREVIEW_MODE_FILE, PREVIEW_MODE_CROP_SELECT };
 const char* PreviewFileModeText[] = { "Sideways Scroll","Browse Images","Set Cropping" };
-typedef struct SYSTEM_INFO {
+struct SYSTEM_INFO {
     uint16_t menuTextColor = TFT_BLUE;
     bool bMenuStar = false;
     bool bHiLiteCurrentFile = true;
@@ -373,7 +373,7 @@ const char* LightBarColorKelvinText[] = {
     "High Pressure Sodium",
 };
 
-typedef struct BUILTIN_INFO {
+struct BUILTIN_INFO {
     // adjustment values for builtins
     uint8_t gHue = 0; // rotating "base color" used by many of the patterns
     // bouncing balls
@@ -535,7 +535,7 @@ enum eDisplayOperation {
 // we need to have a pointer reference to this in the MenuItem, the full declaration follows later
 struct BuiltInItem;
 std::vector<bool> bMenuValid;   // set to indicate menu item  is valid
-typedef struct MenuItem {
+struct MenuItem {
     enum eDisplayOperation op;
     const char* text;                   // text to display
     union {
@@ -557,7 +557,7 @@ typedef struct MenuItem {
 
 // builtins
 // built-in "files"
-typedef struct BuiltInItem {
+struct BuiltInItem {
     const char* text;
     void(*function)();
     MenuItem* menu;
@@ -1215,7 +1215,7 @@ BuiltInItem BuiltInFiles[] = {
 };
 
 // a stack for menus so we can find our way back
-typedef struct MenuInfo {
+struct MenuInfo {
     int index;      // active entry
     int offset;     // scrolled amount
     int menucount;  // how many entries in this menu
@@ -1291,7 +1291,7 @@ struct TEXTLINES {
 };
 std::vector<struct TEXTLINES> TextLines;
 
-typedef struct MACRO_INFO {
+struct MACRO_INFO {
 	String description;             // description of the file
 	int mSeconds;                   // total time in mSeconds
 	int pixels;                     // width in pixels
@@ -1330,7 +1330,7 @@ void WebChangeSettings();
 void WebShowSettings();
 
 struct ON_SERVER_ITEM {
-    char* path;
+    const char* path;
     void(*function)();
 };
 typedef ON_SERVER_ITEM OnServerItem;
@@ -1356,3 +1356,35 @@ OnServerItem OnServerList[] = {
 };
 
 String MenuToHtml(MenuItem* menu, bool bActive = true, int nLevel = 0);
+
+void MakeFileForm(String action, String name, const char* text, WebPageDropDowns dataType);
+void setupSDcard();
+void SetScreenRotation(int rot);
+int ReadLightSensor();
+void TaskInitTestLed(void* parameter);
+void TaskRunArtNet(void* parameter);
+void rainbow_fill();
+void GetFileNamesFromSDorBuiltins(String dir);
+void ReadMacroInfo();
+void ClearScreen();
+void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data);
+boolean ConnectWifi(void);
+void TestLEDs(int delay);
+String MakeMIWFilename(String filename, bool addext);
+int MacroTime(String filepath, int* files, int* width, std::vector<String>* nameList);
+void SaveMacroInfo();
+void LightSensorLedBrightness();
+bool HandleMenus();
+bool HandleRunMode();
+void ShowFilePosition();
+int ReadBattery(int* raw);
+bool UpMenuLevel(bool gotoMain);
+void ResetTextLines();
+void GetIntegerValueHelper(MenuItem* menu, bool bShowHue);
+void BouncingColoredBalls(int balls, CRGB colors[]);
+void ShowRandomBars(bool blacks);
+void DisplayLightBarTitle(bool bRun);
+int RollDownRollOver(int inc);
+void TwinkleRandom(int SpeedDelay, boolean OnlyOne);
+void DrawProgressBar(int x, int y, int dx, int dy, int percent, bool rect);
+void ProcessFileOrBuiltin();
