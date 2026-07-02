@@ -30,7 +30,7 @@ const char* MACRO_JSON_FILE = "/macro.json";
     #include <sdfat.h>
 #endif
 #include "SPI.h"
-
+// ***** these wifi/server includes must be before the TFT_ESPI or server things will break
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiAP.h>
