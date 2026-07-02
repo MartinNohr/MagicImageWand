@@ -1408,3 +1408,4 @@ bool CompareNames(const String& a, const String& b);
 void Circles(int col);
 void FadeInOut(int time, bool in);
 void addGlitter(fract8 chanceOfGlitter);
+void CheckRotaryDialType();
