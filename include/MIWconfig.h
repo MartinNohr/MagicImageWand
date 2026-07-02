@@ -4,7 +4,8 @@
 // use TTGO_T 1, 3 or 4, uncomment only one of these
 //#define TTGO_T 1
 // choose TTGO T-Display for compile type (or T1 if that doesn't work)
-#define TTGO_T 3	// for S3 chip
+// ****** this is now defined in the platformio.ini file for each build environment ******
+// #define TTGO_T 3	// for S3 chip
 // choose LilyGo T-Display S3 for compile type
 //#define TTGO_T 4
 // choose LilyGo T4 for compile type
