@@ -4,7 +4,6 @@
  Author:	Martin Nohr
 */
 #include <Arduino.h>
-#include <TFT_eSPI.h>
 #include "MagicImageWand.h"
 #include "fonts.h"
 #include <nvs_flash.h>
@@ -373,7 +372,7 @@ void CheckRotaryDialType()
 // read the macro info from the files if we didn't find the json file first
 void ReadMacroInfo()
 {
-	if (SD.exists(MACRO_JSON_FILE)) {
+	if (SD_MIW.exists(MACRO_JSON_FILE)) {
 		// read the file
 #if USE_STANDARD_SD
 		SDFile file;
@@ -381,7 +380,7 @@ void ReadMacroInfo()
 		if (file) {
 #else
 		FsFile file;
-		file = SD.open(MACRO_JSON_FILE);
+		file = SD_MIW.open(MACRO_JSON_FILE);
 		if (file.getError() == 0) {
 #endif
 		//WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
@@ -425,7 +424,7 @@ void ReadMacroInfo()
 			String fn = MakeMIWFilename(String(ix), true);
 			MacroInfo[ix].fileNames.clear();
 			MacroInfo[ix].mSeconds = MacroTime("/" + fn, &fileCount, &pixelWidth, &MacroInfo[ix].fileNames);
-			MacroInfo[ix].description = SD.exists("/" + fn) ? "Used" : "Empty";
+			MacroInfo[ix].description = SD_MIW.exists("/" + fn) ? "Used" : "Empty";
 			MacroInfo[ix].length = (float)pixelWidth / (float)LedInfo.nTotalLeds;
 			MacroInfo[ix].pixels = pixelWidth;
 		}
@@ -442,7 +441,7 @@ void SaveMacroInfo()
 	if (file) {
 #else
 	FsFile file;
-	file = SD.open(MACRO_JSON_FILE, O_WRITE | O_CREAT | O_TRUNC);
+	file = SD_MIW.open(MACRO_JSON_FILE, O_WRITE | O_CREAT | O_TRUNC);
 	if (file.getError() == 0) {
 #endif
 		DynamicJsonDocument doc(JSON_DOC_SIZE);
@@ -833,7 +832,7 @@ void ShowMenu(struct MenuItem* menu)
 			// min holds the macro number
 			val = menu->min;
 			//// see if the macro is there and append the text
-			//exists = SD.exists("/" + String(val) + ".miw");
+			//exists = SD_MIW.exists("/" + String(val) + ".miw");
 			//sprintf(line, menu->text, val, exists ? menu->on : menu->off);
 			sprintf(line, menu->text, val, MacroInfo[val].description.c_str());
 			// next line
@@ -1707,16 +1706,16 @@ void setupSDcard()
 #else
 #define SD_CONFIG SdSpiConfig(SDcsPin, /*DEDICATED_SPI*/SHARED_SPI, SD_SCK_MHZ(10))
 	SPI.begin(SDSckPin, SDMisoPin, SDMosiPin, SDcsPin);	// SCK,MISO,MOSI,CS
-	if (!SD.begin(SD_CONFIG)) {
+	if (!SD_MIW.begin(SD_CONFIG)) {
 		//Serial.println("SD initialization failed.");
-		//uint8_t err = SD.card()->errorCode();
+		//uint8_t err = SD_MIW.card()->errorCode();
 		//Serial.println("err: " + String(err));
 		return;
 	}
 	//Serial.println("Mounted SD card");
-	//SD.printFatType(&Serial);
+	//SD_MIW.printFatType(&Serial);
 
-	//uint64_t cardSize = (uint64_t)SD.clusterCount() * SD.bytesPerCluster() / (1024 * 1024 * 1024);
+	//uint64_t cardSize = (uint64_t)SD_MIW.clusterCount() * SD_MIW.bytesPerCluster() / (1024 * 1024 * 1024);
 	//Serial.printf("SD Card Size: %llu GB\n", cardSize);
 #endif
 }
@@ -3142,7 +3141,7 @@ void SendFile(String Filename) {
 		ProcessConfigFile(cfFile);
 	}
 	String fn = currentFolder + Filename;
-	dataFile = SD.open(fn);
+	dataFile = SD_MIW.open(fn);
 	// if the file is available send it to the LED's
 	if (dataFile.available()) {
 		for (int cnt = 0; cnt < (ImgInfo.bMirrorPlayImage ? 2 : 1); ++cnt) {
@@ -3460,7 +3459,7 @@ void GetBmpSize(String fileName, uint32_t* width, uint32_t* height)
 #else
 	FsFile bmpFile;
 #endif
-	bmpFile = SD.open(fileName);
+	bmpFile = SD_MIW.open(fileName);
 	// if the file is available send it to the LED's
 	if (!bmpFile) {
 		WriteMessage("failed to open: " + fileName, true);
@@ -3551,7 +3550,7 @@ void ShowBmp(MenuItem*)
 		if (dataFile.isOpen())
 #endif
 			dataFile.close();
-		dataFile = SD.open(fn);
+		dataFile = SD_MIW.open(fn);
 		// if the file is not available, give up
 		if (!dataFile.available()) {
 			WriteMessage("failed to open: " + currentFolder + FileNames[currentFileIndex.nFileIndex], true);
@@ -4566,7 +4565,7 @@ bool ProcessConfigFile(String filename)
 #else
 	FsFile rdfile;
 #endif
-	rdfile = SD.open(filepath);
+	rdfile = SD_MIW.open(filepath);
 	if (rdfile.available()) {
 		bool bSavedMacroWaitKey = ImgInfo.bMacroWaitKey;
 		int nMacroFileIx = 0;	// keep track of which macro file
@@ -4716,7 +4715,7 @@ int MacroTime(String filepath, int* files, int* width, std::vector<String>* name
 #else
 	FsFile rdfile;
 #endif
-	rdfile = SD.open(filepath);
+	rdfile = SD_MIW.open(filepath);
 	if (rdfile.available()) {
 		String line, command, args;
 		uint32_t width, height;
@@ -4818,14 +4817,14 @@ void GetFileNamesFromSDorBuiltins(String dir) {
 		File root = SD.open(dir);
 		File file;
 #else
-		FsFile root = SD.open(dir, O_RDONLY);
+		FsFile root = SD_MIW.open(dir, O_RDONLY);
 		FsFile file;
 #endif
 		String CurrentFilename = "";
 		if (!root) {
 			//Serial.println("Failed to open directory: " + dir);
 			//Serial.println("error: " + String(root.getError()));
-			//SD.errorPrint("fail");
+			//SD_MIW.errorPrint("fail");
 			worked = false;
 		}
 		if (!root.isDirectory()) {
@@ -5022,11 +5021,11 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 	else {
 		filepath = (bMacro ? String("/") : currentFolder) + MakeMIWFilename(filename, true);
 	}
-	//bool fileExists = SD.exists(filepath.c_str());
+	//bool fileExists = SD_MIW.exists(filepath.c_str());
 	if (remove) {
-		if (!SD.exists(filepath.c_str()))
+		if (!SD_MIW.exists(filepath.c_str()))
 			WriteMessage(String("Not Found:\n") + filepath, true);
-		else if (SD.remove(filepath.c_str())) {
+		else if (SD_MIW.remove(filepath.c_str())) {
 			WriteMessage(String("Erased:\n") + filepath);
 		}
 		else {
@@ -5039,7 +5038,7 @@ bool WriteOrDeleteConfigFile(String filename, bool remove, bool startfile, bool 
 		SDFile file = SD.open(filepath.c_str(), bRecordingMacro ? FILE_APPEND : FILE_WRITE);
 		if (file) {
 #else
-		FsFile file = SD.open(filepath.c_str(), bRecordingMacro ? (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
+		FsFile file = SD_MIW.open(filepath.c_str(), bRecordingMacro ? (O_APPEND | O_WRITE | O_CREAT) : (O_WRITE | O_TRUNC | O_CREAT));
 		if (file.getError() == 0) {
 #endif
 			//Serial.println("file: " + filepath + " " + String(remove) + " " + String(startfile) + " recording " + String(bRecordingMacro));
@@ -5304,7 +5303,7 @@ void DeleteMacro(MenuItem* menu)
 void DeleteMacroJson(MenuItem* menu)
 {
 	if (GetYesNo(String("Delete ") + String(MACRO_JSON_FILE))) {
-		SD.remove(MACRO_JSON_FILE);
+		SD_MIW.remove(MACRO_JSON_FILE);
 	}
 }
 
@@ -5709,11 +5708,11 @@ void handleFileUpload()
 		if (!filename.startsWith("/"))
 			filename = "/" + filename;
 		//Serial.print("Upload File Name: " + filename);
-		SD.remove(filename);   // Remove a previous version just to start clean
+		SD_MIW.remove(filename);   // Remove a previous version just to start clean
 #if USE_STANDARD_SD
 		UploadFile = SD.open(filename, FILE_WRITE);  // Open the file for writing in SPIFFS (create it, if doesn't exist)
 #else
-		UploadFile = SD.open(filename, O_WRITE | O_CREAT);
+		UploadFile = SD_MIW.open(filename, O_WRITE | O_CREAT);
 #endif
 		filename = String();
 	}
@@ -6081,7 +6080,7 @@ void SD_file_download(String filename)
 #if USE_STANDARD_SD
 		SDFile download = SD.open(filename);
 #else
-		FsFile download = SD.open(filename);
+		FsFile download = SD_MIW.open(filename);
 #endif
 		if (filename[0] != '/')
 			filename = '/' + filename;
@@ -6172,7 +6171,7 @@ void FormSettings()
 		<option value = "" selected = "selected">Select One< / option>
 		<option value = "office" >Taxi Office< / option>
 		<option value = "town_hall" >Town Hall< / option>
-		<option value = "telepathy" >We'll Guess!</option>
+		<option value = "telepathy" >We Will Guess!< / option>
 		< / select >
 		< / label>
 		< / p>
@@ -6417,7 +6416,7 @@ void VerifyFileDelete()
 // do the actual file deletion
 void DoFileDelete()
 {
-	SD.remove(currentFolder + FileNames[currentFileIndex.nFileIndex]);
+	SD_MIW.remove(currentFolder + FileNames[currentFileIndex.nFileIndex]);
 	GetFileNamesFromSDorBuiltins(currentFolder);
 	UtilitiesPage();
 }
@@ -7002,7 +7001,7 @@ void ShowUpdateProgress(size_t x, size_t total)
 void CheckUpdateBin(MenuItem* menu)
 {
 	const char* binFileName = "/MagicImageWand.bin";
-	if (SD.exists(binFileName)) {
+	if (SD_MIW.exists(binFileName)) {
 		if (GetYesNo("Load New Firmware?")) {
 			ClearScreen();
 			DisplayLine(2, "loading...");
@@ -7012,7 +7011,7 @@ void CheckUpdateBin(MenuItem* menu)
 			if (binFileName) {
 #else
 			FsFile binFile;
-			binFile = SD.open(binFileName);
+			binFile = SD_MIW.open(binFileName);
 			if (binFile.getError() == 0) {
 #endif
 				size_t binSize = binFile.size();
@@ -7025,7 +7024,7 @@ void CheckUpdateBin(MenuItem* menu)
 				binFile.close();
 				ClearScreen();
 				if (GetYesNo("Delete BIN file?")) {
-					SD.remove(binFileName);
+					SD_MIW.remove(binFileName);
 				}
 				ClearScreen();
 				ESP.restart();

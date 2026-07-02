@@ -23,20 +23,20 @@ public:
     typedef ROTARY_DIAL_SETTINGS ROTARY_DIAL_SETTINGS;
 private:
     static ESP32Encoder encoder;
-    static volatile int m_nButtonTimer;
+    static int m_nButtonTimer;
     static portMUX_TYPE buttonMux;
     static ROTARY_DIAL_SETTINGS* pSettings;
-    static volatile int m_nLongPressTimer;
+    static int m_nLongPressTimer;
     static esp_timer_handle_t periodic_LONGPRESS_timer;
     static esp_timer_create_args_t periodic_LONGPRESS_timer_args;
 	static gpio_num_t gpioA, gpioB, gpioC, gpioBtn0, gpioBtn1, gpioAltLeft, gpioAltRight;
     static std::queue<Button> btnBuf;
     static const int m_nMaxButtons = 10;
-    static volatile int m_nWaitRelease;    // this counts waits after a long press for release
+    static int m_nWaitRelease;    // this counts waits after a long press for release
 #define CLICK_BUTTONS_COUNT 5
     static gpio_num_t gpioNums[CLICK_BUTTONS_COUNT]; // only the clicks, not the rotation AB ones
     // int for which one caused the interrupt
-    static volatile int m_nWhichButton;
+    static int m_nWhichButton;
     // click array for buttons
 	static Button clickBtnArray[CLICK_BUTTONS_COUNT];
 	// long press array for buttons
@@ -353,14 +353,15 @@ gpio_num_t CRotaryDialButton::gpioNums[CLICK_BUTTONS_COUNT] = { };
 gpio_num_t CRotaryDialButton::gpioA, CRotaryDialButton::gpioB, CRotaryDialButton::gpioC;
 gpio_num_t CRotaryDialButton::gpioBtn0, CRotaryDialButton::gpioBtn1;
 gpio_num_t CRotaryDialButton::gpioAltLeft, CRotaryDialButton::gpioAltRight;
-volatile int CRotaryDialButton::m_nLongPressTimer;
-volatile int CRotaryDialButton::m_nWhichButton;
+int CRotaryDialButton::m_nLongPressTimer;
+int CRotaryDialButton::m_nWhichButton;
 esp_timer_handle_t CRotaryDialButton::periodic_LONGPRESS_timer;
 esp_timer_create_args_t CRotaryDialButton::periodic_LONGPRESS_timer_args;
 CRotaryDialButton::ROTARY_DIAL_SETTINGS* CRotaryDialButton::pSettings = { NULL };
 CRotaryDialButton::Button CRotaryDialButton::longpressBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_LONGPRESS,CRotaryDialButton::BTN0_LONGPRESS,CRotaryDialButton::BTN1_LONGPRESS,CRotaryDialButton::BTN_LEFT_LONG,CRotaryDialButton::BTN_RIGHT_LONG };
 CRotaryDialButton::Button CRotaryDialButton::clickBtnArray[CLICK_BUTTONS_COUNT] = { CRotaryDialButton::BTN_CLICK,CRotaryDialButton::BTN0_CLICK,CRotaryDialButton::BTN1_CLICK,CRotaryDialButton::BTN_LEFT,CRotaryDialButton::BTN_RIGHT };
 portMUX_TYPE CRotaryDialButton::buttonMux = portMUX_INITIALIZER_UNLOCKED;
-volatile int CRotaryDialButton::m_nWaitRelease = 0;
-volatile int CRotaryDialButton::m_nButtonTimer = -1;
+int CRotaryDialButton::m_nWaitRelease = 0;
+int CRotaryDialButton::m_nButtonTimer = -1;
 ESP32Encoder CRotaryDialButton::encoder;
+void confetti();

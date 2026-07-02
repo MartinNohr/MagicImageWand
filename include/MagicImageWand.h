@@ -91,7 +91,7 @@ const char* prefsDialReverse = "dialreverse";
   SPIClass spiSDCard;
 #else
   //SPIClass spi1(VSPI);
-  SdFs SD; // fat16/32 and exFAT
+  SdFs SD_MIW; // fat16/32 and exFAT
 #endif
 
 // the display
@@ -488,7 +488,7 @@ unsigned long recordingTime;              // shows the time for each part
 bool bRunningMacro = false;               // set while running
 unsigned long nMacroColumnsDone = 0;      // how many pixel columns in the macro
 int nMacroRepeatsLeft = 1;                // set during macro running
-volatile int nTimerSeconds;
+int nTimerSeconds;
 
 // esp timers
 // set this to the delay time while we get the next frame, also used for delay timers
@@ -496,13 +496,13 @@ volatile bool g_bStripWaiting = false;
 esp_timer_handle_t oneshot_LED_timer;
 esp_timer_create_args_t oneshot_LED_timer_args;
 // use this timer for seconds countdown
-volatile int sleepTimer = 0;
+int sleepTimer = 0;
 // seconds before dimming the display
-volatile int displayDimTimer = 30;
-volatile bool displayDimNow = false;
-volatile int g_nB0Pressed = 0;
-volatile int g_nB1Pressed = 0;
-volatile bool g_bB0B1Cleared = false;
+int displayDimTimer = 30;
+bool displayDimNow = false;
+int g_nB0Pressed = 0;
+int g_nB1Pressed = 0;
+bool g_bB0B1Cleared = false;
 esp_timer_handle_t periodic_Second_timer;
 esp_timer_create_args_t periodic_Second_timer_args;
 
@@ -1388,3 +1388,23 @@ int RollDownRollOver(int inc);
 void TwinkleRandom(int SpeedDelay, boolean OnlyOne);
 void DrawProgressBar(int x, int y, int dx, int dy, int percent, bool rect);
 void ProcessFileOrBuiltin();
+bool IsFolder(int index);
+void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay);
+void meteorRain(byte red, byte green, byte blue, byte meteorSize, byte meteorTrailDecay, boolean meteorRandomDecay, int SpeedDelay);
+void fadeToBlack(int ledNo, byte fadeValue);
+void TestCircles();
+void juggle();
+void sinelon();
+void bpm();
+bool SettingsSaveRestore(bool save, int set);
+void SendFile(String Filename);
+void ShowProgressBar(int percent);
+bool ProcessConfigFile(String filename);
+void ShowProgressBar(int percent);
+bool GetYesNo(String msg);
+void MacroLoadRun(MenuItem*, bool save);
+void load_page_header(bool bRefresh);
+bool CompareNames(const String& a, const String& b);
+void Circles(int col);
+void FadeInOut(int time, bool in);
+void addGlitter(fract8 chanceOfGlitter);

@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 #include <WebServer.h>
 #include <SdFatConfig.h>
 #include <sdfat.h>
