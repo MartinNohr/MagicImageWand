@@ -384,8 +384,7 @@ void ReadMacroInfo()
 		if (file.getError() == 0) {
 #endif
 		//WriteMessage("Reading: " + String(MACRO_JSON_FILE), false, 1000);
-			//StaticJsonDocument<JSON_DOC_SIZE> doc;
-			DynamicJsonDocument doc(JSON_DOC_SIZE);
+			JsonDocument doc;
 			String input = file.readString();
 			//Serial.println("json size: " + String(input.length()));
 			DeserializationError err = deserializeJson(doc, input);
@@ -444,8 +443,7 @@ void SaveMacroInfo()
 	file = SD_MIW.open(MACRO_JSON_FILE, O_WRITE | O_CREAT | O_TRUNC);
 	if (file.getError() == 0) {
 #endif
-		DynamicJsonDocument doc(JSON_DOC_SIZE);
-		//StaticJsonDocument<JSON_DOC_SIZE> doc;
+		JsonDocument doc;
 		for (int ix = 0; ix < 10; ++ix) {
 			doc[ix]["ID"] = ix;
 			doc[ix]["description"] = MacroInfo[ix].description;
@@ -461,9 +459,9 @@ void SaveMacroInfo()
 				++fix;
 			}
 		}
-		char output[JSON_DOC_SIZE];
+		String output;
 		serializeJsonPretty(doc, output);
-		file.write((uint8_t*)output, strlen(output));
+		file.write(output.c_str(), output.length());
 		file.close();
 	}
 	else {

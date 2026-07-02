@@ -13,7 +13,6 @@ const char* StartFileName = "START.MIW";
 #include "MIWconfig.h"
 #include <ArduinoJson.h>
 
-const int JSON_DOC_SIZE = 5000;
 const char* MACRO_JSON_FILE = "/macro.json";
 
 //#include <BLEDevice.h>
